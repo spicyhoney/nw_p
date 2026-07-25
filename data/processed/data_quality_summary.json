@@ -1,0 +1,3036 @@
+{
+  "generated_at": "2026-07-25T08:22:23.736970+00:00",
+  "issue_counts": {
+    "CANCELLED_WITHOUT_CANCEL_TIME": 1,
+    "COMPLETED_WITHOUT_COMPLETE_TIME": 5,
+    "CORRUPTED_ENCRYPTED_PII": 33,
+    "DUPLICATE_TOPIC_SORT": 2,
+    "FORM_DISABLED_OR_DELETED": 1,
+    "FRAGMENTED_JSON_DOCUMENT": 1,
+    "MISSING_FEEDBACK_OPTIONS": 1,
+    "MISSING_FEEDBACK_TOPICS": 1,
+    "MISSING_SERVICE_DESCRIPTION": 3,
+    "ORPHAN_FEEDBACK_SERVICE": 1,
+    "ORPHAN_MEDIA_TOPIC": 1,
+    "ORPHAN_ORDER_SERVICE": 64,
+    "ORPHAN_ORDER_VENDOR": 64,
+    "ORPHAN_TOPIC_GROUP": 7,
+    "PLAINTEXT_PII_IN_FEEDBACK_JSON": 1,
+    "REFUND_STATUS_WITH_ZERO_AMOUNT": 22,
+    "REUSED_PLACEHOLDER_IMAGE": 8,
+    "UNDEFINED_ORDER_TYPE": 64
+  },
+  "issues": [
+    {
+      "details": {
+        "interleaved_text_blocks": 1
+      },
+      "issue_code": "FRAGMENTED_JSON_DOCUMENT",
+      "issue_id": "ISSUE-00001",
+      "message": "檔案不是單一 JSON document，已使用可追蹤解析規則拆分",
+      "severity": "warning",
+      "source_record_id": "相關主檔設定.json",
+      "source_table": "source_file"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00002",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "1",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00003",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "2",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00004",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "3",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00005",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "4",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00006",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "5",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "MISSING_SERVICE_DESCRIPTION",
+      "issue_id": "ISSUE-00007",
+      "message": "服務描述為空，搜尋只能使用名稱與人工整理的別名",
+      "severity": "warning",
+      "source_record_id": "9",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00008",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "9",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "MISSING_SERVICE_DESCRIPTION",
+      "issue_id": "ISSUE-00009",
+      "message": "服務描述為空，搜尋只能使用名稱與人工整理的別名",
+      "severity": "warning",
+      "source_record_id": "16",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00010",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "16",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "MISSING_SERVICE_DESCRIPTION",
+      "issue_id": "ISSUE-00011",
+      "message": "服務描述為空，搜尋只能使用名稱與人工整理的別名",
+      "severity": "warning",
+      "source_record_id": "17",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "REUSED_PLACEHOLDER_IMAGE",
+      "issue_id": "ISSUE-00012",
+      "message": "多個服務共用相同圖片網址",
+      "severity": "warning",
+      "source_record_id": "17",
+      "source_table": "cms_homepage_service"
+    },
+    {
+      "details": {},
+      "issue_code": "FORM_DISABLED_OR_DELETED",
+      "issue_id": "ISSUE-00013",
+      "message": "唯一表單已停用或刪除，不能作為 Agent 正式表單",
+      "severity": "error",
+      "source_record_id": "9",
+      "source_table": "pms_form"
+    },
+    {
+      "details": {
+        "form_group_id": 60
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00014",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "89",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 60
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00015",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "54",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 93
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00016",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "88",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 60
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00017",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "94",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 129
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00018",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "102",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 60
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00019",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "95",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "form_group_id": 129
+      },
+      "issue_code": "ORPHAN_TOPIC_GROUP",
+      "issue_id": "ISSUE-00020",
+      "message": "題目引用不存在的題組",
+      "severity": "error",
+      "source_record_id": "103",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "count": 2
+      },
+      "issue_code": "DUPLICATE_TOPIC_SORT",
+      "issue_id": "ISSUE-00021",
+      "message": "同一表單有重複的題目排序",
+      "severity": "warning",
+      "source_record_id": "form:9:sort:1",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "count": 2
+      },
+      "issue_code": "DUPLICATE_TOPIC_SORT",
+      "issue_id": "ISSUE-00022",
+      "message": "同一表單有重複的題目排序",
+      "severity": "warning",
+      "source_record_id": "form:9:sort:5",
+      "source_table": "pms_form_topic"
+    },
+    {
+      "details": {
+        "topic_id": 108
+      },
+      "issue_code": "ORPHAN_MEDIA_TOPIC",
+      "issue_id": "ISSUE-00023",
+      "message": "圖片引用不存在的題目",
+      "severity": "error",
+      "source_record_id": "34",
+      "source_table": "pms_topic_media"
+    },
+    {
+      "details": {
+        "service_id": 7
+      },
+      "issue_code": "ORPHAN_FEEDBACK_SERVICE",
+      "issue_id": "ISSUE-00024",
+      "message": "諮詢回饋引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "26011500000183",
+      "source_table": "pms_form_feedback"
+    },
+    {
+      "details": {
+        "topic_ids": [
+          55,
+          97,
+          98,
+          100
+        ]
+      },
+      "issue_code": "MISSING_FEEDBACK_TOPICS",
+      "issue_id": "ISSUE-00025",
+      "message": "回饋內容引用範例資料未提供的題目",
+      "severity": "error",
+      "source_record_id": "26011500000183",
+      "source_table": "pms_form_feedback"
+    },
+    {
+      "details": {
+        "option_ids": [
+          103
+        ]
+      },
+      "issue_code": "MISSING_FEEDBACK_OPTIONS",
+      "issue_id": "ISSUE-00026",
+      "message": "回饋內容引用範例資料未提供的選項",
+      "severity": "error",
+      "source_record_id": "26011500000183",
+      "source_table": "pms_form_feedback"
+    },
+    {
+      "details": {},
+      "issue_code": "PLAINTEXT_PII_IN_FEEDBACK_JSON",
+      "issue_id": "ISSUE-00027",
+      "message": "feedback_content 含明文電話或 Email，不得提供給 Agent",
+      "severity": "error",
+      "source_record_id": "26011500000183",
+      "source_table": "pms_form_feedback"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00028",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2041",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00029",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2040",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00030",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2039",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00031",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2038",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00032",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2037",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00033",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2037",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00034",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2037",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00035",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2036",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00036",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2036",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00037",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2036",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00038",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2035",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00039",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2035",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00040",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2035",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00041",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2034",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00042",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2033",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00043",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2032",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00044",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2032",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00045",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2032",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00046",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2031",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00047",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2030",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "COMPLETED_WITHOUT_COMPLETE_TIME",
+      "issue_id": "ISSUE-00048",
+      "message": "完成狀態缺少完成時間",
+      "severity": "error",
+      "source_record_id": "2029",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00049",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2029",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00050",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2028",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00051",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2027",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00052",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2026",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00053",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2025",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00054",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2024",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00055",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2023",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00056",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2022",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00057",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2021",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CANCELLED_WITHOUT_CANCEL_TIME",
+      "issue_id": "ISSUE-00058",
+      "message": "取消狀態缺少取消時間",
+      "severity": "error",
+      "source_record_id": "2020",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00059",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2020",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00060",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2019",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00061",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2018",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00062",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2017",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00063",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2017",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00064",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2017",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00065",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2016",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00066",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2016",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00067",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2016",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00068",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2015",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00069",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2015",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00070",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2015",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "COMPLETED_WITHOUT_COMPLETE_TIME",
+      "issue_id": "ISSUE-00071",
+      "message": "完成狀態缺少完成時間",
+      "severity": "error",
+      "source_record_id": "2014",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00072",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2014",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "COMPLETED_WITHOUT_COMPLETE_TIME",
+      "issue_id": "ISSUE-00073",
+      "message": "完成狀態缺少完成時間",
+      "severity": "error",
+      "source_record_id": "2013",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00074",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2013",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00075",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2012",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00076",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2012",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00077",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2012",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00078",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2011",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00079",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2011",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00080",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2011",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00081",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "2010",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00082",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2008",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00083",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2008",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00084",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2008",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00085",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "2003",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00086",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "2003",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00087",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "2003",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00088",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1999",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00089",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1999",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00090",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1999",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00091",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1998",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00092",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1998",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00093",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1998",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00094",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1996",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00095",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1996",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00096",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1996",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00097",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1995",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00098",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1995",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00099",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1995",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00100",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1994",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00101",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1994",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00102",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1994",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00103",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1993",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00104",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1993",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00105",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1993",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00106",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1990",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00107",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1990",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00108",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1990",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "COMPLETED_WITHOUT_COMPLETE_TIME",
+      "issue_id": "ISSUE-00109",
+      "message": "完成狀態缺少完成時間",
+      "severity": "error",
+      "source_record_id": "1989",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00110",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1989",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00111",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1988",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00112",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1988",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00113",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1988",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00114",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1987",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00115",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1987",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00116",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1987",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00117",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1986",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00118",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1986",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00119",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1986",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00120",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1985",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00121",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1985",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00122",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1985",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00123",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1984",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00124",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1984",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00125",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1984",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00126",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1983",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00127",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1983",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00128",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1983",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00129",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1982",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00130",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1982",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00131",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1982",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00132",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1981",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00133",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1981",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00134",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1981",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00135",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1980",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00136",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1980",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00137",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1980",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00138",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1979",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00139",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1979",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00140",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1979",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00141",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1978",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00142",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1978",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00143",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1978",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00144",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1977",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00145",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1977",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00146",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1977",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00147",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1976",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00148",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1976",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00149",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1976",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00150",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1975",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00151",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1975",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00152",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1975",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00153",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1974",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00154",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1974",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00155",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1974",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00156",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1973",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00157",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1973",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00158",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1973",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00159",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1972",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00160",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1972",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00161",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1972",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00162",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1971",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00163",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1971",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00164",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1971",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00165",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1958",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00166",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1957",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00167",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1956",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00168",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1956",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00169",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1956",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00170",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1956",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00171",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1955",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00172",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1955",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00173",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1955",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00174",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1955",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00175",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1954",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00176",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1954",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00177",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1954",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00178",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1954",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00179",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1953",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00180",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1953",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00181",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1953",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00182",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1953",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00183",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1952",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00184",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1952",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00185",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1952",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00186",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1951",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00187",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1951",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00188",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1951",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00189",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1951",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00190",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1950",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00191",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1950",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00192",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1950",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00193",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1949",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00194",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1949",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00195",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1949",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00196",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1949",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00197",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1948",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00198",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1948",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00199",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1948",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00200",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1947",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00201",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1947",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00202",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1947",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00203",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1947",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00204",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1946",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00205",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1946",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00206",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1946",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00207",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1945",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00208",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1945",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00209",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1945",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00210",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1945",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00211",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1944",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00212",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1944",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00213",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1944",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00214",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1944",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00215",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1943",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00216",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1943",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00217",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1943",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00218",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1943",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00219",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1942",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00220",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1942",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00221",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1942",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00222",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1942",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00223",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1941",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00224",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1941",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00225",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1941",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00226",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1941",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00227",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1940",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00228",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1940",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00229",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1940",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00230",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1940",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00231",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1939",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00232",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1939",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00233",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1939",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00234",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1939",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00235",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1938",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00236",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1938",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00237",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1938",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00238",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1937",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00239",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1937",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00240",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1937",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00241",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1937",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00242",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1936",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00243",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1936",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00244",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1936",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00245",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1936",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00246",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1935",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00247",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1935",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00248",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1935",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00249",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1935",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00250",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1934",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00251",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1934",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00252",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1934",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00253",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1934",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00254",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1933",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00255",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1933",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00256",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1933",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00257",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1933",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00258",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1932",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00259",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1931",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00260",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1930",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00261",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1929",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00262",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1928",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00263",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1928",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00264",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1928",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00265",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1928",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00266",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1927",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00267",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1927",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00268",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1927",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00269",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1927",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00270",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1926",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00271",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1926",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00272",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1926",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_id": 18
+      },
+      "issue_code": "ORPHAN_ORDER_SERVICE",
+      "issue_id": "ISSUE-00273",
+      "message": "訂單引用不存在的服務",
+      "severity": "error",
+      "source_record_id": "1925",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "service_vendor_id": 15
+      },
+      "issue_code": "ORPHAN_ORDER_VENDOR",
+      "issue_id": "ISSUE-00274",
+      "message": "訂單引用不存在的服務供應商",
+      "severity": "error",
+      "source_record_id": "1925",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {
+        "order_type": "07"
+      },
+      "issue_code": "UNDEFINED_ORDER_TYPE",
+      "issue_id": "ISSUE-00275",
+      "message": "訂單類型未出現在 schema 定義",
+      "severity": "error",
+      "source_record_id": "1925",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00276",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1881",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00277",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1878",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "COMPLETED_WITHOUT_COMPLETE_TIME",
+      "issue_id": "ISSUE-00278",
+      "message": "完成狀態缺少完成時間",
+      "severity": "error",
+      "source_record_id": "1877",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "CORRUPTED_ENCRYPTED_PII",
+      "issue_id": "ISSUE-00279",
+      "message": "密文匯出後包含替代字元，清洗輸出已移除",
+      "severity": "warning",
+      "source_record_id": "1877",
+      "source_table": "mms_order_record"
+    },
+    {
+      "details": {},
+      "issue_code": "REFUND_STATUS_WITH_ZERO_AMOUNT",
+      "issue_id": "ISSUE-00280",
+      "message": "退款狀態的退款金額為零，需業務規則確認",
+      "severity": "warning",
+      "source_record_id": "1876",
+      "source_table": "mms_order_record"
+    }
+  ],
+  "location_summary": {
+    "canonical_locations": 368,
+    "external_counties": 22,
+    "external_districts": 368,
+    "external_only_districts": 168,
+    "matched_organizer_districts": 200,
+    "organizer_counties": 22,
+    "organizer_districts": 200
+  },
+  "order_source_comparison": {
+    "csv_only_record_ids": [],
+    "csv_rows": 99,
+    "json_only_record_ids": [],
+    "json_rows": 99,
+    "same_record_ids": true,
+    "semantic_mismatch_counts": {},
+    "semantically_identical": true
+  },
+  "order_summary": {
+    "agent_eligible": 0,
+    "quarantined": 70,
+    "review": 28,
+    "rows": 99,
+    "shape_list": 82,
+    "shape_object_goods": 2,
+    "shape_object_orderItems": 15,
+    "verified": 1
+  },
+  "pipeline": "b_plus",
+  "quarantine_records": 87,
+  "reference_date": "2026-08-01",
+  "severity_counts": {
+    "error": 211,
+    "warning": 69
+  },
+  "source_manifest": [
+    {
+      "file": "相關主檔設定.json",
+      "sha256": "124d1b6b8eb38eb4fa0636cd47d1a5f5991db3af8f357367c0bb4a8bdf11cc9a"
+    },
+    {
+      "file": "縣市區域範例資料.json",
+      "sha256": "f13399aef45c8cc2a00f74003e34df7e273573fe24583a84def240e79e0cd085"
+    },
+    {
+      "file": "諮詢單相關範例資料.json",
+      "sha256": "d2aceeec230a5323bbb65408a07738899829959299349f1243838aa567f445e9"
+    },
+    {
+      "file": "order_record範例資料.json",
+      "sha256": "5c49c89fe8195a28dca447e739ee0b379a4e4fd762502db448ce255d823a67bc"
+    },
+    {
+      "file": "order_record範例資料.csv",
+      "sha256": "e1f3758468685e3d09ed7a414b0e0fd278564aa7890de2f1eb946de5873c7e82"
+    }
+  ],
+  "source_mappings": 24,
+  "table_counts": {
+    "cms_homepage_service": 8,
+    "cms_homepage_service_vendor": 6,
+    "mms_order_record": 99,
+    "pms_form": 1,
+    "pms_form_feedback": 1,
+    "pms_form_topic": 7,
+    "pms_topic_county_district_relation": 1,
+    "pms_topic_media": 1,
+    "pms_topic_option": 6,
+    "sys_county": 22,
+    "sys_district": 200
+  },
+  "unresolved_mappings": 4
+}

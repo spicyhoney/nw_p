@@ -9,6 +9,7 @@
 | `core` | 通過主鍵、外鍵、代碼與商業規則驗證 | 是 |
 | `quarantine` | 不明代碼、孤兒關聯、狀態矛盾或損壞資料 | 否 |
 | `external_reference` | 來自可追蹤公共來源的參考資料 | 視規則 |
+| `curated_config` | 團隊依產品需求設計並版本化的設定，例如 MVP 諮詢表單 | 是，需標示 |
 | `synthetic` | 為 Demo 建立的模擬服務商、時段與案例 | 是，需標示 |
 
 ## 來源標籤
@@ -26,7 +27,19 @@
 - `official_raw`
 - `official_repaired`
 - `external_reference`
+- `curated_config`
 - `synthetic`
+
+## B+ 決策
+
+本專案採用 B+：修復可由規則確定的格式與行政區資料，同時為水電修繕 MVP
+建立一條可展示的模擬流程。正式資料、團隊設定與模擬資料不能混成同一種來源。
+
+- 主辦方服務主檔中的 `service_id=17` 是水電修繕的正式依據。
+- 水電諮詢表單由團隊設計，標記為 `curated_config`，不冒充主辦方原始表單。
+- 師傅、服務區域、時段、案件、媒合與 Demo 訂單皆標記為 `synthetic`。
+- 原始諮詢範例因關聯斷裂且含明文個資，只保留問題索引，不供 Agent 使用。
+- 歷史訂單只做資料品質分析；即使單筆通過格式驗證，也不供 Agent 查詢。
 
 ## 不明資料處理
 
@@ -63,10 +76,18 @@
 
 需要 Demo 資料時，應建立全新的合成紀錄，不改寫成官方紀錄。
 
+## Agent 資料閘門
+
+任何紀錄必須同時滿足以下條件才可透過 `agent` schema 查詢：
+
+- `quality_status = 'verified'`
+- `agent_eligible = true`
+
+`review`、`quarantined`、`unresolved` 與歷史個資資料都不得繞過此條件。
+
 ## 個資
 
 - Agent-facing database 不保存範例檔中的明文姓名、電話或 Email。
 - 損壞的密文不可還原，清洗後應設為 `NULL` 並記錄原因。
 - Demo 使用明確標示的虛構個資。
 - 金鑰與資料庫連線字串只能放在 `.env` 或雲端秘密管理服務。
-

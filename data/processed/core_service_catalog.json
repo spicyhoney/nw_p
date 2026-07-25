@@ -1,0 +1,296 @@
+{
+  "service_type_legend": {
+    "1": "一般居家清潔",
+    "10": "水電修繕",
+    "11": "商城購物",
+    "2": "家電清洗",
+    "3": "包裹寄送",
+    "6": "餐廳訂位",
+    "9": "美食外送"
+  },
+  "services": [
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "洗衣機",
+        "洗衣機異味",
+        "洗衣機清潔"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "👕 衣服越洗越臭？小心洗衣機藏汙納垢！🦠 專業洗衣機深層清潔，徹底清除黴菌、洗劑殘留，讓衣物真正潔淨！",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "洗衣機清洗",
+      "quality_status": "verified",
+      "search_text": "洗衣機清洗 👕 衣服越洗越臭？小心洗衣機藏汙納垢！🦠 專業洗衣機深層清潔，徹底清除黴菌、洗劑殘留，讓衣物真正潔淨！ 洗衣機 洗衣機異味 洗衣機清潔",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 1,
+      "service_type": "02",
+      "service_type_name": "家電清洗",
+      "service_vendor_id": 1,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:1",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "冷氣",
+        "空調",
+        "冷氣不冷",
+        "冷氣清洗"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "🌬 冷氣不冷？異味重？灰塵滿滿？ 別讓髒污影響健康！✅ 專業深層清潔，有效去除霉菌、灰塵，讓冷氣更強勁、更省電！",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "冷氣清洗",
+      "quality_status": "verified",
+      "search_text": "冷氣清洗 🌬 冷氣不冷？異味重？灰塵滿滿？ 別讓髒污影響健康！✅ 專業深層清潔，有效去除霉菌、灰塵，讓冷氣更強勁、更省電！ 冷氣 空調 冷氣不冷 冷氣清洗",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 2,
+      "service_type": "02",
+      "service_type_name": "家電清洗",
+      "service_vendor_id": 1,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:2",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "寄件",
+        "包裹",
+        "宅配",
+        "到府收件"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "常溫包裹寄送超方便，線上填單，到府收件，實現便利新生活！",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "寄件服務",
+      "quality_status": "verified",
+      "search_text": "寄件服務 常溫包裹寄送超方便，線上填單，到府收件，實現便利新生活！ 寄件 包裹 宅配 到府收件",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 3,
+      "service_type": "03",
+      "service_type_name": "包裹寄送",
+      "service_vendor_id": 2,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:3",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "居家清潔",
+        "打掃",
+        "廚房清潔",
+        "浴室清潔"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "🧹 家裡打掃不完？灰塵、油污、髒亂讓人頭痛？💪 專業清潔團隊，從地板、廚房到浴室，徹底清潔不留死角！",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "專業清潔",
+      "quality_status": "verified",
+      "search_text": "專業清潔 🧹 家裡打掃不完？灰塵、油污、髒亂讓人頭痛？💪 專業清潔團隊，從地板、廚房到浴室，徹底清潔不留死角！ 居家清潔 打掃 廚房清潔 浴室清潔",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 4,
+      "service_type": "01",
+      "service_type_name": "一般居家清潔",
+      "service_vendor_id": 1,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:4",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "家事服務",
+        "計時清潔",
+        "掃地",
+        "拖地"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "⏳ 沒時間打掃？想輕鬆享受整潔生活？👩‍🔧 專業家事服務，掃地、拖地、洗碗、摺衣，一次搞定！",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "計時家事服務",
+      "quality_status": "verified",
+      "search_text": "計時家事服務 ⏳ 沒時間打掃？想輕鬆享受整潔生活？👩‍🔧 專業家事服務，掃地、拖地、洗碗、摺衣，一次搞定！ 家事服務 計時清潔 掃地 拖地",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 5,
+      "service_type": "01",
+      "service_type_name": "一般居家清潔",
+      "service_vendor_id": 1,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:5",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "餐廳",
+        "訂位",
+        "訂桌"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "餐廳訂位",
+      "quality_status": "verified",
+      "search_text": "餐廳訂位  餐廳 訂位 訂桌",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 9,
+      "service_type": "06",
+      "service_type_name": "餐廳訂位",
+      "service_vendor_id": 5,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:9",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "外送",
+        "餐點",
+        "美食"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "美食外送",
+      "quality_status": "verified",
+      "search_text": "美食外送  外送 餐點 美食",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 16,
+      "service_type": "09",
+      "service_type_name": "美食外送",
+      "service_vendor_id": 14,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:16",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "aliases": [
+        "水電",
+        "修繕",
+        "水龍頭漏水",
+        "馬桶不通",
+        "水管堵塞",
+        "插座"
+      ],
+      "aliases_source_type": "curated_config",
+      "cleaning_rule": "split_json_documents_normalize_text_and_add_curated_search_aliases",
+      "description": "",
+      "image_url": "https://www.image2url.com/r2/default/files/1782374527812-320699dd-9b09-4bc1-8561-297166da06b8.jpg",
+      "name": "水電修繕",
+      "quality_status": "verified",
+      "search_text": "水電修繕  水電 修繕 水龍頭漏水 馬桶不通 水管堵塞 插座",
+      "search_text_source_types": [
+        "official_repaired",
+        "curated_config"
+      ],
+      "service_id": 17,
+      "service_type": "10",
+      "service_type_name": "水電修繕",
+      "service_vendor_id": 11,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "service:17",
+      "source_type": "official_repaired"
+    }
+  ],
+  "vendors": [
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "清潔服務",
+      "name": "清潔",
+      "quality_status": "verified",
+      "service_vendor_id": 1,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:1",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "包裹運送",
+      "name": "寄件",
+      "quality_status": "verified",
+      "service_vendor_id": 2,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:2",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "餐廳訂位",
+      "name": "餐廳訂位",
+      "quality_status": "verified",
+      "service_vendor_id": 5,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:5",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "限時購",
+      "name": "商城購物",
+      "quality_status": "verified",
+      "service_vendor_id": 10,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:10",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "水電服務",
+      "name": "修繕服務",
+      "quality_status": "verified",
+      "service_vendor_id": 11,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:11",
+      "source_type": "official_repaired"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "split_json_documents_and_normalize_text",
+      "description": "美食外送",
+      "name": "美食外送",
+      "quality_status": "verified",
+      "service_vendor_id": 14,
+      "source_file": "相關主檔設定.json",
+      "source_record_id": "vendor:14",
+      "source_type": "official_repaired"
+    }
+  ]
+}

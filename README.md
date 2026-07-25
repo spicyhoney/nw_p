@@ -75,8 +75,26 @@ docs/             架構、計畫與競賽文件
 
 - [x] 完成官方資料集初步稽核
 - [x] 建立專案與協作骨架
-- [ ] 建立可重複執行的資料清洗流程
-- [ ] 建立 PostgreSQL clean schema
+- [x] 建立可重複執行的 B+ 資料清洗流程
+- [x] 建立 PostgreSQL clean schema 與 Agent 安全檢視
 - [ ] 完成 MCP Tools
 - [ ] 串接 Agent 與 Demo UI
 
+## 執行資料清洗
+
+第一次執行時，先取得並固定官方行政區參考資料：
+
+```powershell
+python .\scripts\fetch_admin_reference.py
+```
+
+接著執行 B+ 清洗：
+
+```powershell
+python .\scripts\clean_data.py --reference-date 2026-08-01
+```
+
+安全的核心資料會寫入 `data/processed/`，詳細檢查結果在
+`reports/data_quality.md`。含歷史訂單分析與隔離索引的本機輸出不會提交至
+GitHub。完整操作與資料流請見
+[資料清洗操作手冊](docs/data-cleaning-runbook.md)。

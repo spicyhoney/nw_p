@@ -11,6 +11,8 @@
 | [gantt_plan.md](gantt_plan.md) | 7/8→8/2 甘特圖＋30 小時決賽衝刺表 | ⭐ |
 | [technical_strategy.md](technical_strategy.md) | 3 套架構方案＋推薦（方案二混合雲） | 資工先讀 |
 | [data_plan.md](data_plan.md) | **官方資料集實際分析結果**＋資料表設計＋合成資料策略 | 統計先讀 |
+| [data-policy.md](data-policy.md) | B+ 正式、隔離、人工設定與模擬資料政策 | 兩人 |
+| [data-cleaning-runbook.md](data-cleaning-runbook.md) | 清洗規則、產出、重跑與 PostgreSQL 載入方式 | 統計主、資工跟 |
 | [mcp_agent_plan.md](mcp_agent_plan.md) | 8 個 tool schema＋Agent 流程＋10 條 eval | 資工 |
 | [aws_learning_plan.md](aws_learning_plan.md) | AWS P0–P3 學習計畫＋7 天速成路線 | 資工主、統計跟 |
 | [tools_description.md](tools_description.md) | 54 個工具「學到什麼程度才夠」＋Top 10 優先序 | 查閱用 |

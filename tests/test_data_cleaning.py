@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 import json
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
@@ -155,6 +156,65 @@ class PipelineIntegrationTests(unittest.TestCase):
             self.assertNotIn("member_phone", safe_orders)
             self.assertNotIn("member_email", safe_orders)
             self.assertNotIn("member_name", safe_orders)
+
+
+class DatabaseDocumentationTests(unittest.TestCase):
+    def test_every_schema_table_and_agent_view_has_a_database_comment(self) -> None:
+        migration = (
+            PROJECT_ROOT / "sql" / "migrations" / "001_b_plus_schema.sql"
+        ).read_text(encoding="utf-8")
+
+        created_schemas = set(
+            re.findall(r"CREATE SCHEMA IF NOT EXISTS ([a-z_]+);", migration)
+        )
+        commented_schemas = set(
+            re.findall(r"COMMENT ON SCHEMA ([a-z_]+) IS", migration)
+        )
+        created_tables = set(
+            re.findall(
+                r"CREATE TABLE IF NOT EXISTS ([a-z_]+\.[a-z_]+) \(",
+                migration,
+            )
+        )
+        commented_tables = set(
+            re.findall(r"COMMENT ON TABLE ([a-z_]+\.[a-z_]+) IS", migration)
+        )
+        created_views = set(
+            re.findall(
+                r"CREATE OR REPLACE VIEW (agent\.[a-z_]+)",
+                migration,
+            )
+        )
+        commented_views = set(
+            re.findall(r"COMMENT ON VIEW (agent\.[a-z_]+) IS", migration)
+        )
+
+        self.assertEqual(created_schemas, commented_schemas)
+        self.assertEqual(created_tables, commented_tables)
+        self.assertEqual(created_views, commented_views)
+
+    def test_database_dictionary_documents_critical_safety_rules(self) -> None:
+        dictionary = (
+            PROJECT_ROOT / "docs" / "data-dictionary.md"
+        ).read_text(encoding="utf-8")
+        checklist = (
+            PROJECT_ROOT / "docs" / "ai-data-review-checklist.md"
+        ).read_text(encoding="utf-8")
+
+        for phrase in (
+            "candidate_canonical_id",
+            "agent_eligible",
+            "source_type=synthetic",
+            "service_id=17",
+            "erDiagram",
+        ):
+            self.assertIn(phrase, dictionary)
+        for phrase in (
+            "service_id=7",
+            "raw_payload_included",
+            "main...feature/data-cleaning",
+        ):
+            self.assertIn(phrase, checklist)
 
 
 if __name__ == "__main__":

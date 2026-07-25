@@ -97,4 +97,6 @@ python .\scripts\clean_data.py --reference-date 2026-08-01
 安全的核心資料會寫入 `data/processed/`，詳細檢查結果在
 `reports/data_quality.md`。含歷史訂單分析與隔離索引的本機輸出不會提交至
 GitHub。完整操作與資料流請見
-[資料清洗操作手冊](docs/data-cleaning-runbook.md)。
+[資料清洗操作手冊](docs/data-cleaning-runbook.md)、
+[資料字典](docs/data-dictionary.md)與
+[AI 資料檢查清單](docs/ai-data-review-checklist.md)。

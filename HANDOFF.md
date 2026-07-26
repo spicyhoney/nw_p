@@ -5,40 +5,46 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #5 仍為 Ready for review、尚未合併。其上的 terminal Demo 再疊出
-`feature/huggingface-model-adapter`，已完成 Hugging Face hosted open-model
-adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待完成。
+PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成功 live
+呼叫四個唯讀 Tools。實測暴露出純 CLI／LLM-rendered checklist、未保存結構化
+表單狀態與模型捏造時間等問題；下一步擬改做 Web vertical slice，待組員同意。
 
 ## 2. 本次 session 完成（帶證據）
 
-- 新增 `HuggingFaceModelClient`，完成 chat messages、function schema、文字／
-  tool-call response 轉換與安全錯誤遮罩；不改 `AgentRunner` 或 MCP 契約。
-- terminal Demo 新增 `--model-provider mock|huggingface`。Hugging Face mode
-  從環境讀 `HF_TOKEN`、`HF_MODEL_ID`、`HF_PROVIDER`、`HF_MAX_TOKENS`；
-  缺設定時 fail fast，不靜默 fallback。
-- 預設 `Qwen/Qwen3-4B-Instruct-2507`、provider `auto`；使用 hosted
-  Inference Providers，不下載模型權重。token 不進 Git／log／repr。
-- 已核對 `huggingface_hub 1.24.0` 真實 API；focused tests 30 passed，
-  完整 suite `60 passed, 10 skipped, 40 subtests passed`，Mock 四工具 smoke、
-  scoped Ruff、format、`compileall`、`pip check`、`git diff --check` 通過。
+- HF live run 已以 `Qwen/Qwen3-4B-Instruct-2507` 成功呼叫
+  `search_services`、`resolve_location`、`get_consultation_form`、
+  `match_service_providers`；adapter／MCP transport 本身可運作。
+- 「查不到」root cause：模型把「每天下午五點後」捏成 2023 時間窗，但 Demo
+  slots 固定在 2026-08-01，合法查詢自然回空；第一次還只傳 start，觸發正確的
+  paired-window validation。之後模型又未經同意自行改成 16:00–20:00。
+- 模型輸出的 Markdown `☐` 不是 UI；目前 `AgentTurnResult` 只有 reply/trace，
+  沒有可供前端渲染的 form/session view model，也未保存 validated form answers。
+- 主辦方 PDF 明定彈性諮詢單、服務廠商管理者後台／操作介面，決賽需交
+  Live Demo 部署網址；完成度評分包含使用體驗。因此 CLI 只保留工程 smoke。
 - 功能 commit：`d2e953c`；遠端分支已推送。
-- 無 `HF_TOKEN`，所以 live provider call 未執行，不宣稱真實模型已端到端完成。
-  全 repo Ruff 另有 22 個未改動的既有 data-cleaning／script 問題。
+- HF token 曾出現在使用者提供的終端 transcript；使用者已撤銷／refresh。
+  不保留或記錄新 token，該 transcript 不可提交或再次分享。
 - 已在 PR #5 更新分工以避免隊友重複實作：
   `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084377900`。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 使用者在自己的 PowerShell session 設定有 Inference Providers 權限的
-   `HF_TOKEN`，執行
-   `python -m home_repair_agent.agent.demo --model-provider huggingface`；
-   只用 synthetic prompts，記錄 tool selection、參數、延遲與額度。
-2. 組員先審查／合併 PR #5。其 squash merge 後同步 `main`，在 Demo 分支執行
-   `git rebase --onto origin/main 55110e3 feature/matching-terminal-demo`，
-   重跑完整測試後再建立 Demo PR。
-3. Demo rebase 後，重疊 HF-only commit：
-   `git rebase --onto feature/matching-terminal-demo ab9fe49 feature/huggingface-model-adapter`；
-   重跑測試，再建立獨立 PR。不要 force-push 未協調的共享分支。
+1. 先等組員在 PR #5 討論串確認 Web scope／分工；今天不開始 UI 實作。
+2. 同意後第一個動作：
+   `git fetch origin --prune`，確認 PR #5 與 stacked branches 狀態；再從團隊同意
+   的最新整合基線建立 `feature/web-demo-vertical-slice`，不要再盲目疊分支。
+3. P0 consumer vertical slice TODO（依序）：
+   - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
+   - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
+   - 結構化 session state：service/location/form answers/time window/candidates。
+   - `single_select` 用 radio；日期時間由 UI 產生 Asia/Taipei aware ISO window。
+   - 必填完成且時間驗證通過後才媒合；禁止模型捏造日期、修改偏好或替換服務。
+   - provider label／debug trace 可見；切 HF→Bedrock 時 UI/API contract 不變。
+4. P1 TODO：最小服務廠商後台（案件列表、摘要、狀態）；需先完成有確認與冪等的
+   case submission contract。語音、登入、付款、真實師傅、照片、完整後台、
+   AWS 部署皆不納入 P0。
+5. P0 驗收：需求文字 → 三個真 Tool → 手動完成欄位 → validated matching Tool
+   → 顯示 tool result 的 synthetic 候選；換 `ModelClient` 時前端零修改。
 
 ## 4. 條目（全部為 active）
 
@@ -57,6 +63,10 @@ adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待�
   matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 - [active] 已授權串接 Hugging Face 模型（原話：「幫我做一件事情，就是串一下
   huggingface的模型來做這件問題」，2026-07-27）。
+- [active] 下一步改為可操作 UI＋正確模型 Demo，並保持日後串 AWS 只需替換
+  adapter；今天先列 TODO、更新 handoff、徵求組員同意，明天再做
+  （使用者原話，2026-07-27）。
+- [active] HF token 已 refresh；舊 token 視為失效，不重新要求或記錄新 token。
 
 ### Agent assumptions（可質疑）
 
@@ -66,11 +76,17 @@ adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待�
   fallback 必須在 log、CLI/UI 與回應 metadata 可見；`bedrock` mode 不得
   靜默降級。
 - [active] Hugging Face adapter 重用既有 `ModelClient`、`AgentRunner` 與 MCP
-  tool loop；default model 可替換，尚未以 live eval 鎖定競賽用模型。
+  tool loop；live 已證明 transport 可用，但尚未完成固定 eval。
+- [active] P0 建議同 repo 以 FastAPI＋輕量 web frontend 提供單一部署網址，
+  但 React/Vite 或無 build 的 HTML/CSS/JS 尚待組員確認。
+- [active] UI state 應由 deterministic backend view model 驅動；LLM reply
+  只作說明，不作 checkbox、日期或 business state 的 source of truth。
 
 ### Open issues（待決）
 
-- [active] Hugging Face live eval 的 token、額度、模型品質與延遲尚未驗證。
+- [active] 組員是否同意 P0/P1 scope、技術棧與分工？
+- [active] Web branch 要等 PR #5 合併後從 main 開，還是暫時以整合分支開工？
+- [active] consultation session state P0 存 memory；何時切 PostgreSQL？
 - [active] Bedrock provider routing 何時實作、由誰負責？
 - [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
 - [active] 若要完全離線的本機 open model，runtime、模型尺寸、硬體與
@@ -87,7 +103,7 @@ adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待�
 ## 5. 目前架構與工作邊界
 
 - 已完成：資料清洗、PostgreSQL schema/loader、四個唯讀 Service／MCP
-  Tools、`matching_v1` synthetic 媒合、Mock terminal Demo、HF adapter contract。
+  Tools、`matching_v1` synthetic 媒合、Mock terminal Demo、HF live adapter。
 - 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、時段保留、
   確認媒合與訂單。
 - Agent 介面：`src/home_repair_agent/agent/ports.py` 的 `ModelClient` /
@@ -112,5 +128,6 @@ adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待�
 - 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將 PR #5
   改為 Ready；完成只讀 matching terminal Demo 與 Hugging Face adapter
   （2026-07-26～27）。
-- 未授權：合併 matching-service PR、啟用寫入 MCP Tools、部署 AWS 資源或
-  選定特定本機模型。
+- 已授權本次：只更新 Web scope/TODO/handoff 並徵求組員同意；UI 明天再做。
+- 未授權：合併 matching-service PR、今天開始 UI、啟用寫入 MCP Tools、
+  部署 AWS 資源或選定特定本機模型。

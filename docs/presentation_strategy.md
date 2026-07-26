@@ -19,7 +19,7 @@
 | 7 | MCP：讓任何管家都能調用我們 | 8 個 tool 清單＋Inspector/外部 Agent 調用錄影截圖；service 層一份邏輯兩個協定入口 | tool 表＋調用時序圖 | 技術、切合 | MCP 調用錄影 |
 | 8 | 資料應用：站在官方 schema 上 | 官方 7+1+2 表直接採用；PII AES-256-GCM＋hash 實作；我們補齊的缺口（vendors 表、type=07）；合成資料方法 | ERD 精簡圖＋加密欄位 DB 截圖 | 技術、商業、切合 | DB 截圖、資料字典 |
 | 9 | 商業價值：生態系的入口 | 轉換率提升邏輯→媒合抽成/訂閱模型→OpenPoint 點數回流零售→高齡市場延伸 | 商業飛輪圖＋一頁財務假設（保守） | 商業 25% | 點數欄位佐證、市場數字 1–2 個 |
-| 10 | 完成度與下一步 | 已完成 checklist（閉環/MCP/加密/eval）vs 未來規劃（KMS/Cognito/Bedrock Agents/更多場景）；Kiro 使用說明；團隊分工 | 兩欄 done/next＋Kiro 截圖 | 完成度、Kiro | Kiro 證據、GitHub 連結 QR code |
+| 10 | 完成度與下一步 | 已完成 checklist（閉環/MCP/加密/eval）vs 未來規劃（KMS/Cognito/更多場景）；Kiro 使用說明；團隊分工 | 兩欄 done/next＋Kiro 截圖 | 完成度、Kiro | Kiro 證據、GitHub 連結 QR code |
 
 > 簡報紀律：每頁一個重點句放大；數字一律有出處（官方資料或自己的 eval）；「未來規劃」永遠誠實標註未實作。
 
@@ -54,7 +54,7 @@
 | 13 | 語音準確率不高怎麼辦？ | 雙通道設計，語音轉寫後回顯確認再進流程；轉寫錯誤由確認步驟攔截 |
 | 14 | 兩人怎麼分工的？ | 資工：Agent/API/MCP/AWS/加密；統計：prompt 與 eval、合成資料、媒合計分、後台與統計圖表——各自對應未來職涯，講得出每行程式歸屬 |
 | 15 | 最困難的技術點？ | 誠實選一個真的卡過的（如 tool use 參數穩定性/slot filling 不重複追問），講「問題→嘗試→解法→數據」 |
-| 16 | 為什麼不用 LangChain/Bedrock Agents？ | 工具數 8 個、流程可控，自寫迴圈透明可測；託管編排在此規模是黑盒負債——規模化後才是它們的場景（未來頁有寫） |
+| 16 | 為什麼不用 LangChain/Bedrock Agents Classic？ | 工具數 8 個、流程可控，自寫迴圈透明可測；本案以 AgentCore 託管自製 Agent，避免同時維護兩套編排方式 |
 | 17 | Kiro 怎麼用的？ | 指 repo `.kiro/` spec 與 commit 紀錄：用於生成後台頁/測試/README，核心 agent 邏輯自寫——按官方 log 認定方式呈現 |
 | 18 | 這個增長到十萬用戶會怎樣？ | 無狀態 API 水平擴展、媒合已 serverless 化、DB 換 RDS 讀寫分離、Bedrock 配額提升——架構圖右側「production 演進」就是答案 |
 

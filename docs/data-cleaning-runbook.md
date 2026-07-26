@@ -90,8 +90,8 @@ python .\scripts\clean_data.py --reference-date 2026-08-01
 
 ### 原生 Windows 環境
 
-若 WSL 2／Hyper-V 會與 Intel XTU、其他 hypervisor 或必要硬體工具衝突，不要
-為了 Docker 啟用 Windows hypervisor。可從
+若電腦無法使用 WSL 2／Hyper-V，或不適合為 Docker 啟用 Windows hypervisor，
+可從
 [PostgreSQL Windows 官方下載頁](https://www.postgresql.org/download/windows/)
 取得 EDB 提供的 PostgreSQL 16 Windows binary ZIP，在純英文暫存路徑使用
 `initdb`、`pg_ctl` 與非預設連接埠啟動暫時資料庫。

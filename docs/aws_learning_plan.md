@@ -1,7 +1,10 @@
 # aws_learning_plan.md — AWS 學習計畫（零經驗、只學必要的）
 
 > 原則：每學一個服務，都必須同時回答「Demo 用在哪」與「簡報架構圖講什麼」。學了但上不了架構圖＝浪費時間。
-> 前置一次性設定（兩人共做，約 2 小時）：註冊帳號（或等主辦提供）→ 開 IAM user（絕不用 root 寫程式）→ 本機 `aws configure` → 設定 billing alert（$10、$50 兩道）→ 在 Bedrock console 申請模型存取（Claude 系列，審核可能要等，**第一天就做**）。
+> 目前沒有比賽 AWS 憑證時，先用 Mock Model、本機 MCP 與本機 PostgreSQL，不建立
+> 假金鑰。主辦方提供環境後，優先使用暫時憑證或 IAM Identity Center，確認指定
+> Region、模型、額度與 AgentCore 權限。若使用 Anthropic 模型，再完成一次性的
+> First Time Use 表單；其他基礎模型在 IAM 權限正確時通常已預設可用。
 
 ---
 
@@ -11,17 +14,22 @@
 - **為什麼要學**：系統大腦；「AWS 生成式 AI 黑客松」的架構圖不可能沒有它
 - **本題怎麼用**：意圖分類、多輪追問、表單預填、案件摘要、報修照片理解
 - **最小 PoC**：boto3 `converse()` 傳「我家馬桶不通」→ 回 JSON `{service_type, confidence}`；再加一輪 tool use；再傳一張照片
-- **預估學習時間**：0.5 天（含等模型存取審核的空檔看文件）
-- **最容易踩雷**：① 模型存取沒先申請，寫好程式才發現 403；② region 選錯（模型不是每區都有，建議 us-west-2 或工作坊指定區）；③ 忘了 tool use 要自己寫「執行→回填」迴圈
+- **預估學習時間**：0.5 天
+- **最容易踩雷**：① IAM 缺少 `bedrock:InvokeModel`；② Region 或指定模型不可用；
+  ③ Anthropic 首次使用表單尚未完成；④ 忘了 client-side tool use 要由自己的程式
+  執行工具並回填結果
 - **Demo 呈現**：對話視窗即 Bedrock 輸出；可加「本次呼叫工具鏈」側欄可視化
 - **簡報亮點講法**：「LLM 不直接寫資料庫——所有動作經過受控的 tool 白名單，Bedrock tool use 保證輸出結構化、可驗證」
 
 ### 2. IAM（最小限度）
 - **為什麼要學**：不會 IAM 連 Bedrock 都打不通
-- **本題怎麼用**：程式用 IAM user；Lambda 執行 role 掛 Bedrock/S3 權限
-- **最小 PoC**：建 user＋access key，本機成功呼叫 Bedrock
+- **本題怎麼用**：開發者使用暫時憑證；Runtime、Gateway、Lambda 使用各自的 IAM role
+- **最小 PoC**：使用主辦方 session 或 IAM Identity Center 登入，先讓
+  `sts get-caller-identity` 成功，再呼叫 Bedrock
 - **預估學習時間**：2 小時
-- **最容易踩雷**：AccessDenied 訊息看不懂——先檢查「誰在呼叫（user/role）」再檢查「policy 允許了什麼 action」；黑客松用 AWS managed policy 就好，不要自寫 JSON
+- **最容易踩雷**：AccessDenied 訊息看不懂。先檢查「誰在呼叫（user/role）」、
+  「目前 Region」與「policy 允許了什麼 action」；不要使用 root，也不要把長期
+  access key 寫進 `.env` 或 GitHub
 - **Demo 呈現**：不呈現
 - **簡報亮點講法**：資安 Q&A 備彈：「服務間權限走 IAM role 最小授權」
 
@@ -41,24 +49,37 @@
 
 ## P1 建議學（讓架構完整、簡報更好看）
 
-### 5. AWS Lambda（包 1–2 支純函式）
+### 5. Amazon Bedrock AgentCore Runtime / Gateway
+- **為什麼要學**：這是工作坊展示的 Agent 執行與 MCP 工具入口，也是自家 Agent
+  和 Lumine one 共用工具的方式
+- **本題怎麼用**：Runtime 託管自製 Agent 或 FastMCP Server；Gateway 讓 Agent 以
+  `tools/list`、`tools/call` 發現並呼叫白名單工具
+- **最小 PoC**：先把一個本機 FastMCP tool 部署到 Runtime，再由 Gateway 成功列出
+  並呼叫；下一步才接完整 Service Layer
+- **預估學習時間**：0.5–1 天
+- **最容易踩雷**：把 AgentCore Gateway 和 API Gateway 混為一談；前者面向 MCP
+  Agent 工具，後者面向一般 HTTP API
+- **Demo 呈現**：在側欄顯示 Gateway 實際呼叫的 tool 名稱、輸入摘要與延遲
+
+### 6. AWS Lambda（最多一支展示）
 - **為什麼要學**：serverless 是雲端履歷關鍵字；讓架構圖不只一個後端方塊
-- **本題怎麼用**：`search_vendor`（媒合計分）、`summarize_case`（案件摘要，內呼 Bedrock）
+- **本題怎麼用**：有餘裕時把一個無狀態工具做成 AgentCore Gateway 的 Lambda target
 - **最小 PoC**：console 建 Python Lambda，測試事件回傳假廠商列表
 - **預估學習時間**：0.5 天
-- **最容易踩雷**：① 第三方依賴要打包（layer/容器），**對策：媒合 Lambda 只用標準庫＋boto3，不連 DB，資料由呼叫端帶入或內嵌 JSON**；② timeout 預設 3 秒，呼叫 Bedrock 要調到 30–60 秒；③ log 在 CloudWatch 不在 console
+- **最容易踩雷**：為展示而複製一套媒合邏輯。Lambda 和 FastMCP 必須呼叫同一個
+  Service Layer；若部署依賴或資料庫網路尚未打通，就保留 FastMCP 版本
 - **Demo 呈現**：「推薦服務商」瞬間背後是 Lambda——側欄顯示呼叫延遲
 - **簡報亮點講法**：「媒合引擎 serverless 化，尖峰自動擴展、閒置零成本——符合社區服務晚間尖峰的流量形態」
 
-### 6. API Gateway
-- **為什麼要學**：Lambda 沒有它就沒有公開 URL
-- **本題怎麼用**：`POST /vendors/search` → Lambda
-- **最小 PoC**：HTTP API（不是 REST API，較簡單便宜）掛通、curl 成功
-- **預估學習時間**：2 小時（與 Lambda 同天）
-- **最容易踩雷**：CORS——前端跨域呼叫要在 API Gateway 開 CORS；deploy stage 忘了發布改動
-- **簡報亮點講法**：「對外 API 統一入口，未來加金鑰與流量控管即可開放給合作廠商」——直接呼應命題「若合作廠商提供 API」的想像
+### 7. API Gateway（有一般 REST API 需求才學）
+- **為什麼要學**：讓一般網頁、手機或合作廠商以 HTTPS 呼叫 Lambda / REST API
+- **本題怎麼用**：只有確定要公開 `POST /vendors/search` 等 REST endpoint 時才加
+- **最小 PoC**：將一支 Lambda 掛到 HTTP API 並用測試 client 打通
+- **預估學習時間**：2 小時
+- **最容易踩雷**：把它誤當 AgentCore Gateway。Agent 呼叫 MCP Tools 已由
+  AgentCore Gateway 負責，不需要再多繞一層 API Gateway
 
-### 7. Amazon Transcribe（若做語音模組）
+### 8. Amazon Transcribe（若做語音模組）
 - **為什麼要學**：語音是「智慧管家可透過語音互動」的官方場景；AWS AI 服務展示點
 - **本題怎麼用**：長者語音 → 文字進對話管線；demo 現場用預錄音檔
 - **最小 PoC**：一段 10 秒中文 wav 上 S3 → batch transcription job → 取回文字
@@ -67,7 +88,7 @@
 - **Demo 呈現**：播放長者語音 → 文字出現 → AI 接手追問
 - **簡報亮點講法**：「同一套對話引擎，文字與語音雙通道；語音層用 Transcribe/Polly，高齡使用者零打字完成留資」
 
-### 8. CloudWatch（被動使用）
+### 9. CloudWatch（被動使用）
 - 學習時間 30 分鐘：會看 Lambda log group 排錯即可。簡報講法：「全鏈路 log 可審計」。
 
 ---
@@ -88,7 +109,7 @@
 
 | 服務 | 為什麼不學 | 簡報替代講法 |
 |---|---|---|
-| Bedrock Agents / Knowledge Base | 託管黑盒難除錯，行為不可控，賽場翻車率高 | 「未來規模化後遷移至 Bedrock Agents 託管編排」 |
+| Bedrock Agents Classic / Knowledge Base | 本案已選自製 Agent＋AgentCore；不要再疊另一套編排框架 | 「目前以 AgentCore 託管自製 Agent，保留框架控制權」 |
 | Step Functions | 學習成本高，本題狀態流用 DB 欄位即可表達 | 未來架構圖畫一個狀態機示意 |
 | Cognito | 真登入對 demo 無增益，設定繁瑣 | 「production 採 Cognito＋UniOpen SSO」 |
 | SageMaker | 本題零自訓模型需求 | 不提，提了反而被追問 |
@@ -102,14 +123,16 @@
 
 | 天 | 主題 | 具體任務 | 產出（驗收） |
 |---|---|---|---|
-| D1 | 帳號＋IAM＋Bedrock 申請 | 開帳號、billing alert、IAM user、`aws configure`、**申請 Claude 模型存取**、讀 Converse API 文件 | `aws sts get-caller-identity` 成功；模型申請送出 |
+| D1 | 帳號＋IAM＋Bedrock 可用性 | 使用主辦方暫時憑證或 IAM Identity Center、確認 Region / model ID / 額度；選 Anthropic 才填首次使用表單 | `aws sts get-caller-identity` 與一次 Converse 呼叫成功 |
 | D2 | Bedrock 基礎 | boto3 converse 第一次對話；試 system prompt；量測延遲 | 「馬桶不通」→ 正確 JSON 分類 |
 | D3 | Bedrock tool use | 定義 `classify_service_type`＋`search_vendor` 兩個 tool，寫執行迴圈 | 一句話觸發兩段 tool 呼叫並總結 |
 | D4 | S3＋多模態 | 照片上傳、presigned URL；Claude 讀圖回結構化 JSON | 上傳馬桶照→判型正確→前端可顯示 |
-| D5 | Lambda | console 建 `search_vendor` Lambda（純 boto3＋內嵌假資料） | 測試事件回傳排序結果 |
-| D6 | API Gateway＋CloudWatch | 掛 HTTP API、開 CORS、故意報錯練習查 log | curl 公網 URL 成功；找得到錯誤 log |
-| D7 | 整合＋架構圖 | FastAPI 改呼叫 Lambda 版媒合；畫第一版 AWS 架構圖（draw.io） | 端到端跑通；架構圖 v1 存 repo |
+| D5 | AgentCore Runtime | 部署最小 Agent 或 FastMCP Server | Runtime endpoint 可呼叫 |
+| D6 | AgentCore Gateway＋CloudWatch | 將 Runtime MCP Server 加為 target；練習 `tools/list` / `tools/call` 並查看 log | Gateway 成功呼叫一個真實 tool |
+| D7 | 整合＋架構圖 | 切換 Bedrock / Gateway adapters，跑完整閉環；Lambda 僅在有餘裕時追加 | 端到端跑通；架構圖與實作一致 |
 
 **分工**：D1–D2 兩人一起（都要會打 Bedrock）；D3–D7 資工主開發、統計同步做 prompt 語料與假資料（見 data_plan），每天收工前互相 demo 十分鐘。
 
-**履歷收割**：完賽後你們可以寫——「以 Bedrock Claude tool-use 建構多輪需求理解 Agent；Lambda＋API Gateway 部署 serverless 媒合服務；PII 以 AES-256-GCM 加密並以 hash 欄位支援等值查詢；MCP Server 對外提供標準化工具接口」。每個字都對應真的做過的東西。
+**履歷收割**：完成後可依實際成果寫「以 Amazon Bedrock tool use 建構多輪需求
+理解 Agent；以 AgentCore Runtime / Gateway 部署並治理 MCP 工具；PII 以
+AES-256-GCM 加密並以 hash 欄位支援等值查詢」。只寫真正完成並展示過的部分。

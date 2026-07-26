@@ -22,7 +22,7 @@ AWS 上的「模型即服務」：用一支 API 呼叫 Claude、Llama、Titan �
 - 30 分鐘：懂 console 開通模型存取、什麼是 model id、on-demand 計費
 - 2 小時：用 boto3 `converse()` 完成一次對話＋一次 tool use 回圈
 - 1 天：多模態（傳圖）、system prompt 設計、錯誤重試
-- 不建議深入：fine-tuning、Bedrock Agents 進階編排、Knowledge Base 調參
+- 不建議深入：fine-tuning、Bedrock Agents Classic 編排、Knowledge Base 調參
 
 ### 最小實作任務
 用 boto3 呼叫 Claude：傳入「我家馬桶不通」，要求回傳 JSON `{service_type, missing_fields}`。
@@ -216,12 +216,14 @@ AWS 的權限系統：誰（user/role）能對什麼資源做什麼操作。
 
 ### 是否必要？ **必學（P0，最小限度）**
 ### 需要學到什麼程度？
-- 30 分鐘：user / role / policy 三概念、不要用 root、建 access key
+- 30 分鐘：principal / role / policy 三概念、不要用 root、優先使用暫時憑證
 - 2 小時：給 Lambda 掛上 Bedrock＋S3 權限的 managed policy
-- 不建議深入：自寫細粒度 policy、SCP、跨帳號
+- 不建議深入：SCP、跨帳號；但正式部署應逐步從 managed policy 收斂為最小權限
 
 ### 最小實作任務
-建一個 IAM user（程式用），本機 `aws configure` 後成功呼叫一次 Bedrock。
+使用主辦方提供的 session 或 IAM Identity Center 登入，確認
+`aws sts get-caller-identity` 後成功呼叫一次 Bedrock。長期 access key 不得放入
+`.env`、原始碼或 GitHub。
 
 ### 求職價值：DS △｜AIE ○｜Infra ◎｜BE ○｜Cloud ◎
 

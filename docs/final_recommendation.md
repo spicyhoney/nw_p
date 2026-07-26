@@ -15,15 +15,19 @@
 ```
 Frontend   : Streamlit（消費者聊天頁＋廠商後台）；Kiro 生成 React 聊天頁為選配升級
 Backend    : FastAPI（Python）＋ service 層共用
-AI         : Amazon Bedrock — Claude（Converse API：對話/tool use/多模態/摘要）
-MCP        : Python MCP SDK（FastMCP），stdio＋HTTP，與 FastAPI 共用 service 層
-Database   : PostgreSQL（Docker；直接匯入官方 3 個 SQL 檔）＋ S3（照片）
-AWS 增量   : Lambda×2（search_vendor / summarize_case）＋ API Gateway ＋ CloudWatch；語音選配 Transcribe
+AI         : Amazon Bedrock（Converse API：對話/tool use/多模態/摘要）
+Agent      : 自製 Python Agent；AWS 目標為 AgentCore Runtime
+MCP        : Python MCP SDK（FastMCP）＋ AgentCore Gateway，與 FastAPI 共用 service 層
+Database   : 本機 PostgreSQL；正式環境目標為 RDS for PostgreSQL
+AWS        : AgentCore Runtime / Gateway＋IAM＋CloudWatch；照片選配 S3
+AWS 選配   : Lambda target×1；確有一般 REST API 需求才加 API Gateway
 安全       : Python cryptography 做 AES-256-GCM＋SHA-256 hash（照官方欄位規格）
-部署       : Docker Compose 全容器化（應對未知的 EDIMUS/Ademus）
+部署       : 本機可用原生 PostgreSQL 或 Docker；雲端依主辦方環境部署
 協作       : GitHub（PR flow）＋ Kiro（留痕拿 +5%）
 ```
-不用：LangChain/LangGraph、Bedrock Agents、DynamoDB（主庫）、Cognito、Step Functions、n8n——全部只出現在簡報「未來架構」。
+不用：LangChain/LangGraph、Bedrock Agents Classic、DynamoDB（主庫）、Cognito、
+Step Functions、n8n。AgentCore Runtime / Gateway 是目前主架構，不要和
+Bedrock Agents Classic 混為一談。
 
 ## 3. 最推薦優先學的工具（10 個）
 
@@ -36,11 +40,12 @@ AWS 增量   : Lambda×2（search_vendor / summarize_case）＋ API Gateway ＋ 
 7. Docker Compose
 8. Kiro
 9. AES-256-GCM＋hash（cryptography 套件）
-10. Lambda＋API Gateway（一組學）
+10. AgentCore Runtime＋Gateway
 
 ## 4. 最推薦先做的 5 個 PoC（依序）
 
-1. **T01 Bedrock 首呼**（憑證＋模型存取全通——今天就申請模型存取）
+1. **T01 Bedrock 首呼**（取得憑證後確認 Region、model ID 與 IAM；選 Anthropic
+   才需完成首次使用表單）
 2. **T04 官方 SQL 匯入＋寫一筆諮詢單**（資料層地基＋讀懂官方結構）
 3. **T02 Tool use 迴圈**（Agent 架構成立前提）
 4. **T05 MCP Server 最小版**（命題必做項，早通早安心）
@@ -50,12 +55,13 @@ AWS 增量   : Lambda×2（search_vendor / summarize_case）＋ API Gateway ＋ 
 
 **Day 1（今天）**
 - [ ] 兩人各花 40 分鐘讀完 brainstorm.md＋final_recommendation.md，約定明晚拍板題目
-- [ ] 申請/確認 AWS 帳號，**送出 Bedrock Claude 模型存取申請**（審核有等待期，最優先）
-- [ ] 建 GitHub repo（含 docs/ 放本文件包）；裝 Docker Desktop
+- [ ] 取得/確認 AWS 帳號或主辦方暫時憑證，確認 Bedrock 指定 Region、model ID、
+  額度與 AgentCore 權限
+- [ ] 建 GitHub repo（含 docs/ 放本文件包）；依電腦環境選原生 PostgreSQL 或 Docker
 
 **Day 2**
 - [ ] 拍板：主體題目＋demo 的 2 個服務場景＋persona（人類決策，見第 6 節）
-- [ ] A：Docker Postgres 起庫＋匯入官方 3 個 SQL 檔（T04 前半）
+- [ ] A：PostgreSQL 起庫＋匯入官方 3 個 SQL 檔（T04 前半）
 - [ ] B：手寫 20 句 eval 語料（六類服務＋3 個陷阱題）
 
 **Day 3**

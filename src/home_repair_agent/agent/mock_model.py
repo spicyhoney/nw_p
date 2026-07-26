@@ -115,7 +115,14 @@ class RuleBasedRepairMockModel:
                     return _search_latest_user(messages)
                 return ModelTurn.answer("目前找不到唯一支援的服務，請再具體描述需要處理的問題。")
 
-            location = _extract_location(_all_user_text(messages))
+            location_text = _all_user_text(messages)
+            if (
+                location_result is not None
+                and not _is_success(location_result.payload)
+                and _has_user_after(messages, location_result)
+            ):
+                location_text = _latest_user_text(messages)
+            location = _extract_location(location_text)
             if location is None:
                 return ModelTurn.answer("請提供完整的縣市與行政區，例如「臺北市大安區」。")
 
@@ -227,6 +234,13 @@ def _all_user_text(messages: Sequence[ConversationMessage]) -> str:
     return " ".join(
         message.text for message in messages if isinstance(message, UserMessage)
     ).replace("台", "臺")
+
+
+def _latest_user_text(messages: Sequence[ConversationMessage]) -> str:
+    for message in reversed(messages):
+        if isinstance(message, UserMessage):
+            return message.text.replace("台", "臺")
+    return ""
 
 
 def _extract_location(text: str) -> tuple[str, str] | None:

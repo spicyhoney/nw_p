@@ -119,17 +119,18 @@ credentials 由標準 credential provider chain 或 IAM role 提供，不得寫�
 python -m pytest tests/test_agent_loop.py -q
 ```
 
-2026-07-26 結果：10 passed。涵蓋：
+2026-07-26 結果：11 passed。涵蓋：
 
 - 一句話依序呼叫三個真實 MCP Tools。
 - 缺少地點時，下一輪補充後繼續而不重查服務。
+- 行政區查詢失敗時，可在下一輪更正地點並繼續流程。
 - 表單答案跨輪保存，最後停在確認前。
 - 查無服務與行政區錯誤時不猜 ID。
 - 寫入 Tool 從模型可見 catalog 移除並拒絕執行。
 - 未知 Tool、Tool 例外與 catalog 例外的安全處理。
 - 重複 Tool Call 在最大步數停止。
 
-完整 test suite：36 passed、8 skipped。8 個 skipped 是需要
+完整 test suite：36 passed、9 skipped、25 subtests passed。9 個 skipped 是需要
 `TEST_DATABASE_URL` 的 PostgreSQL 整合測試。
 
 ## 尚未做

@@ -3,9 +3,10 @@
 > **文件狀態（2026-07-26）**：本頁主要是早期完整功能規劃，不代表所有 Tool
 > 已完成。實際程式狀態以 [實作索引](implementation-index.md) 與
 > [MCP Server README](../src/home_repair_agent/mcp_server/README.md) 為準。
-> 第一階段目前只完成 `search_services`、`resolve_location`、
-> `get_consultation_form` 三個唯讀 Tool。下方八個 Tool 是後續候選設計，名稱與
-> schema 在實作前仍可調整。
+> 第一階段目前已完成 `search_services`、`resolve_location`、
+> `get_consultation_form` 三個唯讀 Tool，以及可替換 ModelClient 的本機 Agent
+> 迴圈。真實 Bedrock adapter、寫入與下方八個候選 Tool 尚未完成，名稱與 schema
+> 在實作前仍可調整。
 
 ## 1. 本題為什麼適合 MCP / Tool Calling？
 

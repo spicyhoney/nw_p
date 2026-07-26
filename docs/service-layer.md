@@ -188,5 +188,5 @@ python -m unittest discover -s tests -v
 
 1. 加入 FastAPI read endpoints，和 MCP 共用同一層。
 2. 實作 `match_service_providers` 只讀媒合。
-3. 建立 Agent 對話骨架並評估是否正確選用三個 MCP Tools。
+3. 將已完成的 Mock Agent 迴圈替換為 BedrockModelClient 並做 tool-selection eval。
 4. 設計使用者確認契約後，才實作建案與建單等寫入 Service。

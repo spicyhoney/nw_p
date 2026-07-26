@@ -1,0 +1,3829 @@
+{
+  "counties": [
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000"
+    },
+    {
+      "county_name": "嘉義市",
+      "county_name_raw": "嘉義市",
+      "nlsc_county_code": "I",
+      "nlsc_county_code01": "10020"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007"
+    },
+    {
+      "county_name": "新竹市",
+      "county_name_raw": "新竹市",
+      "nlsc_county_code": "O",
+      "nlsc_county_code01": "10018"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016"
+    },
+    {
+      "county_name": "連江縣",
+      "county_name_raw": "連江縣",
+      "nlsc_county_code": "Z",
+      "nlsc_county_code01": "09007"
+    }
+  ],
+  "districts": [
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "松山區",
+      "district_name_raw": "松山區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000010",
+      "nlsc_town_code01": "A01"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "信義區",
+      "district_name_raw": "信義區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000020",
+      "nlsc_town_code01": "A17"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "大安區",
+      "district_name_raw": "大安區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000030",
+      "nlsc_town_code01": "A02"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "中山區",
+      "district_name_raw": "中山區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000040",
+      "nlsc_town_code01": "A10"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "中正區",
+      "district_name_raw": "中正區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000050",
+      "nlsc_town_code01": "A03"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "大同區",
+      "district_name_raw": "大同區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000060",
+      "nlsc_town_code01": "A09"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "萬華區",
+      "district_name_raw": "萬華區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000070",
+      "nlsc_town_code01": "A05"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "文山區",
+      "district_name_raw": "文山區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000080",
+      "nlsc_town_code01": "A11"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "南港區",
+      "district_name_raw": "南港區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000090",
+      "nlsc_town_code01": "A13"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "內湖區",
+      "district_name_raw": "內湖區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000100",
+      "nlsc_town_code01": "A14"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "士林區",
+      "district_name_raw": "士林區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000110",
+      "nlsc_town_code01": "A15"
+    },
+    {
+      "county_name": "台北市",
+      "county_name_raw": "臺北市",
+      "district_name": "北投區",
+      "district_name_raw": "北投區",
+      "nlsc_county_code": "A",
+      "nlsc_county_code01": "63000",
+      "nlsc_town_code": "63000120",
+      "nlsc_town_code01": "A16"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "中區",
+      "district_name_raw": "中區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000010",
+      "nlsc_town_code01": "B01"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "東區",
+      "district_name_raw": "東區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000020",
+      "nlsc_town_code01": "B02"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "南區",
+      "district_name_raw": "南區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000030",
+      "nlsc_town_code01": "B03"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "西區",
+      "district_name_raw": "西區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000040",
+      "nlsc_town_code01": "B04"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "北區",
+      "district_name_raw": "北區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000050",
+      "nlsc_town_code01": "B05"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "西屯區",
+      "district_name_raw": "西屯區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000060",
+      "nlsc_town_code01": "B06"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "南屯區",
+      "district_name_raw": "南屯區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000070",
+      "nlsc_town_code01": "B07"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "北屯區",
+      "district_name_raw": "北屯區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000080",
+      "nlsc_town_code01": "B08"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "豐原區",
+      "district_name_raw": "豐原區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000090",
+      "nlsc_town_code01": "B09"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "東勢區",
+      "district_name_raw": "東勢區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000100",
+      "nlsc_town_code01": "B10"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "大甲區",
+      "district_name_raw": "大甲區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000110",
+      "nlsc_town_code01": "B11"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "清水區",
+      "district_name_raw": "清水區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000120",
+      "nlsc_town_code01": "B12"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "沙鹿區",
+      "district_name_raw": "沙鹿區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000130",
+      "nlsc_town_code01": "B13"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "梧棲區",
+      "district_name_raw": "梧棲區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000140",
+      "nlsc_town_code01": "B14"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "后里區",
+      "district_name_raw": "后里區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000150",
+      "nlsc_town_code01": "B15"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "神岡區",
+      "district_name_raw": "神岡區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000160",
+      "nlsc_town_code01": "B16"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "潭子區",
+      "district_name_raw": "潭子區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000170",
+      "nlsc_town_code01": "B17"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "大雅區",
+      "district_name_raw": "大雅區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000180",
+      "nlsc_town_code01": "B18"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "新社區",
+      "district_name_raw": "新社區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000190",
+      "nlsc_town_code01": "B19"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "石岡區",
+      "district_name_raw": "石岡區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000200",
+      "nlsc_town_code01": "B20"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "外埔區",
+      "district_name_raw": "外埔區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000210",
+      "nlsc_town_code01": "B21"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "大安區",
+      "district_name_raw": "大安區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000220",
+      "nlsc_town_code01": "B22"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "烏日區",
+      "district_name_raw": "烏日區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000230",
+      "nlsc_town_code01": "B23"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "大肚區",
+      "district_name_raw": "大肚區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000240",
+      "nlsc_town_code01": "B24"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "龍井區",
+      "district_name_raw": "龍井區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000250",
+      "nlsc_town_code01": "B25"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "霧峰區",
+      "district_name_raw": "霧峰區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000260",
+      "nlsc_town_code01": "B26"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "太平區",
+      "district_name_raw": "太平區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000270",
+      "nlsc_town_code01": "B27"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "大里區",
+      "district_name_raw": "大里區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000280",
+      "nlsc_town_code01": "B28"
+    },
+    {
+      "county_name": "台中市",
+      "county_name_raw": "臺中市",
+      "district_name": "和平區",
+      "district_name_raw": "和平區",
+      "nlsc_county_code": "B",
+      "nlsc_county_code01": "66000",
+      "nlsc_town_code": "66000290",
+      "nlsc_town_code01": "B29"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "中正區",
+      "district_name_raw": "中正區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017010",
+      "nlsc_town_code01": "C01"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "七堵區",
+      "district_name_raw": "七堵區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017020",
+      "nlsc_town_code01": "C02"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "暖暖區",
+      "district_name_raw": "暖暖區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017030",
+      "nlsc_town_code01": "C03"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "仁愛區",
+      "district_name_raw": "仁愛區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017040",
+      "nlsc_town_code01": "C04"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "中山區",
+      "district_name_raw": "中山區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017050",
+      "nlsc_town_code01": "C05"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "安樂區",
+      "district_name_raw": "安樂區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017060",
+      "nlsc_town_code01": "C06"
+    },
+    {
+      "county_name": "基隆市",
+      "county_name_raw": "基隆市",
+      "district_name": "信義區",
+      "district_name_raw": "信義區",
+      "nlsc_county_code": "C",
+      "nlsc_county_code01": "10017",
+      "nlsc_town_code": "10017070",
+      "nlsc_town_code01": "C07"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "新營區",
+      "district_name_raw": "新營區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000010",
+      "nlsc_town_code01": "D09"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "鹽水區",
+      "district_name_raw": "鹽水區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000020",
+      "nlsc_town_code01": "D10"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "白河區",
+      "district_name_raw": "白河區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000030",
+      "nlsc_town_code01": "D12"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "柳營區",
+      "district_name_raw": "柳營區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000040",
+      "nlsc_town_code01": "D11"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "後壁區",
+      "district_name_raw": "後壁區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000050",
+      "nlsc_town_code01": "D13"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "東山區",
+      "district_name_raw": "東山區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000060",
+      "nlsc_town_code01": "D14"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "麻豆區",
+      "district_name_raw": "麻豆區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000070",
+      "nlsc_town_code01": "D15"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "下營區",
+      "district_name_raw": "下營區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000080",
+      "nlsc_town_code01": "D16"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "六甲區",
+      "district_name_raw": "六甲區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000090",
+      "nlsc_town_code01": "D17"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "官田區",
+      "district_name_raw": "官田區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000100",
+      "nlsc_town_code01": "D18"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "大內區",
+      "district_name_raw": "大內區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000110",
+      "nlsc_town_code01": "D19"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "佳里區",
+      "district_name_raw": "佳里區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000120",
+      "nlsc_town_code01": "D20"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "學甲區",
+      "district_name_raw": "學甲區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000130",
+      "nlsc_town_code01": "D25"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "西港區",
+      "district_name_raw": "西港區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000140",
+      "nlsc_town_code01": "D21"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "七股區",
+      "district_name_raw": "七股區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000150",
+      "nlsc_town_code01": "D22"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "將軍區",
+      "district_name_raw": "將軍區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000160",
+      "nlsc_town_code01": "D23"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "北門區",
+      "district_name_raw": "北門區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000170",
+      "nlsc_town_code01": "D24"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "新化區",
+      "district_name_raw": "新化區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000180",
+      "nlsc_town_code01": "D26"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "善化區",
+      "district_name_raw": "善化區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000190",
+      "nlsc_town_code01": "D27"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "新市區",
+      "district_name_raw": "新市區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000200",
+      "nlsc_town_code01": "D28"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "安定區",
+      "district_name_raw": "安定區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000210",
+      "nlsc_town_code01": "D29"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "山上區",
+      "district_name_raw": "山上區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000220",
+      "nlsc_town_code01": "D30"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "玉井區",
+      "district_name_raw": "玉井區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000230",
+      "nlsc_town_code01": "D36"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "楠西區",
+      "district_name_raw": "楠西區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000240",
+      "nlsc_town_code01": "D37"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "南化區",
+      "district_name_raw": "南化區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000250",
+      "nlsc_town_code01": "D38"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "左鎮區",
+      "district_name_raw": "左鎮區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000260",
+      "nlsc_town_code01": "D31"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "仁德區",
+      "district_name_raw": "仁德區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000270",
+      "nlsc_town_code01": "D32"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "歸仁區",
+      "district_name_raw": "歸仁區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000280",
+      "nlsc_town_code01": "D33"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "關廟區",
+      "district_name_raw": "關廟區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000290",
+      "nlsc_town_code01": "D34"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "龍崎區",
+      "district_name_raw": "龍崎區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000300",
+      "nlsc_town_code01": "D35"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "永康區",
+      "district_name_raw": "永康區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000310",
+      "nlsc_town_code01": "D39"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "東區",
+      "district_name_raw": "東區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000320",
+      "nlsc_town_code01": "D01"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "南區",
+      "district_name_raw": "南區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000330",
+      "nlsc_town_code01": "D02"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "北區",
+      "district_name_raw": "北區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000340",
+      "nlsc_town_code01": "D04"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "安南區",
+      "district_name_raw": "安南區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000350",
+      "nlsc_town_code01": "D06"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "安平區",
+      "district_name_raw": "安平區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000360",
+      "nlsc_town_code01": "D07"
+    },
+    {
+      "county_name": "台南市",
+      "county_name_raw": "臺南市",
+      "district_name": "中西區",
+      "district_name_raw": "中西區",
+      "nlsc_county_code": "D",
+      "nlsc_county_code01": "67000",
+      "nlsc_town_code": "67000370",
+      "nlsc_town_code01": "D08"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "鹽埕區",
+      "district_name_raw": "鹽埕區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000010",
+      "nlsc_town_code01": "E01"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "鼓山區",
+      "district_name_raw": "鼓山區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000020",
+      "nlsc_town_code01": "E02"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "左營區",
+      "district_name_raw": "左營區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000030",
+      "nlsc_town_code01": "E03"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "楠梓區",
+      "district_name_raw": "楠梓區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000040",
+      "nlsc_town_code01": "E04"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "三民區",
+      "district_name_raw": "三民區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000050",
+      "nlsc_town_code01": "E05"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "新興區",
+      "district_name_raw": "新興區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000060",
+      "nlsc_town_code01": "E06"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "前金區",
+      "district_name_raw": "前金區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000070",
+      "nlsc_town_code01": "E07"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "苓雅區",
+      "district_name_raw": "苓雅區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000080",
+      "nlsc_town_code01": "E08"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "前鎮區",
+      "district_name_raw": "前鎮區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000090",
+      "nlsc_town_code01": "E09"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "旗津區",
+      "district_name_raw": "旗津區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000100",
+      "nlsc_town_code01": "E10"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "小港區",
+      "district_name_raw": "小港區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000110",
+      "nlsc_town_code01": "E11"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "鳳山區",
+      "district_name_raw": "鳳山區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000120",
+      "nlsc_town_code01": "E12"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "林園區",
+      "district_name_raw": "林園區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000130",
+      "nlsc_town_code01": "E13"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "大寮區",
+      "district_name_raw": "大寮區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000140",
+      "nlsc_town_code01": "E14"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "大樹區",
+      "district_name_raw": "大樹區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000150",
+      "nlsc_town_code01": "E15"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "大社區",
+      "district_name_raw": "大社區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000160",
+      "nlsc_town_code01": "E16"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "仁武區",
+      "district_name_raw": "仁武區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000170",
+      "nlsc_town_code01": "E17"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "鳥松區",
+      "district_name_raw": "鳥松區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000180",
+      "nlsc_town_code01": "E18"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "岡山區",
+      "district_name_raw": "岡山區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000190",
+      "nlsc_town_code01": "E19"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "橋頭區",
+      "district_name_raw": "橋頭區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000200",
+      "nlsc_town_code01": "E20"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "燕巢區",
+      "district_name_raw": "燕巢區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000210",
+      "nlsc_town_code01": "E21"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "田寮區",
+      "district_name_raw": "田寮區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000220",
+      "nlsc_town_code01": "E22"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "阿蓮區",
+      "district_name_raw": "阿蓮區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000230",
+      "nlsc_town_code01": "E23"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "路竹區",
+      "district_name_raw": "路竹區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000240",
+      "nlsc_town_code01": "E24"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "湖內區",
+      "district_name_raw": "湖內區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000250",
+      "nlsc_town_code01": "E25"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "茄萣區",
+      "district_name_raw": "茄萣區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000260",
+      "nlsc_town_code01": "E26"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "永安區",
+      "district_name_raw": "永安區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000270",
+      "nlsc_town_code01": "E27"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "彌陀區",
+      "district_name_raw": "彌陀區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000280",
+      "nlsc_town_code01": "E28"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "梓官區",
+      "district_name_raw": "梓官區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000290",
+      "nlsc_town_code01": "E29"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "旗山區",
+      "district_name_raw": "旗山區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000300",
+      "nlsc_town_code01": "E30"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "美濃區",
+      "district_name_raw": "美濃區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000310",
+      "nlsc_town_code01": "E31"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "六龜區",
+      "district_name_raw": "六龜區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000320",
+      "nlsc_town_code01": "E32"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "甲仙區",
+      "district_name_raw": "甲仙區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000330",
+      "nlsc_town_code01": "E33"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "杉林區",
+      "district_name_raw": "杉林區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000340",
+      "nlsc_town_code01": "E34"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "內門區",
+      "district_name_raw": "內門區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000350",
+      "nlsc_town_code01": "E35"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "茂林區",
+      "district_name_raw": "茂林區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000360",
+      "nlsc_town_code01": "E36"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "桃源區",
+      "district_name_raw": "桃源區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000370",
+      "nlsc_town_code01": "E37"
+    },
+    {
+      "county_name": "高雄市",
+      "county_name_raw": "高雄市",
+      "district_name": "那瑪夏區",
+      "district_name_raw": "那瑪夏區",
+      "nlsc_county_code": "E",
+      "nlsc_county_code01": "64000",
+      "nlsc_town_code": "64000380",
+      "nlsc_town_code01": "E38"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "板橋區",
+      "district_name_raw": "板橋區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000010",
+      "nlsc_town_code01": "F14"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "三重區",
+      "district_name_raw": "三重區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000020",
+      "nlsc_town_code01": "F05"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "中和區",
+      "district_name_raw": "中和區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000030",
+      "nlsc_town_code01": "F18"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "永和區",
+      "district_name_raw": "永和區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000040",
+      "nlsc_town_code01": "F33"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "新莊區",
+      "district_name_raw": "新莊區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000050",
+      "nlsc_town_code01": "F01"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "新店區",
+      "district_name_raw": "新店區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000060",
+      "nlsc_town_code01": "F07"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "樹林區",
+      "district_name_raw": "樹林區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000070",
+      "nlsc_town_code01": "F17"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "鶯歌區",
+      "district_name_raw": "鶯歌區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000080",
+      "nlsc_town_code01": "F16"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "三峽區",
+      "district_name_raw": "三峽區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000090",
+      "nlsc_town_code01": "F15"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "淡水區",
+      "district_name_raw": "淡水區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000100",
+      "nlsc_town_code01": "F27"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "汐止區",
+      "district_name_raw": "汐止區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000110",
+      "nlsc_town_code01": "F28"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "瑞芳區",
+      "district_name_raw": "瑞芳區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000120",
+      "nlsc_town_code01": "F21"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "土城區",
+      "district_name_raw": "土城區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000130",
+      "nlsc_town_code01": "F19"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "蘆洲區",
+      "district_name_raw": "蘆洲區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000140",
+      "nlsc_town_code01": "F04"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "五股區",
+      "district_name_raw": "五股區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000150",
+      "nlsc_town_code01": "F03"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "泰山區",
+      "district_name_raw": "泰山區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000160",
+      "nlsc_town_code01": "F06"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "林口區",
+      "district_name_raw": "林口區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000170",
+      "nlsc_town_code01": "F02"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "深坑區",
+      "district_name_raw": "深坑區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000180",
+      "nlsc_town_code01": "F09"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "石碇區",
+      "district_name_raw": "石碇區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000190",
+      "nlsc_town_code01": "F08"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "坪林區",
+      "district_name_raw": "坪林區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000200",
+      "nlsc_town_code01": "F10"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "三芝區",
+      "district_name_raw": "三芝區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000210",
+      "nlsc_town_code01": "F30"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "石門區",
+      "district_name_raw": "石門區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000220",
+      "nlsc_town_code01": "F31"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "八里區",
+      "district_name_raw": "八里區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000230",
+      "nlsc_town_code01": "F32"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "平溪區",
+      "district_name_raw": "平溪區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000240",
+      "nlsc_town_code01": "F22"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "雙溪區",
+      "district_name_raw": "雙溪區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000250",
+      "nlsc_town_code01": "F23"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "貢寮區",
+      "district_name_raw": "貢寮區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000260",
+      "nlsc_town_code01": "F24"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "金山區",
+      "district_name_raw": "金山區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000270",
+      "nlsc_town_code01": "F25"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "萬里區",
+      "district_name_raw": "萬里區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000280",
+      "nlsc_town_code01": "F26"
+    },
+    {
+      "county_name": "新北市",
+      "county_name_raw": "新北市",
+      "district_name": "烏來區",
+      "district_name_raw": "烏來區",
+      "nlsc_county_code": "F",
+      "nlsc_county_code01": "65000",
+      "nlsc_town_code": "65000290",
+      "nlsc_town_code01": "F11"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "宜蘭市",
+      "district_name_raw": "宜蘭市",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002010",
+      "nlsc_town_code01": "G01"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "羅東鎮",
+      "district_name_raw": "羅東鎮",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002020",
+      "nlsc_town_code01": "G06"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "蘇澳鎮",
+      "district_name_raw": "蘇澳鎮",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002030",
+      "nlsc_town_code01": "G09"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "頭城鎮",
+      "district_name_raw": "頭城鎮",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002040",
+      "nlsc_town_code01": "G02"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "礁溪鄉",
+      "district_name_raw": "礁溪鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002050",
+      "nlsc_town_code01": "G03"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "壯圍鄉",
+      "district_name_raw": "壯圍鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002060",
+      "nlsc_town_code01": "G04"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "員山鄉",
+      "district_name_raw": "員山鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002070",
+      "nlsc_town_code01": "G05"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "冬山鄉",
+      "district_name_raw": "冬山鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002080",
+      "nlsc_town_code01": "G08"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "五結鄉",
+      "district_name_raw": "五結鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002090",
+      "nlsc_town_code01": "G07"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "三星鄉",
+      "district_name_raw": "三星鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002100",
+      "nlsc_town_code01": "G10"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "大同鄉",
+      "district_name_raw": "大同鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002110",
+      "nlsc_town_code01": "G11"
+    },
+    {
+      "county_name": "宜蘭縣",
+      "county_name_raw": "宜蘭縣",
+      "district_name": "南澳鄉",
+      "district_name_raw": "南澳鄉",
+      "nlsc_county_code": "G",
+      "nlsc_county_code01": "10002",
+      "nlsc_town_code": "10002120",
+      "nlsc_town_code01": "G12"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "桃園區",
+      "district_name_raw": "桃園區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000010",
+      "nlsc_town_code01": "H01"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "中壢區",
+      "district_name_raw": "中壢區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000020",
+      "nlsc_town_code01": "H03"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "大溪區",
+      "district_name_raw": "大溪區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000030",
+      "nlsc_town_code01": "H02"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "楊梅區",
+      "district_name_raw": "楊梅區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000040",
+      "nlsc_town_code01": "H04"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "蘆竹區",
+      "district_name_raw": "蘆竹區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000050",
+      "nlsc_town_code01": "H05"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "大園區",
+      "district_name_raw": "大園區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000060",
+      "nlsc_town_code01": "H06"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "龜山區",
+      "district_name_raw": "龜山區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000070",
+      "nlsc_town_code01": "H07"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "八德區",
+      "district_name_raw": "八德區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000080",
+      "nlsc_town_code01": "H08"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "龍潭區",
+      "district_name_raw": "龍潭區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000090",
+      "nlsc_town_code01": "H09"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "平鎮區",
+      "district_name_raw": "平鎮區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000100",
+      "nlsc_town_code01": "H10"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "新屋區",
+      "district_name_raw": "新屋區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000110",
+      "nlsc_town_code01": "H11"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "觀音區",
+      "district_name_raw": "觀音區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000120",
+      "nlsc_town_code01": "H12"
+    },
+    {
+      "county_name": "桃園市",
+      "county_name_raw": "桃園市",
+      "district_name": "復興區",
+      "district_name_raw": "復興區",
+      "nlsc_county_code": "H",
+      "nlsc_county_code01": "68000",
+      "nlsc_town_code": "68000130",
+      "nlsc_town_code01": "H13"
+    },
+    {
+      "county_name": "嘉義市",
+      "county_name_raw": "嘉義市",
+      "district_name": "東區",
+      "district_name_raw": "東區",
+      "nlsc_county_code": "I",
+      "nlsc_county_code01": "10020",
+      "nlsc_town_code": "10020010",
+      "nlsc_town_code01": "I01"
+    },
+    {
+      "county_name": "嘉義市",
+      "county_name_raw": "嘉義市",
+      "district_name": "西區",
+      "district_name_raw": "西區",
+      "nlsc_county_code": "I",
+      "nlsc_county_code01": "10020",
+      "nlsc_town_code": "10020020",
+      "nlsc_town_code01": "I02"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "竹北市",
+      "district_name_raw": "竹北市",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004010",
+      "nlsc_town_code01": "J05"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "竹東鎮",
+      "district_name_raw": "竹東鎮",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004020",
+      "nlsc_town_code01": "J02"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "新埔鎮",
+      "district_name_raw": "新埔鎮",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004030",
+      "nlsc_town_code01": "J04"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "關西鎮",
+      "district_name_raw": "關西鎮",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004040",
+      "nlsc_town_code01": "J03"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "湖口鄉",
+      "district_name_raw": "湖口鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004050",
+      "nlsc_town_code01": "J06"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "新豐鄉",
+      "district_name_raw": "新豐鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004060",
+      "nlsc_town_code01": "J09"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "芎林鄉",
+      "district_name_raw": "芎林鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004070",
+      "nlsc_town_code01": "J10"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "橫山鄉",
+      "district_name_raw": "橫山鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004080",
+      "nlsc_town_code01": "J08"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "北埔鄉",
+      "district_name_raw": "北埔鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004090",
+      "nlsc_town_code01": "J12"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "寶山鄉",
+      "district_name_raw": "寶山鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004100",
+      "nlsc_town_code01": "J11"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "峨眉鄉",
+      "district_name_raw": "峨眉鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004110",
+      "nlsc_town_code01": "J13"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "尖石鄉",
+      "district_name_raw": "尖石鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004120",
+      "nlsc_town_code01": "J14"
+    },
+    {
+      "county_name": "新竹縣",
+      "county_name_raw": "新竹縣",
+      "district_name": "五峰鄉",
+      "district_name_raw": "五峰鄉",
+      "nlsc_county_code": "J",
+      "nlsc_county_code01": "10004",
+      "nlsc_town_code": "10004130",
+      "nlsc_town_code01": "J15"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "苗栗市",
+      "district_name_raw": "苗栗市",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005010",
+      "nlsc_town_code01": "K01"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "苑裡鎮",
+      "district_name_raw": "苑裡鎮",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005020",
+      "nlsc_town_code01": "K02"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "通霄鎮",
+      "district_name_raw": "通霄鎮",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005030",
+      "nlsc_town_code01": "K03"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "竹南鎮",
+      "district_name_raw": "竹南鎮",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005040",
+      "nlsc_town_code01": "K09"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "頭份市",
+      "district_name_raw": "頭份市",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005050",
+      "nlsc_town_code01": "K10"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "後龍鎮",
+      "district_name_raw": "後龍鎮",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005060",
+      "nlsc_town_code01": "K12"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "卓蘭鎮",
+      "district_name_raw": "卓蘭鎮",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005070",
+      "nlsc_town_code01": "K16"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "大湖鄉",
+      "district_name_raw": "大湖鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005080",
+      "nlsc_town_code01": "K15"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "公館鄉",
+      "district_name_raw": "公館鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005090",
+      "nlsc_town_code01": "K04"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "銅鑼鄉",
+      "district_name_raw": "銅鑼鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005100",
+      "nlsc_town_code01": "K05"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "南庄鄉",
+      "district_name_raw": "南庄鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005110",
+      "nlsc_town_code01": "K14"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "頭屋鄉",
+      "district_name_raw": "頭屋鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005120",
+      "nlsc_town_code01": "K08"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "三義鄉",
+      "district_name_raw": "三義鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005130",
+      "nlsc_town_code01": "K06"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "西湖鄉",
+      "district_name_raw": "西湖鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005140",
+      "nlsc_town_code01": "K07"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "造橋鄉",
+      "district_name_raw": "造橋鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005150",
+      "nlsc_town_code01": "K11"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "三灣鄉",
+      "district_name_raw": "三灣鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005160",
+      "nlsc_town_code01": "K13"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "獅潭鄉",
+      "district_name_raw": "獅潭鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005170",
+      "nlsc_town_code01": "K17"
+    },
+    {
+      "county_name": "苗栗縣",
+      "county_name_raw": "苗栗縣",
+      "district_name": "泰安鄉",
+      "district_name_raw": "泰安鄉",
+      "nlsc_county_code": "K",
+      "nlsc_county_code01": "10005",
+      "nlsc_town_code": "10005180",
+      "nlsc_town_code01": "K18"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "南投市",
+      "district_name_raw": "南投市",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008010",
+      "nlsc_town_code01": "M01"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "埔里鎮",
+      "district_name_raw": "埔里鎮",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008020",
+      "nlsc_town_code01": "M02"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "草屯鎮",
+      "district_name_raw": "草屯鎮",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008030",
+      "nlsc_town_code01": "M03"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "竹山鎮",
+      "district_name_raw": "竹山鎮",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008040",
+      "nlsc_town_code01": "M04"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "集集鎮",
+      "district_name_raw": "集集鎮",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008050",
+      "nlsc_town_code01": "M05"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "名間鄉",
+      "district_name_raw": "名間鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008060",
+      "nlsc_town_code01": "M06"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "鹿谷鄉",
+      "district_name_raw": "鹿谷鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008070",
+      "nlsc_town_code01": "M07"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "中寮鄉",
+      "district_name_raw": "中寮鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008080",
+      "nlsc_town_code01": "M08"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "魚池鄉",
+      "district_name_raw": "魚池鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008090",
+      "nlsc_town_code01": "M09"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "國姓鄉",
+      "district_name_raw": "國姓鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008100",
+      "nlsc_town_code01": "M10"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "水里鄉",
+      "district_name_raw": "水里鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008110",
+      "nlsc_town_code01": "M11"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "信義鄉",
+      "district_name_raw": "信義鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008120",
+      "nlsc_town_code01": "M12"
+    },
+    {
+      "county_name": "南投縣",
+      "county_name_raw": "南投縣",
+      "district_name": "仁愛鄉",
+      "district_name_raw": "仁愛鄉",
+      "nlsc_county_code": "M",
+      "nlsc_county_code01": "10008",
+      "nlsc_town_code": "10008130",
+      "nlsc_town_code01": "M13"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "彰化市",
+      "district_name_raw": "彰化市",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007010",
+      "nlsc_town_code01": "N01"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "鹿港鎮",
+      "district_name_raw": "鹿港鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007020",
+      "nlsc_town_code01": "N02"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "和美鎮",
+      "district_name_raw": "和美鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007030",
+      "nlsc_town_code01": "N03"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "線西鄉",
+      "district_name_raw": "線西鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007040",
+      "nlsc_town_code01": "N09"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "伸港鄉",
+      "district_name_raw": "伸港鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007050",
+      "nlsc_town_code01": "N10"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "福興鄉",
+      "district_name_raw": "福興鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007060",
+      "nlsc_town_code01": "N11"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "秀水鄉",
+      "district_name_raw": "秀水鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007070",
+      "nlsc_town_code01": "N12"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "花壇鄉",
+      "district_name_raw": "花壇鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007080",
+      "nlsc_town_code01": "N13"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "芬園鄉",
+      "district_name_raw": "芬園鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007090",
+      "nlsc_town_code01": "N14"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "員林市",
+      "district_name_raw": "員林市",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007100",
+      "nlsc_town_code01": "N05"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "溪湖鎮",
+      "district_name_raw": "溪湖鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007110",
+      "nlsc_town_code01": "N06"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "田中鎮",
+      "district_name_raw": "田中鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007120",
+      "nlsc_town_code01": "N07"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "大村鄉",
+      "district_name_raw": "大村鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007130",
+      "nlsc_town_code01": "N15"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "埔鹽鄉",
+      "district_name_raw": "埔鹽鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007140",
+      "nlsc_town_code01": "N16"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "埔心鄉",
+      "district_name_raw": "埔心鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007150",
+      "nlsc_town_code01": "N17"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "永靖鄉",
+      "district_name_raw": "永靖鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007160",
+      "nlsc_town_code01": "N18"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "社頭鄉",
+      "district_name_raw": "社頭鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007170",
+      "nlsc_town_code01": "N19"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "二水鄉",
+      "district_name_raw": "二水鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007180",
+      "nlsc_town_code01": "N20"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "北斗鎮",
+      "district_name_raw": "北斗鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007190",
+      "nlsc_town_code01": "N04"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "二林鎮",
+      "district_name_raw": "二林鎮",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007200",
+      "nlsc_town_code01": "N08"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "田尾鄉",
+      "district_name_raw": "田尾鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007210",
+      "nlsc_town_code01": "N21"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "埤頭鄉",
+      "district_name_raw": "埤頭鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007220",
+      "nlsc_town_code01": "N22"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "芳苑鄉",
+      "district_name_raw": "芳苑鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007230",
+      "nlsc_town_code01": "N23"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "大城鄉",
+      "district_name_raw": "大城鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007240",
+      "nlsc_town_code01": "N24"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "竹塘鄉",
+      "district_name_raw": "竹塘鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007250",
+      "nlsc_town_code01": "N25"
+    },
+    {
+      "county_name": "彰化縣",
+      "county_name_raw": "彰化縣",
+      "district_name": "溪州鄉",
+      "district_name_raw": "溪州鄉",
+      "nlsc_county_code": "N",
+      "nlsc_county_code01": "10007",
+      "nlsc_town_code": "10007260",
+      "nlsc_town_code01": "N26"
+    },
+    {
+      "county_name": "新竹市",
+      "county_name_raw": "新竹市",
+      "district_name": "東區",
+      "district_name_raw": "東區",
+      "nlsc_county_code": "O",
+      "nlsc_county_code01": "10018",
+      "nlsc_town_code": "10018010",
+      "nlsc_town_code01": "O01"
+    },
+    {
+      "county_name": "新竹市",
+      "county_name_raw": "新竹市",
+      "district_name": "北區",
+      "district_name_raw": "北區",
+      "nlsc_county_code": "O",
+      "nlsc_county_code01": "10018",
+      "nlsc_town_code": "10018020",
+      "nlsc_town_code01": "O02"
+    },
+    {
+      "county_name": "新竹市",
+      "county_name_raw": "新竹市",
+      "district_name": "香山區",
+      "district_name_raw": "香山區",
+      "nlsc_county_code": "O",
+      "nlsc_county_code01": "10018",
+      "nlsc_town_code": "10018030",
+      "nlsc_town_code01": "O03"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "斗六市",
+      "district_name_raw": "斗六市",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009010",
+      "nlsc_town_code01": "P01"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "斗南鎮",
+      "district_name_raw": "斗南鎮",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009020",
+      "nlsc_town_code01": "P02"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "虎尾鎮",
+      "district_name_raw": "虎尾鎮",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009030",
+      "nlsc_town_code01": "P03"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "西螺鎮",
+      "district_name_raw": "西螺鎮",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009040",
+      "nlsc_town_code01": "P04"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "土庫鎮",
+      "district_name_raw": "土庫鎮",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009050",
+      "nlsc_town_code01": "P05"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "北港鎮",
+      "district_name_raw": "北港鎮",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009060",
+      "nlsc_town_code01": "P06"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "古坑鄉",
+      "district_name_raw": "古坑鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009070",
+      "nlsc_town_code01": "P07"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "大埤鄉",
+      "district_name_raw": "大埤鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009080",
+      "nlsc_town_code01": "P08"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "莿桐鄉",
+      "district_name_raw": "莿桐鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009090",
+      "nlsc_town_code01": "P09"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "林內鄉",
+      "district_name_raw": "林內鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009100",
+      "nlsc_town_code01": "P10"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "二崙鄉",
+      "district_name_raw": "二崙鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009110",
+      "nlsc_town_code01": "P11"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "崙背鄉",
+      "district_name_raw": "崙背鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009120",
+      "nlsc_town_code01": "P12"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "麥寮鄉",
+      "district_name_raw": "麥寮鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009130",
+      "nlsc_town_code01": "P13"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "東勢鄉",
+      "district_name_raw": "東勢鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009140",
+      "nlsc_town_code01": "P14"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "褒忠鄉",
+      "district_name_raw": "褒忠鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009150",
+      "nlsc_town_code01": "P15"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "台西鄉",
+      "district_name_raw": "臺西鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009160",
+      "nlsc_town_code01": "P16"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "元長鄉",
+      "district_name_raw": "元長鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009170",
+      "nlsc_town_code01": "P17"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "四湖鄉",
+      "district_name_raw": "四湖鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009180",
+      "nlsc_town_code01": "P18"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "口湖鄉",
+      "district_name_raw": "口湖鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009190",
+      "nlsc_town_code01": "P19"
+    },
+    {
+      "county_name": "雲林縣",
+      "county_name_raw": "雲林縣",
+      "district_name": "水林鄉",
+      "district_name_raw": "水林鄉",
+      "nlsc_county_code": "P",
+      "nlsc_county_code01": "10009",
+      "nlsc_town_code": "10009200",
+      "nlsc_town_code01": "P20"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "太保市",
+      "district_name_raw": "太保市",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010010",
+      "nlsc_town_code01": "Q12"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "朴子市",
+      "district_name_raw": "朴子市",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010020",
+      "nlsc_town_code01": "Q02"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "布袋鎮",
+      "district_name_raw": "布袋鎮",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010030",
+      "nlsc_town_code01": "Q03"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "大林鎮",
+      "district_name_raw": "大林鎮",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010040",
+      "nlsc_town_code01": "Q04"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "民雄鄉",
+      "district_name_raw": "民雄鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010050",
+      "nlsc_town_code01": "Q05"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "溪口鄉",
+      "district_name_raw": "溪口鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010060",
+      "nlsc_town_code01": "Q06"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "新港鄉",
+      "district_name_raw": "新港鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010070",
+      "nlsc_town_code01": "Q07"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "六腳鄉",
+      "district_name_raw": "六腳鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010080",
+      "nlsc_town_code01": "Q08"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "東石鄉",
+      "district_name_raw": "東石鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010090",
+      "nlsc_town_code01": "Q09"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "義竹鄉",
+      "district_name_raw": "義竹鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010100",
+      "nlsc_town_code01": "Q10"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "鹿草鄉",
+      "district_name_raw": "鹿草鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010110",
+      "nlsc_town_code01": "Q11"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "水上鄉",
+      "district_name_raw": "水上鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010120",
+      "nlsc_town_code01": "Q13"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "中埔鄉",
+      "district_name_raw": "中埔鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010130",
+      "nlsc_town_code01": "Q14"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "竹崎鄉",
+      "district_name_raw": "竹崎鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010140",
+      "nlsc_town_code01": "Q15"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "梅山鄉",
+      "district_name_raw": "梅山鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010150",
+      "nlsc_town_code01": "Q16"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "番路鄉",
+      "district_name_raw": "番路鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010160",
+      "nlsc_town_code01": "Q17"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "大埔鄉",
+      "district_name_raw": "大埔鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010170",
+      "nlsc_town_code01": "Q18"
+    },
+    {
+      "county_name": "嘉義縣",
+      "county_name_raw": "嘉義縣",
+      "district_name": "阿里山鄉",
+      "district_name_raw": "阿里山鄉",
+      "nlsc_county_code": "Q",
+      "nlsc_county_code01": "10010",
+      "nlsc_town_code": "10010180",
+      "nlsc_town_code01": "Q20"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "屏東市",
+      "district_name_raw": "屏東市",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013010",
+      "nlsc_town_code01": "T01"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "潮州鎮",
+      "district_name_raw": "潮州鎮",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013020",
+      "nlsc_town_code01": "T02"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "東港鎮",
+      "district_name_raw": "東港鎮",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013030",
+      "nlsc_town_code01": "T03"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "恆春鎮",
+      "district_name_raw": "恆春鎮",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013040",
+      "nlsc_town_code01": "T04"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "萬丹鄉",
+      "district_name_raw": "萬丹鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013050",
+      "nlsc_town_code01": "T05"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "長治鄉",
+      "district_name_raw": "長治鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013060",
+      "nlsc_town_code01": "T06"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "麟洛鄉",
+      "district_name_raw": "麟洛鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013070",
+      "nlsc_town_code01": "T07"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "九如鄉",
+      "district_name_raw": "九如鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013080",
+      "nlsc_town_code01": "T08"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "里港鄉",
+      "district_name_raw": "里港鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013090",
+      "nlsc_town_code01": "T09"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "鹽埔鄉",
+      "district_name_raw": "鹽埔鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013100",
+      "nlsc_town_code01": "T10"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "高樹鄉",
+      "district_name_raw": "高樹鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013110",
+      "nlsc_town_code01": "T11"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "萬巒鄉",
+      "district_name_raw": "萬巒鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013120",
+      "nlsc_town_code01": "T12"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "內埔鄉",
+      "district_name_raw": "內埔鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013130",
+      "nlsc_town_code01": "T13"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "竹田鄉",
+      "district_name_raw": "竹田鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013140",
+      "nlsc_town_code01": "T14"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "新埤鄉",
+      "district_name_raw": "新埤鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013150",
+      "nlsc_town_code01": "T15"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "枋寮鄉",
+      "district_name_raw": "枋寮鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013160",
+      "nlsc_town_code01": "T16"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "新園鄉",
+      "district_name_raw": "新園鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013170",
+      "nlsc_town_code01": "T17"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "崁頂鄉",
+      "district_name_raw": "崁頂鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013180",
+      "nlsc_town_code01": "T18"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "林邊鄉",
+      "district_name_raw": "林邊鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013190",
+      "nlsc_town_code01": "T19"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "南州鄉",
+      "district_name_raw": "南州鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013200",
+      "nlsc_town_code01": "T20"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "佳冬鄉",
+      "district_name_raw": "佳冬鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013210",
+      "nlsc_town_code01": "T21"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "琉球鄉",
+      "district_name_raw": "琉球鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013220",
+      "nlsc_town_code01": "T22"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "車城鄉",
+      "district_name_raw": "車城鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013230",
+      "nlsc_town_code01": "T23"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "滿州鄉",
+      "district_name_raw": "滿州鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013240",
+      "nlsc_town_code01": "T24"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "枋山鄉",
+      "district_name_raw": "枋山鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013250",
+      "nlsc_town_code01": "T25"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "三地門鄉",
+      "district_name_raw": "三地門鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013260",
+      "nlsc_town_code01": "T26"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "霧台鄉",
+      "district_name_raw": "霧臺鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013270",
+      "nlsc_town_code01": "T27"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "瑪家鄉",
+      "district_name_raw": "瑪家鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013280",
+      "nlsc_town_code01": "T28"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "泰武鄉",
+      "district_name_raw": "泰武鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013290",
+      "nlsc_town_code01": "T29"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "來義鄉",
+      "district_name_raw": "來義鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013300",
+      "nlsc_town_code01": "T30"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "春日鄉",
+      "district_name_raw": "春日鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013310",
+      "nlsc_town_code01": "T31"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "獅子鄉",
+      "district_name_raw": "獅子鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013320",
+      "nlsc_town_code01": "T32"
+    },
+    {
+      "county_name": "屏東縣",
+      "county_name_raw": "屏東縣",
+      "district_name": "牡丹鄉",
+      "district_name_raw": "牡丹鄉",
+      "nlsc_county_code": "T",
+      "nlsc_county_code01": "10013",
+      "nlsc_town_code": "10013330",
+      "nlsc_town_code01": "T33"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "花蓮市",
+      "district_name_raw": "花蓮市",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015010",
+      "nlsc_town_code01": "U01"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "鳳林鎮",
+      "district_name_raw": "鳳林鎮",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015020",
+      "nlsc_town_code01": "U07"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "玉里鎮",
+      "district_name_raw": "玉里鎮",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015030",
+      "nlsc_town_code01": "U03"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "新城鄉",
+      "district_name_raw": "新城鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015040",
+      "nlsc_town_code01": "U04"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "吉安鄉",
+      "district_name_raw": "吉安鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015050",
+      "nlsc_town_code01": "U05"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "壽豐鄉",
+      "district_name_raw": "壽豐鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015060",
+      "nlsc_town_code01": "U06"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "光復鄉",
+      "district_name_raw": "光復鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015070",
+      "nlsc_town_code01": "U02"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "豐濱鄉",
+      "district_name_raw": "豐濱鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015080",
+      "nlsc_town_code01": "U08"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "瑞穗鄉",
+      "district_name_raw": "瑞穗鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015090",
+      "nlsc_town_code01": "U09"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "富里鄉",
+      "district_name_raw": "富里鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015100",
+      "nlsc_town_code01": "U10"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "秀林鄉",
+      "district_name_raw": "秀林鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015110",
+      "nlsc_town_code01": "U11"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "萬榮鄉",
+      "district_name_raw": "萬榮鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015120",
+      "nlsc_town_code01": "U12"
+    },
+    {
+      "county_name": "花蓮縣",
+      "county_name_raw": "花蓮縣",
+      "district_name": "卓溪鄉",
+      "district_name_raw": "卓溪鄉",
+      "nlsc_county_code": "U",
+      "nlsc_county_code01": "10015",
+      "nlsc_town_code": "10015130",
+      "nlsc_town_code01": "U13"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "台東市",
+      "district_name_raw": "臺東市",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014010",
+      "nlsc_town_code01": "V01"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "成功鎮",
+      "district_name_raw": "成功鎮",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014020",
+      "nlsc_town_code01": "V02"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "關山鎮",
+      "district_name_raw": "關山鎮",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014030",
+      "nlsc_town_code01": "V03"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "卑南鄉",
+      "district_name_raw": "卑南鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014040",
+      "nlsc_town_code01": "V04"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "鹿野鄉",
+      "district_name_raw": "鹿野鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014050",
+      "nlsc_town_code01": "V09"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "池上鄉",
+      "district_name_raw": "池上鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014060",
+      "nlsc_town_code01": "V10"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "東河鄉",
+      "district_name_raw": "東河鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014070",
+      "nlsc_town_code01": "V07"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "長濱鄉",
+      "district_name_raw": "長濱鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014080",
+      "nlsc_town_code01": "V08"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "太麻里鄉",
+      "district_name_raw": "太麻里鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014090",
+      "nlsc_town_code01": "V06"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "大武鄉",
+      "district_name_raw": "大武鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014100",
+      "nlsc_town_code01": "V05"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "綠島鄉",
+      "district_name_raw": "綠島鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014110",
+      "nlsc_town_code01": "V11"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "海端鄉",
+      "district_name_raw": "海端鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014120",
+      "nlsc_town_code01": "V13"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "延平鄉",
+      "district_name_raw": "延平鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014130",
+      "nlsc_town_code01": "V12"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "金峰鄉",
+      "district_name_raw": "金峰鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014140",
+      "nlsc_town_code01": "V15"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "達仁鄉",
+      "district_name_raw": "達仁鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014150",
+      "nlsc_town_code01": "V14"
+    },
+    {
+      "county_name": "台東縣",
+      "county_name_raw": "臺東縣",
+      "district_name": "蘭嶼鄉",
+      "district_name_raw": "蘭嶼鄉",
+      "nlsc_county_code": "V",
+      "nlsc_county_code01": "10014",
+      "nlsc_town_code": "10014160",
+      "nlsc_town_code01": "V16"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "金城鎮",
+      "district_name_raw": "金城鎮",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020010",
+      "nlsc_town_code01": "W03"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "金沙鎮",
+      "district_name_raw": "金沙鎮",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020020",
+      "nlsc_town_code01": "W02"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "金湖鎮",
+      "district_name_raw": "金湖鎮",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020030",
+      "nlsc_town_code01": "W01"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "金寧鄉",
+      "district_name_raw": "金寧鄉",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020040",
+      "nlsc_town_code01": "W04"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "烈嶼鄉",
+      "district_name_raw": "烈嶼鄉",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020050",
+      "nlsc_town_code01": "W05"
+    },
+    {
+      "county_name": "金門縣",
+      "county_name_raw": "金門縣",
+      "district_name": "烏坵鄉",
+      "district_name_raw": "烏坵鄉",
+      "nlsc_county_code": "W",
+      "nlsc_county_code01": "09020",
+      "nlsc_town_code": "09020060",
+      "nlsc_town_code01": "W06"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "馬公市",
+      "district_name_raw": "馬公市",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016010",
+      "nlsc_town_code01": "X01"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "湖西鄉",
+      "district_name_raw": "湖西鄉",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016020",
+      "nlsc_town_code01": "X02"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "白沙鄉",
+      "district_name_raw": "白沙鄉",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016030",
+      "nlsc_town_code01": "X03"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "西嶼鄉",
+      "district_name_raw": "西嶼鄉",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016040",
+      "nlsc_town_code01": "X04"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "望安鄉",
+      "district_name_raw": "望安鄉",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016050",
+      "nlsc_town_code01": "X05"
+    },
+    {
+      "county_name": "澎湖縣",
+      "county_name_raw": "澎湖縣",
+      "district_name": "七美鄉",
+      "district_name_raw": "七美鄉",
+      "nlsc_county_code": "X",
+      "nlsc_county_code01": "10016",
+      "nlsc_town_code": "10016060",
+      "nlsc_town_code01": "X06"
+    },
+    {
+      "county_name": "連江縣",
+      "county_name_raw": "連江縣",
+      "district_name": "南竿鄉",
+      "district_name_raw": "南竿鄉",
+      "nlsc_county_code": "Z",
+      "nlsc_county_code01": "09007",
+      "nlsc_town_code": "09007010",
+      "nlsc_town_code01": "Z01"
+    },
+    {
+      "county_name": "連江縣",
+      "county_name_raw": "連江縣",
+      "district_name": "北竿鄉",
+      "district_name_raw": "北竿鄉",
+      "nlsc_county_code": "Z",
+      "nlsc_county_code01": "09007",
+      "nlsc_town_code": "09007020",
+      "nlsc_town_code01": "Z02"
+    },
+    {
+      "county_name": "連江縣",
+      "county_name_raw": "連江縣",
+      "district_name": "莒光鄉",
+      "district_name_raw": "莒光鄉",
+      "nlsc_county_code": "Z",
+      "nlsc_county_code01": "09007",
+      "nlsc_town_code": "09007030",
+      "nlsc_town_code01": "Z03"
+    },
+    {
+      "county_name": "連江縣",
+      "county_name_raw": "連江縣",
+      "district_name": "東引鄉",
+      "district_name_raw": "東引鄉",
+      "nlsc_county_code": "Z",
+      "nlsc_county_code01": "09007",
+      "nlsc_town_code": "09007040",
+      "nlsc_town_code01": "Z04"
+    }
+  ],
+  "metadata": {
+    "county_api_url": "https://api.nlsc.gov.tw/other/ListCounty",
+    "dataset": "代碼服務－鄉鎮市區清單（戶政）",
+    "dataset_url": "https://data.gov.tw/dataset/102011",
+    "license": "政府資料開放授權條款第1版",
+    "license_url": "https://data.gov.tw/license",
+    "provider": "內政部國土測繪中心",
+    "retrieved_at": "2026-07-25T08:10:49.961648+00:00",
+    "source_type": "external_reference",
+    "town_api_url_template": "https://api.nlsc.gov.tw/other/ListTown1/{county_code}"
+  }
+}

@@ -1,0 +1,270 @@
+{
+  "mappings": [
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "1",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "1",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "2",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "2",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "3",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "3",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "4",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "4",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "5",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "5",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": false,
+      "candidate_canonical_id": "17",
+      "canonical_id": null,
+      "entity_type": "service",
+      "evidence": {
+        "note": "回饋內容為馬桶問題，但不足以證明 7 等於 17"
+      },
+      "mapping_method": "semantic_hint_only",
+      "mapping_status": "unresolved",
+      "source_id": "7",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "9",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "9",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "16",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "16",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "17",
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "17",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": false,
+      "candidate_canonical_id": null,
+      "canonical_id": null,
+      "entity_type": "service",
+      "evidence": {},
+      "mapping_method": "no_evidence",
+      "mapping_status": "unresolved",
+      "source_id": "18",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "1",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "1",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "2",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "2",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "5",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "5",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "10",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "10",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "11",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "11",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "14",
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "same_id_in_master",
+      "mapping_status": "verified",
+      "source_id": "14",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": false,
+      "candidate_canonical_id": null,
+      "canonical_id": null,
+      "entity_type": "service_vendor",
+      "evidence": {},
+      "mapping_method": "no_evidence",
+      "mapping_status": "unresolved",
+      "source_id": "15",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "01",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "01",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "02",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "02",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "03",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "03",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "04",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "04",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "05",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "05",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": true,
+      "candidate_canonical_id": null,
+      "canonical_id": "06",
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "documented_in_schema",
+      "mapping_status": "verified",
+      "source_id": "06",
+      "source_system": "organizer_dataset"
+    },
+    {
+      "agent_eligible": false,
+      "candidate_canonical_id": null,
+      "canonical_id": null,
+      "entity_type": "order_type",
+      "evidence": {},
+      "mapping_method": "not_documented",
+      "mapping_status": "unresolved",
+      "source_id": "07",
+      "source_system": "organizer_dataset"
+    }
+  ]
+}

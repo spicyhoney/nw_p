@@ -29,6 +29,10 @@ dev = [
     "ruff",
 ]
 
+[project.scripts]
+home-repair-clean = "home_repair_agent.data_cleaning.cli:main"
+home-repair-fetch-reference = "home_repair_agent.data_cleaning.reference_cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -38,4 +42,3 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-

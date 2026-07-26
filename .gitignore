@@ -35,6 +35,12 @@ Thumbs.db
 /data/raw/
 /data/processed/*
 !/data/processed/README.md
+!/data/processed/core_service_catalog.json
+!/data/processed/core_locations.json
+!/data/processed/curated_repair_form.json
+!/data/processed/demo_seed.json
+!/data/processed/source_mappings.json
+!/data/processed/data_quality_summary.json
 /data/quarantine/*
 !/data/quarantine/README.md
 
@@ -44,4 +50,3 @@ Thumbs.db
 *.dump
 *.log
 /uploads/
-

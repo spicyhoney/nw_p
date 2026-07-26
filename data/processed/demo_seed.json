@@ -1,0 +1,235 @@
+{
+  "consultation_cases": [
+    {
+      "agent_eligible": true,
+      "answers": {
+        "contact_method": "app",
+        "issue_category": "faucet_leak",
+        "issue_description": "廚房水龍頭關閉後仍持續滴水。",
+        "photos": [],
+        "preferred_time": "afternoon",
+        "water_shutoff": "yes"
+      },
+      "case_id": "SYN-CASE-001",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "form_key": "repair_form_v1",
+      "location_id": "ORG-01-007",
+      "preferred_end": "2026-08-01T17:00:00+08:00",
+      "preferred_start": "2026-08-01T13:00:00+08:00",
+      "problem_summary": "廚房水龍頭持續漏水",
+      "quality_status": "verified",
+      "service_id": 17,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "case:SYN-CASE-001",
+      "source_type": "synthetic",
+      "status": "matched"
+    }
+  ],
+  "match_results": [
+    {
+      "agent_eligible": true,
+      "availability_id": "SYN-SLOT-001",
+      "case_id": "SYN-CASE-001",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "match_id": "SYN-MATCH-001",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "reasons": [
+        "服務項目符合",
+        "可服務大安區",
+        "週六下午有空"
+      ],
+      "score": 0.96,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "match:SYN-MATCH-001",
+      "source_type": "synthetic",
+      "status": "selected"
+    }
+  ],
+  "order_items": [
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "item_amount": 300,
+      "item_name": "現場勘驗費",
+      "item_no": 1,
+      "order_no": "SYN-ORDER-001",
+      "quality_status": "verified",
+      "quantity": 1,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "order-item:SYN-ORDER-001:1",
+      "source_type": "synthetic",
+      "unit_price": 300
+    }
+  ],
+  "orders": [
+    {
+      "agent_eligible": true,
+      "case_id": "SYN-CASE-001",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "currency": "TWD",
+      "deposit_amount": 300,
+      "final_amount": 300,
+      "match_id": "SYN-MATCH-001",
+      "order_no": "SYN-ORDER-001",
+      "order_status": "11",
+      "order_type": "01",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "scheduled_end": "2026-08-01T17:00:00+08:00",
+      "scheduled_start": "2026-08-01T13:00:00+08:00",
+      "service_id": 17,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "order:SYN-ORDER-001",
+      "source_type": "synthetic"
+    }
+  ],
+  "provider_availability": [
+    {
+      "agent_eligible": true,
+      "availability_id": "SYN-SLOT-001",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "ends_at": "2026-08-01T17:00:00+08:00",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "availability:SYN-SLOT-001",
+      "source_type": "synthetic",
+      "starts_at": "2026-08-01T13:00:00+08:00",
+      "status": "available"
+    },
+    {
+      "agent_eligible": true,
+      "availability_id": "SYN-SLOT-002",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "ends_at": "2026-08-01T12:00:00+08:00",
+      "provider_id": "SYN-PROVIDER-002",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "availability:SYN-SLOT-002",
+      "source_type": "synthetic",
+      "starts_at": "2026-08-01T09:00:00+08:00",
+      "status": "available"
+    },
+    {
+      "agent_eligible": true,
+      "availability_id": "SYN-SLOT-003",
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "ends_at": "2026-08-01T18:00:00+08:00",
+      "provider_id": "SYN-PROVIDER-003",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "availability:SYN-SLOT-003",
+      "source_type": "synthetic",
+      "starts_at": "2026-08-01T14:00:00+08:00",
+      "status": "available"
+    }
+  ],
+  "provider_service_areas": [
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-007",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-001:ORG-01-007",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-005",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-001:ORG-01-005",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-007",
+      "provider_id": "SYN-PROVIDER-002",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-002:ORG-01-007",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-001",
+      "provider_id": "SYN-PROVIDER-002",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-002:ORG-01-001",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-005",
+      "provider_id": "SYN-PROVIDER-003",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-003:ORG-01-005",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "location_id": "ORG-01-001",
+      "provider_id": "SYN-PROVIDER-003",
+      "quality_status": "verified",
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider-area:SYN-PROVIDER-003:ORG-01-001",
+      "source_type": "synthetic"
+    }
+  ],
+  "providers": [
+    {
+      "agent_eligible": true,
+      "base_inspection_fee": 300,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "completed_jobs": 128,
+      "display_name": "安心修繕 A 組",
+      "provider_id": "SYN-PROVIDER-001",
+      "quality_status": "verified",
+      "rating": 4.8,
+      "service_id": 17,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider:SYN-PROVIDER-001",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "base_inspection_fee": 250,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "completed_jobs": 86,
+      "display_name": "城市水電 B 組",
+      "provider_id": "SYN-PROVIDER-002",
+      "quality_status": "verified",
+      "rating": 4.6,
+      "service_id": 17,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider:SYN-PROVIDER-002",
+      "source_type": "synthetic"
+    },
+    {
+      "agent_eligible": true,
+      "base_inspection_fee": 350,
+      "cleaning_rule": "generate_deterministic_demo_seed",
+      "completed_jobs": 64,
+      "display_name": "即刻修繕 C 組",
+      "provider_id": "SYN-PROVIDER-003",
+      "quality_status": "verified",
+      "rating": 4.7,
+      "service_id": 17,
+      "source_file": "src/home_repair_agent/data_cleaning/demo.py",
+      "source_record_id": "provider:SYN-PROVIDER-003",
+      "source_type": "synthetic"
+    }
+  ],
+  "reference_date": "2026-08-01"
+}

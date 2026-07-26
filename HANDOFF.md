@@ -5,26 +5,28 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #4 已以 squash commit `0bb0920` 合併到 `main`。目前在
-`feature/matching-service` 完成第四個唯讀 MCP Tool 與可解釋 synthetic
-師傅媒合；真實 Bedrock、案件／訂單寫入、FastAPI 與 Demo UI 尚未完成。
+PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for review；
+沒有發現 merge blocker，尚未合併。第四個唯讀 MCP Tool 與可解釋 synthetic
+師傅媒合已完成；真實 Bedrock、寫入流程、FastAPI 與 Demo UI 尚未完成。
 
 ## 2. 本次 session 完成（帶證據）
 
-- 新增 `ReadServiceLayer.match_service_providers`：硬性過濾服務、地點與時段，
-  再依 `matching_v1` 透明規則排序並去除同師傅重複時段。
-- 新增第四個唯讀 MCP Tool `match_service_providers`；結果與候選都標示為
-  `synthetic`，查無候選時回空清單，不保留空檔或寫入資料。
-- 新增 Service、MCP、Agent 與 PostgreSQL 案例；無 `TEST_DATABASE_URL` 的
-  本工作區為 `44 passed, 9 skipped, 40 subtests passed`。
-- 實作與限制：`docs/matching-service.md`。新增 PostgreSQL 媒合案例本次因無
-  測試資料庫而 skip，不宣稱已完成真實 PostgreSQL 複驗。
+- 審查 PR #5 head `703d4cb`：契約、查無候選、`matching_v1` 實作與文件、
+  result/candidate 的 synthetic 標籤均一致，未發現阻塞問題。
+- 本機完整 suite：`43 passed, 10 skipped, 40 subtests passed`；比作者工作區
+  多一個 skip 是因本機沒有 organizer dataset。Scoped Ruff、`compileall` 與
+  `git diff --check` 通過；repo-wide format check 仍含既有未格式化檔案。
+- PR 審查紀錄：`https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084270645`；
+  PR 已由 Draft 改為 Ready for review，未執行 merge。
+- 無 `TEST_DATABASE_URL`，所以 PostgreSQL 媒合案例仍為 skip；不可宣稱 SQL
+  已在真實 PostgreSQL 複驗。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 推送 `feature/matching-service` 並建立 Draft PR，請組員複查契約、權重、
-   synthetic 標籤與 PostgreSQL 案例。
-2. 有測試 PostgreSQL 時設定 `TEST_DATABASE_URL`，執行完整 suite 複驗媒合 SQL。
+1. 組員閱讀 PR #5 審查紀錄並決定是否合併；合併前若能取得隔離的測試
+   PostgreSQL，設定 `TEST_DATABASE_URL` 後執行 `python -m pytest -q`。
+2. 真實供應商資料接入前，調整 PostgreSQL 候選池：目前先按開始時間取 100
+   個 slot，再由 Service 排名／去重；大量時段可能降低候選師傅多樣性。
 3. 顯式 `bedrock / local / mock` provider routing 另開獨立分支，再修改
    `src/home_repair_agent/agent/`；不要把 provider routing 混進
    matching-service 分支。
@@ -40,6 +42,8 @@ PR #4 已以 squash commit `0bb0920` 合併到 `main`。目前在
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
+- [active] 已授權審查 PR #5、必要時修正、留下審查紀錄並改為 Ready；
+  尚未授權 merge（原話：「好 請吧」，2026-07-26）。
 
 ### Agent assumptions（可質疑）
 
@@ -61,7 +65,10 @@ PR #4 已以 squash commit `0bb0920` 合併到 `main`。目前在
 - [active] 本機開源模型 runtime、model 尺寸、硬體需求及 tool-calling
   相容性尚未評估。
 - [active] 真實 Bedrock adapter 由誰實作、何時能取得 AWS 環境仍待確認。
-- [active] `matching_v1` 權重需組員複查；真實資料接入前不得宣稱媒合準確率。
+- [active] `matching_v1` 已通過本機程式審查，但是否符合產品偏好仍由組員
+  決定；真實資料接入前不得宣稱媒合準確率。
+- [active] PostgreSQL repository 先取 100 個 slot 再排名／去重，真實規模下
+  可能讓多早期空檔的單一師傅佔滿候選池；目前 3 位 synthetic Demo 不受影響。
 - [active] 案件、保留時段、確認媒合與訂單的寫入／冪等邊界尚未定案。
 
 ## 5. 目前架構與工作邊界
@@ -79,7 +86,7 @@ PR #4 已以 squash commit `0bb0920` 合併到 `main`。目前在
 ## 6. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 當前分支：`feature/matching-service`，由最新 `main` 建立。
+- 當前分支：`feature/matching-service`，PR #5 Ready for review，尚未合併。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -88,7 +95,7 @@ PR #4 已以 squash commit `0bb0920` 合併到 `main`。目前在
 
 ## 7. 授權狀態
 
-- 使用者已授權：PR #4 squash merge；實作、測試、提交並為
-  `feature/matching-service` 建立 Draft PR（2026-07-26）。
+- 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將
+  `feature/matching-service` PR #5 改為 Ready for review（2026-07-26）。
 - 未授權：合併 matching-service PR、啟用寫入 MCP Tools、部署 AWS 資源或
   選定特定本機模型。

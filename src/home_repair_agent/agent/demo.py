@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Callable, Sequence
+from datetime import datetime, timedelta, timezone
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
@@ -13,6 +14,7 @@ from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
 from home_repair_agent.agent.models import ConversationSession, ToolTraceEntry
 from home_repair_agent.backend.models import (
+    AvailableProviderSlot,
     ConsultationForm,
     FormOption,
     FormTopic,
@@ -23,6 +25,7 @@ from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.mcp_server.server import create_mcp_server
 
 DEMO_SERVICE_ID = 17
+TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 SCRIPTED_INPUTS = (
     "台北市大安區水龍頭漏水",
     "水龍頭漏水",
@@ -31,7 +34,7 @@ SCRIPTED_INPUTS = (
 DEMO_NOTICE = """\
 修繕小隊長｜本機終端 Demo
 模式：Mock Model + 記憶體 Demo 資料（不連 AWS、不寫資料庫、不建立案件）
-用途：人工驗證 Agent → MCP Tools → Service Layer 的多輪閉環。
+用途：人工驗證 Agent → 四個唯讀 MCP Tools → Service Layer 的多輪閉環。
 指令：/help、/reset、/quit
 """
 
@@ -108,6 +111,34 @@ class DemoReadRepository:
                 ),
             ],
         )
+        self._slots = (
+            AvailableProviderSlot(
+                provider_id="SYN-PROVIDER-001",
+                display_name="安心修繕 A 組",
+                service_id=DEMO_SERVICE_ID,
+                rating=4.8,
+                completed_jobs=128,
+                base_inspection_fee=300,
+                location_id="DEMO-63000030",
+                location_name="臺北市大安區",
+                availability_id="SYN-SLOT-001",
+                starts_at=datetime(2026, 8, 1, 13, tzinfo=TAIPEI_TIMEZONE),
+                ends_at=datetime(2026, 8, 1, 17, tzinfo=TAIPEI_TIMEZONE),
+            ),
+            AvailableProviderSlot(
+                provider_id="SYN-PROVIDER-002",
+                display_name="城市水電 B 組",
+                service_id=DEMO_SERVICE_ID,
+                rating=4.6,
+                completed_jobs=86,
+                base_inspection_fee=250,
+                location_id="DEMO-63000030",
+                location_name="臺北市大安區",
+                availability_id="SYN-SLOT-002",
+                starts_at=datetime(2026, 8, 1, 14, tzinfo=TAIPEI_TIMEZONE),
+                ends_at=datetime(2026, 8, 1, 18, tzinfo=TAIPEI_TIMEZONE),
+            ),
+        )
 
     def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
         searchable_terms = (
@@ -147,6 +178,30 @@ class DemoReadRepository:
         service_id: int,
     ) -> list[ConsultationForm]:
         return [self._form] if service_id == DEMO_SERVICE_ID else []
+
+    def list_available_provider_slots(
+        self,
+        *,
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None,
+        preferred_end: datetime | None,
+        candidate_limit: int,
+    ) -> list[AvailableProviderSlot]:
+        return [
+            slot
+            for slot in self._slots
+            if slot.service_id == service_id
+            and slot.location_id == location_id
+            and (
+                preferred_start is None
+                or (
+                    preferred_end is not None
+                    and slot.starts_at < preferred_end
+                    and slot.ends_at > preferred_start
+                )
+            )
+        ][:candidate_limit]
 
 
 async def run_demo(
@@ -201,7 +256,7 @@ async def run_demo(
                     output_func(_format_trace(entry))
             output_func(f"Agent > {result.reply}")
 
-    output_func("\nDemo 結束；本次沒有寫入資料庫或建立案件。")
+    output_func("\nDemo 結束；本次只讀取 synthetic 候選，沒有保留時段或建立案件。")
     return conversation
 
 

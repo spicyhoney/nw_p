@@ -25,9 +25,21 @@ class DemoRepositoryTests(unittest.TestCase):
 
         self.assertEqual("臺北市大安區", location.full_name)
 
+    def test_demo_matching_returns_labeled_synthetic_candidates(self) -> None:
+        result = self.services.match_service_providers(
+            service_id=17,
+            location_id="DEMO-63000030",
+        )
+
+        self.assertEqual(2, result.count)
+        self.assertEqual("synthetic", result.data_source)
+        self.assertTrue(
+            all(candidate.source_type == "synthetic" for candidate in result.candidates)
+        )
+
 
 class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):
-    async def test_scripted_demo_runs_the_real_three_tool_loop(self) -> None:
+    async def test_scripted_demo_runs_the_real_four_tool_loop(self) -> None:
         output: list[str] = []
 
         conversation = await run_demo(
@@ -39,8 +51,10 @@ class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("[MCP] search_services", transcript)
         self.assertIn("[MCP] resolve_location", transcript)
         self.assertIn("[MCP] get_consultation_form", transcript)
-        self.assertIn("必要資訊已收集完成", transcript)
-        self.assertIn("沒有寫入資料庫或建立案件", transcript)
+        self.assertIn("[MCP] match_service_providers", transcript)
+        self.assertIn("synthetic 師傅候選", transcript)
+        self.assertIn("安心修繕 A 組", transcript)
+        self.assertIn("沒有保留時段或建立案件", transcript)
         self.assertGreaterEqual(len(conversation.messages), 3)
 
 

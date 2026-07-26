@@ -150,4 +150,5 @@ python -m home_repair_agent.agent.demo --scripted
 ```
 
 移除 `--scripted` 可自行輸入對話。這個 Demo 使用明確標示的記憶體合成資料，
-只驗證編排流程，不建立案件，也不代表 Bedrock 的語意品質。
+會走完四個唯讀 MCP Tools 並顯示 synthetic 師傅候選；它只驗證編排流程，
+不建立案件、不保留時段，也不代表 Bedrock 的語意品質。

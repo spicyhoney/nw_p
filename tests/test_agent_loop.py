@@ -165,6 +165,20 @@ class LocationCorrectionRepository(StubReadRepository):
         return []
 
 
+class LocationCorrectionRepository(StubReadRepository):
+    def find_locations(
+        self,
+        *,
+        county_name: str,
+        county_base: str,
+        district_name: str,
+        district_base: str,
+    ) -> list[ResolvedLocation]:
+        if county_name == "新北市" and district_name == "板橋區":
+            return [_banqiao_location()]
+        return []
+
+
 class RecordingToolClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
@@ -504,6 +518,45 @@ class AgentMCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertFalse(result.tool_trace[-1].result["ok"])
         self.assertIn("無法唯一確認", result.reply)
+
+    async def test_invalid_location_can_be_corrected_on_the_next_turn(
+        self,
+    ) -> None:
+        repository = LocationCorrectionRepository()
+        server = create_mcp_server(ReadServiceLayer(repository))
+
+        async with create_connected_server_and_client_session(
+            server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            runner = AgentRunner(
+                model_client=RuleBasedRepairMockModel(),
+                tool_client=MCPToolClient(mcp_session),
+            )
+            conversation = ConversationSession(session_id="correct-location")
+
+            first = await runner.run_turn(
+                session=conversation,
+                user_text="臺北市不存在區水龍頭漏水",
+            )
+            second = await runner.run_turn(
+                session=conversation,
+                user_text="新北市板橋區",
+            )
+
+        self.assertFalse(first.tool_trace[-1].result["ok"])
+        self.assertEqual(
+            ["resolve_location", "get_consultation_form"],
+            [entry.name for entry in second.tool_trace],
+        )
+        self.assertEqual(
+            {
+                "county_name": "新北市",
+                "district_name": "板橋區",
+            },
+            second.tool_trace[0].arguments,
+        )
+        self.assertIn("需要處理的問題", second.reply)
 
 
 class AgentSafetyTests(unittest.IsolatedAsyncioTestCase):

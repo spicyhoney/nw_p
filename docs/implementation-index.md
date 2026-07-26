@@ -13,6 +13,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | 未開始 | 尚無 | 預計拆成案件、確認媒合、訂單 | 尚無 |
 | Agent 核心迴圈 | 已驗證 Mock 版本 | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | 13 個 Agent / MCP 測試 |
+| 本機終端 Demo | 已驗證 | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 smoke test、3 個 Demo 測試 |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
 | FastAPI / Demo UI | 未開始 | 尚無 | [系統架構](architecture.md) | 尚無 |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
@@ -45,6 +46,7 @@ MCP Client / 測試 Agent
   44 passed、9 skipped、40 subtests passed。
 - 2026-07-26：新增 PostgreSQL 媒合案例，但本次因無測試資料庫而 skip；
   不宣稱新增 SQL 已完成真實 PostgreSQL 複驗。
+- 2026-07-26：本機終端 Demo 走完三個 MCP Tools 與多輪表單追問。
 - 2026-07-26：MCP SDK `v1.x` 記憶體內 Client/Server protocol tests。
 - 2026-07-25：原生 Windows PostgreSQL 16.14 migration、loader 與 constraints。
 

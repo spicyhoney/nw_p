@@ -33,6 +33,7 @@ dev = [
 home-repair-clean = "home_repair_agent.data_cleaning.cli:main"
 home-repair-fetch-reference = "home_repair_agent.data_cleaning.reference_cli:main"
 home-repair-mcp = "home_repair_agent.mcp_server.server:main"
+home-repair-agent-demo = "home_repair_agent.agent.demo:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

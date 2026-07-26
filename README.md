@@ -87,10 +87,10 @@ docs/             架構、計畫與競賽文件
 - [x] 建立可重複執行的 B+ 資料清洗流程
 - [x] 建立 PostgreSQL clean schema 與 Agent 安全檢視
 - [x] 在原生 Windows PostgreSQL 16.14 完成 migration、loader 與 constraints 測試
-- [x] 完成第一階段只讀 Service Layer：服務、行政區、諮詢表單
-- [x] 完成三個唯讀 MCP Tools 與 protocol tests
+- [x] 完成唯讀 Service Layer：服務、行政區、諮詢表單、synthetic 師傅媒合
+- [x] 完成四個唯讀 MCP Tools 與 protocol tests
 - [x] 完成可替換模型的 Agent 核心迴圈與 Mock 多輪測試
-- [ ] 完成 Bedrock adapter、媒合與寫入 Service Layer、Demo UI
+- [ ] 完成 Bedrock adapter、案件／訂單寫入 Service Layer、Demo UI
 - [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
 
 ## 執行資料清洗

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+from datetime import datetime
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ReadModel(BaseModel):
@@ -60,3 +61,64 @@ class ConsultationForm(ReadModel):
     name: str
     description: str = ""
     topics: list[FormTopic] = Field(default_factory=list)
+
+
+class AvailableProviderSlot(ReadModel):
+    provider_id: str
+    display_name: str
+    service_id: int = Field(gt=0)
+    rating: float = Field(ge=0, le=5)
+    completed_jobs: int = Field(ge=0)
+    base_inspection_fee: float = Field(ge=0)
+    location_id: str
+    location_name: str
+    availability_id: str
+    starts_at: datetime
+    ends_at: datetime
+
+    @model_validator(mode="after")
+    def validate_time_window(self) -> Self:
+        if (
+            self.starts_at.tzinfo is None
+            or self.starts_at.utcoffset() is None
+            or self.ends_at.tzinfo is None
+            or self.ends_at.utcoffset() is None
+        ):
+            raise ValueError("provider availability must include a timezone")
+        if self.ends_at <= self.starts_at:
+            raise ValueError("provider availability must end after it starts")
+        return self
+
+
+class MatchScoreBreakdown(ReadModel):
+    schedule_fit: float = Field(ge=0, le=1)
+    rating: float = Field(ge=0, le=1)
+    experience: float = Field(ge=0, le=1)
+    fee: float = Field(ge=0, le=1)
+
+
+class ProviderMatchCandidate(ReadModel):
+    provider_id: str
+    display_name: str
+    location_name: str
+    availability_id: str
+    starts_at: datetime
+    ends_at: datetime
+    rating: float = Field(ge=0, le=5)
+    completed_jobs: int = Field(ge=0)
+    base_inspection_fee: float = Field(ge=0)
+    match_score: float = Field(ge=0, le=1)
+    score_breakdown: MatchScoreBreakdown
+    reasons: list[str] = Field(default_factory=list)
+    source_type: Literal["synthetic"] = "synthetic"
+
+
+class ProviderMatchResult(ReadModel):
+    service_id: int = Field(gt=0)
+    location_id: str
+    preferred_start: datetime | None = None
+    preferred_end: datetime | None = None
+    scoring_policy: Literal["matching_v1"] = "matching_v1"
+    data_source: Literal["synthetic"] = "synthetic"
+    count: int = Field(ge=0)
+    candidates: list[ProviderMatchCandidate] = Field(default_factory=list)

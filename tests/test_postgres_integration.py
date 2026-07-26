@@ -14,7 +14,6 @@ from home_repair_agent.backend.postgres_repository import PostgresReadRepository
 from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.data_cleaning.postgres import load_pipeline_outputs
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
@@ -282,6 +281,42 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
         with self.assertRaises(ServiceLayerError) as raised:
             service_layer.get_consultation_form(service_id=2)
         self.assertEqual("FORM_NOT_FOUND", raised.exception.code)
+
+    def test_read_service_matches_synthetic_providers_without_guessing(
+        self,
+    ) -> None:
+        service_layer = ReadServiceLayer(PostgresReadRepository(DATABASE_URL))
+        daan = service_layer.resolve_location(
+            county_name="台北",
+            district_name="大安",
+        )
+        banqiao = service_layer.resolve_location(
+            county_name="新北",
+            district_name="板橋",
+        )
+
+        daan_matches = service_layer.match_service_providers(
+            service_id=17,
+            location_id=daan.location_id,
+        )
+        banqiao_matches = service_layer.match_service_providers(
+            service_id=17,
+            location_id=banqiao.location_id,
+        )
+
+        self.assertEqual(2, daan_matches.count)
+        self.assertEqual(
+            ["SYN-PROVIDER-001", "SYN-PROVIDER-002"],
+            [candidate.provider_id for candidate in daan_matches.candidates],
+        )
+        self.assertTrue(
+            all(
+                candidate.source_type == "synthetic"
+                for candidate in daan_matches.candidates
+            )
+        )
+        self.assertEqual(0, banqiao_matches.count)
+        self.assertEqual([], banqiao_matches.candidates)
 
 
 if __name__ == "__main__":

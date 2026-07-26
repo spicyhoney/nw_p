@@ -17,8 +17,9 @@
 | `RuleBasedRepairMockModel` | `mock_model.py` | 無 AWS 時可重現的修繕流程替身 |
 | `ScriptedModelClient` | `mock_model.py` | 精確控制 Tool Call 的測試替身 |
 
-它已能保存同一個 session 的多輪訊息、呼叫三個唯讀 MCP Tools、把結果交回
-ModelClient，直到模型給出使用者回覆或觸發安全停止。
+它已能保存同一個 session 的多輪訊息、呼叫四個唯讀 MCP Tools、把結果交回
+ModelClient，直到模型給出使用者回覆或觸發安全停止。Rule-based Mock 會自動
+跑前三個諮詢工具；第四個媒合 Tool 已由 scripted model 驗證可通過相同迴圈。
 
 ## 為什麼現在能做
 
@@ -119,9 +120,10 @@ credentials 由標準 credential provider chain 或 IAM role 提供，不得寫�
 python -m pytest tests/test_agent_loop.py -q
 ```
 
-2026-07-26 結果：12 passed。涵蓋：
+2026-07-26 結果：13 passed。涵蓋：
 
 - 一句話依序呼叫三個真實 MCP Tools。
+- scripted model 能看見並呼叫第四個唯讀媒合 Tool。
 - 缺少地點時，下一輪補充後繼續而不重查服務。
 - 行政區查詢失敗時，可在下一輪更正地點並繼續流程。
 - 更正句同時包含新、舊地點時不猜測，要求單一新地點後再繼續。
@@ -133,7 +135,7 @@ python -m pytest tests/test_agent_loop.py -q
 
 完整 test suite 的數字取決於本機是否具備主辦方資料集與
 `TEST_DATABASE_URL`。2026-07-26 在有主辦方資料集、未設定測試資料庫的
-工作區為 38 passed、8 skipped、25 subtests passed；8 個 skipped 是
+工作區為 44 passed、9 skipped、40 subtests passed；9 個 skipped 是
 PostgreSQL 整合測試。乾淨 checkout 若沒有主辦方資料集，會再跳過 1 個
 資料清洗整合測試。
 
@@ -143,7 +145,8 @@ PostgreSQL 整合測試。乾淨 checkout 若沒有主辦方資料集，會再�
 - AgentCore Runtime / Gateway 部署與 IAM 驗證。
 - Speech-to-Text、Text-to-Speech 與前端麥克風。
 - 回答自動對映到任意表單 topic 的 LLM slot filling。
-- 建立案件、媒合、確認與訂單寫入。
+- Rule-based Mock 尚未把表單自由文字自動轉成含時區的媒合參數。
+- 建立案件、保留時段、確認媒合與訂單寫入。
 - session 的 PostgreSQL / Redis 永久保存。
 
 下一階段應先接 Bedrock adapter 並以固定 eval cases 比較 Tool 選擇；寫入功能

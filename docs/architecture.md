@@ -22,14 +22,14 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 |---|---|---|
 | 資料清洗 | 已完成 B+ pipeline 與品質報告 | 持續補測試資料 |
 | PostgreSQL | 已在真實 PostgreSQL 16.14 通過 migration、loader、view、constraint 測試 | 實作最小權限與正式 RDS 連線 |
-| Service Layer | 已完成服務、行政區、諮詢表單三個只讀功能 | 下一步做媒合，再做需確認的寫入 |
-| MCP Tools | 已完成三個唯讀 Tool 與記憶體內 protocol tests | 接入 Mock Agent 並做 tool-selection 評估 |
+| Service Layer | 已完成服務、行政區、諮詢表單與 synthetic 師傅媒合 | 複驗媒合 PostgreSQL 查詢，再做需確認的寫入 |
+| MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests | 以真實模型做 tool-selection 評估 |
 | Agent | 已完成核心迴圈、MCP Client 與 Mock 多輪測試 | 實作 BedrockModelClient 與 tool-selection eval |
 | AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
 | UI | 尚未實作 | 最後串接聊天與直接操作按鈕 |
 
-目前有主辦方資料集、無測試資料庫的工作區為 38 passed、8 skipped、
-25 subtests passed；缺少主辦方資料集時會再跳過 1 個資料清洗整合測試。
+目前有主辦方資料集、無測試資料庫的工作區為 44 passed、9 skipped、
+40 subtests passed；缺少主辦方資料集時會再跳過 1 個資料清洗整合測試。
 這些測試已驗證資料清洗、Service Layer、MCP 協定與 Mock Agent 迴圈，但仍
 不代表 Bedrock、FastAPI、語音或 AWS 部署已經端到端完成。
 

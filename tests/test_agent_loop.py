@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime, timedelta, timezone
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
@@ -22,6 +23,7 @@ from home_repair_agent.agent.models import (
     ToolResultMessage,
 )
 from home_repair_agent.backend.models import (
+    AvailableProviderSlot,
     ConsultationForm,
     FormTopic,
     ResolvedLocation,
@@ -93,11 +95,29 @@ def _form() -> ConsultationForm:
     )
 
 
+def _slot() -> AvailableProviderSlot:
+    taipei_timezone = timezone(timedelta(hours=8))
+    return AvailableProviderSlot(
+        provider_id="SYN-PROVIDER-001",
+        display_name="安心修繕 A 組",
+        service_id=17,
+        rating=4.8,
+        completed_jobs=128,
+        base_inspection_fee=300,
+        location_id="NLSC-63000030",
+        location_name="臺北市大安區",
+        availability_id="SYN-SLOT-001",
+        starts_at=datetime(2026, 7, 27, 13, tzinfo=taipei_timezone),
+        ends_at=datetime(2026, 7, 27, 17, tzinfo=taipei_timezone),
+    )
+
+
 class StubReadRepository:
     def __init__(self) -> None:
         self.service_results = [_service()]
         self.location_results = [_location()]
         self.form_results = [_form()]
+        self.slot_results = [_slot()]
 
     def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
         return self.service_results[:limit]
@@ -118,6 +138,17 @@ class StubReadRepository:
         service_id: int,
     ) -> list[ConsultationForm]:
         return self.form_results
+
+    def list_available_provider_slots(
+        self,
+        *,
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None,
+        preferred_end: datetime | None,
+        candidate_limit: int,
+    ) -> list[AvailableProviderSlot]:
+        return self.slot_results[:candidate_limit]
 
 
 class LocationCorrectionRepository(StubReadRepository):
@@ -237,6 +268,51 @@ class AgentMCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("需要處理的問題", result.reply)
         self.assertTrue(all(entry.result["ok"] for entry in result.tool_trace))
+
+    async def test_agent_can_call_read_only_matching_tool(self) -> None:
+        model = ScriptedModelClient(
+            [
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="match-1",
+                        name="match_service_providers",
+                        arguments={
+                            "service_id": 17,
+                            "location_id": "NLSC-63000030",
+                            "limit": 3,
+                        },
+                    )
+                ),
+                ModelTurn.answer("已找到可預約的模擬師傅候選。"),
+            ]
+        )
+
+        async with create_connected_server_and_client_session(
+            self.server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            runner = AgentRunner(
+                model_client=model,
+                tool_client=MCPToolClient(mcp_session),
+            )
+            result = await runner.run_turn(
+                session=ConversationSession(session_id="matching-tool"),
+                user_text="請幫我找可預約的師傅",
+            )
+
+        self.assertEqual(
+            ["match_service_providers"],
+            [entry.name for entry in result.tool_trace],
+        )
+        self.assertEqual(
+            "SYN-PROVIDER-001",
+            result.tool_trace[0].result["data"]["candidates"][0]["provider_id"],
+        )
+        self.assertIn(
+            "match_service_providers",
+            {tool.name for tool in model.requests[0][1]},
+        )
+        self.assertIn("模擬師傅候選", result.reply)
 
     async def test_missing_location_is_collected_on_the_next_user_turn(
         self,

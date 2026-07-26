@@ -1,6 +1,6 @@
 # Service Layer 第一階段
 
-## 為什麼先做三個只讀功能
+## 第一階段為什麼先做三個只讀功能
 
 這三個功能不是 Service Layer 的全部，而是第一條可以安全驗證的查詢鏈：
 
@@ -43,12 +43,12 @@ FastAPI endpoint / MCP Tool
 | `backend/models.py` | 穩定、可轉 JSON 的輸出資料模型 |
 | `backend/errors.py` | API 與 MCP 可共用的錯誤格式 |
 | `backend/ports.py` | Service Layer 要求的 Repository 介面 |
-| `backend/services.py` | 三個查詢的輸入驗證與商業規則 |
+| `backend/services.py` | 四個查詢的輸入驗證、商業規則與透明媒合計分 |
 | `backend/postgres_repository.py` | 只查 `agent.*` views 的參數化 SQL |
 
 FastAPI 與 MCP 未來只能呼叫 Service Layer，不在 adapter 中複製 SQL 或規則。
 
-## 已完成的三個功能
+## 第一階段三個功能
 
 ### `search_services`
 
@@ -113,6 +113,25 @@ options = 14
 例如 `service_id=2` 是洗衣機清洗，但目前沒有通過政策的對應表單，因此會回
 `FORM_NOT_FOUND`，不會拿水電表單代替。
 
+## `match_service_providers`
+
+用途：依正式服務、正式行政區與選填偏好時段，查詢並排序可用的 synthetic
+師傅候選。
+
+| 項目 | 內容 |
+|---|---|
+| 輸入 | `service_id`、`location_id`、選填含時區時段、`limit` |
+| 資料來源 | `agent.available_provider_slot` |
+| 硬性條件 | 服務、行政區相同；時段狀態 available；指定時段時必須重疊 |
+| 排序 | `matching_v1`：時段 40%、評分 35%、經驗 20%、相對費用 5% |
+| 可解釋性 | 回傳四項分數明細與中文理由 |
+| 資料標籤 | 結果與每位候選均標示 `synthetic` |
+| 無結果 | 成功回傳空陣列，不自行建立或替換師傅 |
+
+同一師傅若有多個可用時段只回傳最高分的一個。本功能不保留時段、不建立案件
+或訂單；完整契約、安全界線與測試結果見
+[唯讀師傅媒合服務](matching-service.md)。
+
 ## 穩定錯誤格式
 
 Service Layer 的預期錯誤可直接由 FastAPI 或 MCP adapter 轉成 JSON：
@@ -155,7 +174,7 @@ location = services.resolve_location(
 form = services.get_consultation_form(service_id=17)
 ```
 
-目前這個 Python 內部介面已由三個 FastMCP Tools 共用；實作與契約請見
+目前這個 Python 內部介面已由四個 FastMCP Tools 共用；實作與契約請見
 [MCP Server README](../src/home_repair_agent/mcp_server/README.md)。FastAPI
 read endpoints 尚未實作，未來也必須呼叫同一個 `ReadServiceLayer`，不可複製
 規則或 SQL。
@@ -175,18 +194,20 @@ $env:TEST_DATABASE_URL="postgresql://home_repair@127.0.0.1:55434/home_repair"
 python -m unittest discover -s tests -v
 ```
 
-2026-07-26 已在真實 PostgreSQL 16.14 完成原有 28 項測試；加入 MCP 後，
-無測試資料庫的完整 suite 為 26 passed、8 skipped。驗證包含：
+2026-07-26 已在真實 PostgreSQL 16.14 完成原有查詢測試；新增媒合後，
+無測試資料庫的完整 suite 為 44 passed、9 skipped、40 subtests passed。
+新增媒合 SQL 案例需要再次提供 `TEST_DATABASE_URL` 才會執行。驗證包含：
 
 - 查詢文字中的 alias 能找出 `service_id=17`。
 - `台北`、`大安` 能唯一解析為 `ORG-01-007`。
 - 水電表單能組成 8 題與 14 個選項。
 - 沒有表單與結果不唯一時不猜測。
 - Repository SQL 只引用 `agent.*` views。
+- 媒合輸入、空結果、透明排序、同師傅去重與 MCP structured content。
 
 ## 下一階段
 
-1. 加入 FastAPI read endpoints，和 MCP 共用同一層。
-2. 實作 `match_service_providers` 只讀媒合。
+1. 使用 `TEST_DATABASE_URL` 複驗新增媒合 SQL。
+2. 加入 FastAPI read endpoints，和 MCP 共用同一層。
 3. 將已完成的 Mock Agent 迴圈替換為 BedrockModelClient 並做 tool-selection eval。
 4. 設計使用者確認契約後，才實作建案與建單等寫入 Service。

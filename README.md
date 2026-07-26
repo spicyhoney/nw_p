@@ -89,7 +89,8 @@ docs/             架構、計畫與競賽文件
 - [x] 在原生 Windows PostgreSQL 16.14 完成 migration、loader 與 constraints 測試
 - [x] 完成第一階段只讀 Service Layer：服務、行政區、諮詢表單
 - [x] 完成三個唯讀 MCP Tools 與 protocol tests
-- [ ] 完成媒合與寫入 Service Layer、Agent 與 Demo UI
+- [x] 完成可替換模型的 Agent 核心迴圈與 Mock 多輪測試
+- [ ] 完成 Bedrock adapter、媒合與寫入 Service Layer、Demo UI
 - [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
 
 ## 執行資料清洗
@@ -136,3 +137,6 @@ home-repair-mcp
 或設定 `MCP_TRANSPORT=streamable-http`，endpoint 會位於
 `http://127.0.0.1:8000/mcp`。工具契約與安全設計請見
 [MCP Server 實作說明](src/home_repair_agent/mcp_server/README.md)。
+
+Agent 的模型／工具介面、多輪狀態、安全停止、Mock 限制及語音接法請見
+[Agent 對話迴圈實作說明](src/home_repair_agent/agent/README.md)。

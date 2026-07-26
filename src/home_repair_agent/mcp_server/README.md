@@ -111,7 +111,7 @@ HTTP MCP endpoint 為 `http://127.0.0.1:8000/mcp`。正式部署到 AWS 時才�
 
 - 建立諮詢案件、媒合、確認訂單等寫入 Tool。
 - MCP HTTP 的 OAuth / Gateway 驗證。
-- Agent 的多輪對話與 tool-selection 評估。
+- 真實 Bedrock 模型的 tool-selection 評估。
 - AWS AgentCore Gateway、Lambda 與 RDS 部署。
 
 以上項目要等唯讀流程與權限邊界穩定後分階段加入。

@@ -9,3 +9,5 @@
 - 被修復與被隔離的資料筆數
 - 資料來源與規則版本
 
+`postgres_integration.md` 另記錄 migration、loader、constraints、Agent views
+與資料庫註解在真實 PostgreSQL 16 的整合測試結果。

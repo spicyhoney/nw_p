@@ -67,6 +67,13 @@ python -m unittest discover -s tests -v
 本機有 PostgreSQL 時，再執行 migration 與 loader，確認所有外鍵、constraint、
 view 和 `COMMENT ON` 都能成功建立。
 
+可使用獨立測試資料庫執行 PostgreSQL 整合測試：
+
+```powershell
+$env:TEST_DATABASE_URL="postgresql://home_repair:home_repair@127.0.0.1:55432/home_repair"
+python -m unittest tests.test_postgres_integration -v
+```
+
 ## 回報格式
 
 AI 應先列問題，再列摘要。每項問題包含：

@@ -77,6 +77,7 @@ docs/             架構、計畫與競賽文件
 - [x] 建立專案與協作骨架
 - [x] 建立可重複執行的 B+ 資料清洗流程
 - [x] 建立 PostgreSQL clean schema 與 Agent 安全檢視
+- [x] 在原生 Windows PostgreSQL 16.14 完成 migration、loader 與 constraints 測試
 - [ ] 完成 MCP Tools
 - [ ] 串接 Agent 與 Demo UI
 

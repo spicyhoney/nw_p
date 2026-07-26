@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 try:
     import psycopg
 except ImportError:
     psycopg = None
 
+from home_repair_agent.backend.errors import ServiceLayerError
+from home_repair_agent.backend.postgres_repository import PostgresReadRepository
+from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.data_cleaning.postgres import load_pipeline_outputs
 
 
@@ -240,6 +243,45 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
 
         self.assertEqual(before, after)
         self.assertEqual(812, sum(loaded_again.values()))
+
+    def test_read_service_searches_by_alias_inside_user_utterance(self) -> None:
+        service_layer = ReadServiceLayer(PostgresReadRepository(DATABASE_URL))
+
+        result = service_layer.search_services(
+            "台北市大安區水龍頭漏水",
+            limit=5,
+        )
+
+        self.assertGreaterEqual(result.count, 1)
+        self.assertEqual(17, result.services[0].service_id)
+        self.assertEqual("水電修繕", result.services[0].name)
+
+    def test_read_service_resolves_location_without_guessing(self) -> None:
+        service_layer = ReadServiceLayer(PostgresReadRepository(DATABASE_URL))
+
+        result = service_layer.resolve_location(
+            county_name="台北",
+            district_name="大安",
+        )
+
+        self.assertEqual("台北市", result.county_name)
+        self.assertEqual("大安區", result.district_name)
+        self.assertEqual("台北市大安區", result.full_name)
+
+    def test_read_service_returns_curated_form_and_rejects_missing_form(
+        self,
+    ) -> None:
+        service_layer = ReadServiceLayer(PostgresReadRepository(DATABASE_URL))
+
+        form = service_layer.get_consultation_form(service_id=17)
+
+        self.assertEqual("repair_form_v1", form.form_key)
+        self.assertEqual(8, len(form.topics))
+        self.assertEqual(14, sum(len(topic.options) for topic in form.topics))
+
+        with self.assertRaises(ServiceLayerError) as raised:
+            service_layer.get_consultation_form(service_id=2)
+        self.assertEqual("FORM_NOT_FOUND", raised.exception.code)
 
 
 if __name__ == "__main__":

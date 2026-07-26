@@ -6,7 +6,7 @@
 
 - PostgreSQL：16.14，EDB Windows x86-64 binary ZIP
 - 啟動方式：原生 Windows `initdb` / `pg_ctl`
-- 監聽範圍：`127.0.0.1:55432`
+- 監聽範圍：僅 `127.0.0.1`，使用非預設暫時連接埠
 - Python：專案 `.venv`
 - Driver：psycopg 3.3.4
 - 資料庫編碼：UTF-8
@@ -70,12 +70,20 @@ Migration `sql/migrations/001_b_plus_schema.sql` 成功執行，loader 共處理
 - Schema、table、重要 column 與 Agent view 的 `COMMENT ON` 可由 PostgreSQL 查詢。
 - 第二次套用 migration 與 loader 成功。
 - 重跑前後各資料表筆數一致。
-- 完整測試套件 13 項全部通過，其中 5 項為 PostgreSQL 整合測試。
-- 測試後已使用 fast shutdown 停止伺服器，連接埠確認不再回應。
+- `search_services` 能從完整句子中的「水龍頭漏水」找到
+  `service_id=17 / 水電修繕`。
+- `resolve_location("台北", "大安")` 唯一解析為
+  `ORG-01-007 / 台北市大安區`。
+- `get_consultation_form(17)` 回傳 `repair_form_v1`、8 題與 14 個選項；
+  沒有表單的服務不會被套用水電表單。
+- 完整測試套件 28 項全部通過，其中 8 項為 PostgreSQL 整合測試。
+- 測試後已使用 fast shutdown 停止伺服器，連接埠確認不再回應；可攜 binary、
+  data directory 與下載 ZIP 均已刪除。
 
 ## 尚未涵蓋
 
 - 正式雲端 PostgreSQL／RDS 權限與網路設定。
 - Agent 專用唯讀資料庫角色及 `GRANT`。
 - 多使用者併發、效能與備份還原。
-- FastAPI／MCP Service Layer 的端到端交易。
+- FastAPI／MCP adapter 對只讀 Service Layer 的端到端呼叫。
+- 建案、預約與訂單等寫入 Service Layer 的交易與使用者確認。

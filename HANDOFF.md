@@ -24,8 +24,8 @@ PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成
 - 功能 commit：`d2e953c`；遠端分支已推送。
 - HF token 曾出現在使用者提供的終端 transcript；使用者已撤銷／refresh。
   不保留或記錄新 token，該 transcript 不可提交或再次分享。
-- 已在 PR #5 更新分工以避免隊友重複實作：
-  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084377900`。
+- 已在 PR #5 提出 Web scope／分工與驗收標準，待組員回覆：
+  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084536753`。
 
 ## 3. 下一步（具體到第一個動作）
 

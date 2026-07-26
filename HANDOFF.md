@@ -21,10 +21,11 @@ adapter 與顯式 provider routing；live token、Bedrock、寫入與 UI 尚待�
 - 已核對 `huggingface_hub 1.24.0` 真實 API；focused tests 30 passed，
   完整 suite `60 passed, 10 skipped, 40 subtests passed`，Mock 四工具 smoke、
   scoped Ruff、format、`compileall`、`pip check`、`git diff --check` 通過。
+- 功能 commit：`d2e953c`；遠端分支已推送。
 - 無 `HF_TOKEN`，所以 live provider call 未執行，不宣稱真實模型已端到端完成。
   全 repo Ruff 另有 22 個未改動的既有 data-cleaning／script 問題。
-- 已在 PR #5 留下下一階段分工：
-  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084316544`。
+- 已在 PR #5 更新分工以避免隊友重複實作：
+  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084377900`。
 
 ## 3. 下一步（具體到第一個動作）
 

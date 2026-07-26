@@ -1,20 +1,23 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-07-26 19:28 +08:00　更新者：Codex　機器：Windows / Asia-Taipei
+> 更新：2026-07-26　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先以本檔為準，再按連結讀細節。
 
 ## 1. 目前狀態（3 行內）
 
-PR #4 `feature/agent-prototype` 已補上地點更正 bug 修正與回歸測試，最新
-commit 為 `36fd1e2`，PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環
-可測；真實 Bedrock、寫入/媒合服務與 Demo UI 尚未完成。
+PR #4 `feature/agent-prototype` 已補上地點更正、多地點安全重試與回歸測試，
+PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 Bedrock、
+寫入/媒合服務與 Demo UI 尚未完成。最新版本以遠端 PR head 為準，不在文件
+硬編會隨下一個 commit 失效的 SHA。
 
 ## 2. 本次 session 完成（帶證據）
 
-- PR #4 bug 已修正：失敗的行政區可在下一輪更正，不會被舊訊息遮蔽
-  （程式：`src/home_repair_agent/agent/mock_model.py`；測試：
+- PR #4 地點流程已強化：失敗的行政區可在下一輪更正；同一句含新、舊地點時
+  不猜測，會要求只輸入更正後地點（程式：
+  `src/home_repair_agent/agent/mock_model.py`；測試：
   `tests/test_agent_loop.py`）。
-- 驗證：Agent 測試 `11 passed`；完整測試 `36 passed, 9 skipped,
+- 驗證：Agent 測試 `12 passed`；本工作區有主辦方資料集、未設定
+  `TEST_DATABASE_URL` 時，完整測試為 `38 passed, 8 skipped,
   25 subtests passed`；Agent 範圍 Ruff 通過。
 - 修正細節與重現步驟：
   `docs/ENGINEER_LOG-pr4-location-fix.md`。
@@ -26,9 +29,10 @@ commit 為 `36fd1e2`，PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP
 1. 先同步並驗證 PR #4：
    `git switch feature/agent-prototype && git pull --ff-only &&`
    `.\.venv\Scripts\python.exe -m pytest -q`
-   預期：`36 passed, 9 skipped, 25 subtests passed`。
-2. 組員審查 `36fd1e2` 與 PR 內的 model-mode 提案，決定是否採用
-   `auto / bedrock / local / mock` provider routing。
+   結果會依本機是否有主辦方資料集與 `TEST_DATABASE_URL` 而異；Agent
+   專屬測試應為 `12 passed`。
+2. 組員審查 PR #4 與 model-mode 提案。現階段建議只評估顯式的
+   `bedrock / local / mock`，`auto` fallback 暫緩。
 3. 若提案通過，先在最新 `main` 建立獨立分支，再修改
    `src/home_repair_agent/agent/`；不要把 provider routing 混進
    matching-service 分支。
@@ -49,14 +53,13 @@ commit 為 `36fd1e2`，PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP
 
 ### Agent assumptions（可質疑）
 
-- [active] 建議 provider mode 為：
+- [active] 審查建議的顯式 provider mode 為：
   - `bedrock`：強制使用 AWS；設定或憑證不足時 fail fast。
   - `local`：使用本機開源模型 adapter；不得冒充 Bedrock。
-  - `auto`：Bedrock 設定完整才使用 AWS，否則顯示
-    `AWS 未啟用，目前使用 local mode` 後切到 `local`。
   - `mock`：保留目前 deterministic rule-based client，只供測試與固定 Demo。
-- [active] 不建議在 `bedrock` mode 靜默降級，否則正式 Demo 可能在不知情下
-  使用不同模型；fallback 必須在 log、CLI/UI 與回應 metadata 可見。
+- [active] 目前不建議實作 `auto`。若未來加入，必須由設定明確啟用，且
+  fallback 必須在 log、CLI/UI 與回應 metadata 可見；`bedrock` mode 不得
+  靜默降級。
 - [active] 本機開源模型應實作成新的 `ModelClient` adapter，重用既有
   `AgentRunner` 與 MCP tool loop；實際 runtime/model（例如本機相容 API）
   尚未選定。
@@ -64,8 +67,8 @@ commit 為 `36fd1e2`，PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP
 
 ### Open issues（待決）
 
-- [active] 組員是否同意四種 provider mode？需要在 PR #4 回覆。
-- [active] `auto` 是否允許自動 fallback，或必須由使用者確認後才切換？
+- [active] 組員是否同意顯式的 `bedrock / local / mock` provider mode？
+- [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
 - [active] 本機開源模型 runtime、model 尺寸、硬體需求及 tool-calling
   相容性尚未評估。
 - [active] 真實 Bedrock adapter 由誰實作、何時能取得 AWS 環境仍待確認。
@@ -77,25 +80,21 @@ commit 為 `36fd1e2`，PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP
   MCP Tools、Mock Agent tool loop。
 - 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、媒合、確認與
   訂單。
-- Agent 介面：`src/home_repair_agent/agent/models.py` 的 `ModelClient` /
+- Agent 介面：`src/home_repair_agent/agent/ports.py` 的 `ModelClient` /
   `ToolClient`；設計說明見 `src/home_repair_agent/agent/README.md`。
 - 現有 Agent 只允許 read-only tools；不要在未做確認、冪等與授權設計前開放
   寫入 tool。
-- `feature/agent-terminal-demo`（`2ae5ada`）與
-  `feature/bedrock-adapter`（`446fb84`）是本機未推送的實驗分支，不是遠端
-  canonical 狀態；使用前必須重新審查並 rebase 最新基底。
+- 未推送的本機實驗分支不屬於可重現的團隊狀態，不作為接手依據。
 
 ## 6. 環境快照
 
-- Repo：`C:\Users\water\Desktop\AI\claude\hack松\nw_p`
+- Repo：`https://github.com/spicyhoney/nw_p`
 - 當前分支：`feature/agent-prototype`，追蹤
   `origin/feature/agent-prototype`。
-- Python：`.venv` / Python 3.14.5。
-- 還在跑的 process：無本次工作啟動的長時間 process。
+- Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、
   `docs/ENGINEER_LOG-pr4-location-fix.md`、PR #4。
-- 危險區：不要 force-push、不要直接改/刪使用者的兩個本機實驗分支、不要在
-  沒有明確授權時將 PR 改 Ready 或合併。
+- 危險區：不要 force-push；不要在沒有明確授權時將 PR 改 Ready 或合併。
 
 ## 7. 授權狀態
 

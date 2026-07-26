@@ -307,6 +307,48 @@ class AgentMCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("需要處理的問題", second.reply)
 
+    async def test_location_correction_with_old_and_new_locations_requests_retry(
+        self,
+    ) -> None:
+        services = ReadServiceLayer(LocationCorrectionRepository())
+        server = create_mcp_server(services)
+
+        async with create_connected_server_and_client_session(
+            server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            runner = AgentRunner(
+                model_client=RuleBasedRepairMockModel(),
+                tool_client=MCPToolClient(mcp_session),
+            )
+            conversation = ConversationSession(session_id="ambiguous-location-correction")
+
+            await runner.run_turn(
+                session=conversation,
+                user_text="臺北市不存在區水龍頭漏水",
+            )
+            ambiguous = await runner.run_turn(
+                session=conversation,
+                user_text="不是臺北市不存在區，是新北市板橋區",
+            )
+            corrected = await runner.run_turn(
+                session=conversation,
+                user_text="新北市板橋區",
+            )
+
+        self.assertEqual([], ambiguous.tool_trace)
+        self.assertIn("偵測到多個地點", ambiguous.reply)
+        self.assertIn("只提供更正後", ambiguous.reply)
+        self.assertEqual(
+            ["resolve_location", "get_consultation_form"],
+            [entry.name for entry in corrected.tool_trace],
+        )
+        self.assertEqual(
+            {"county_name": "新北市", "district_name": "板橋區"},
+            corrected.tool_trace[0].arguments,
+        )
+        self.assertIn("需要處理的問題", corrected.reply)
+
     async def test_form_answers_persist_across_turns_until_confirmation(
         self,
     ) -> None:

@@ -122,7 +122,13 @@ class RuleBasedRepairMockModel:
                 and _has_user_after(messages, location_result)
             ):
                 location_text = _latest_user_text(messages)
-            location = _extract_location(location_text)
+            location_candidates = _extract_locations(location_text)
+            if _county_mention_count(location_text) > 1 or len(location_candidates) > 1:
+                return ModelTurn.answer(
+                    "偵測到多個地點，為避免選錯，請只提供更正後的完整縣市與行政區，"
+                    "例如「新北市板橋區」。"
+                )
+            location = location_candidates[0] if location_candidates else None
             if location is None:
                 return ModelTurn.answer("請提供完整的縣市與行政區，例如「臺北市大安區」。")
 
@@ -243,20 +249,40 @@ def _latest_user_text(messages: Sequence[ConversationMessage]) -> str:
     return ""
 
 
-def _extract_location(text: str) -> tuple[str, str] | None:
-    county_match: tuple[str, int] | None = None
+def _extract_locations(text: str) -> list[tuple[str, str]]:
+    normalized_text = text.replace("台", "臺")
+    county_mentions: list[tuple[int, int, str]] = []
     for county_name in COUNTY_NAMES:
-        position = text.find(county_name)
-        if position >= 0:
-            county_match = (county_name, position + len(county_name))
-            break
-    if county_match is None:
-        return None
+        county_mentions.extend(
+            (match.start(), match.end(), county_name)
+            for match in re.finditer(re.escape(county_name), normalized_text)
+        )
+    county_mentions.sort()
 
-    district_match = DISTRICT_PATTERN.search(text[county_match[1] :])
-    if district_match is None:
-        return None
-    return county_match[0], district_match.group(1)
+    locations: list[tuple[str, str]] = []
+    for index, (_, county_end, county_name) in enumerate(county_mentions):
+        next_county_start = (
+            county_mentions[index + 1][0]
+            if index + 1 < len(county_mentions)
+            else len(normalized_text)
+        )
+        locations.extend(
+            (county_name, district_match.group(1))
+            for district_match in DISTRICT_PATTERN.finditer(
+                normalized_text[county_end:next_county_start]
+            )
+        )
+    return locations
+
+
+def _county_mention_count(text: str) -> int:
+    normalized_text = text.replace("台", "臺")
+    return sum(normalized_text.count(county_name) for county_name in COUNTY_NAMES)
+
+
+def _extract_location(text: str) -> tuple[str, str] | None:
+    locations = _extract_locations(text)
+    return locations[0] if len(locations) == 1 else None
 
 
 def _has_user_after(

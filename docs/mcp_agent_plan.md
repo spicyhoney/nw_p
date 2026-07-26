@@ -1,5 +1,12 @@
 # mcp_agent_plan.md — MCP / Agent / Tool Calling 實作規劃
 
+> **文件狀態（2026-07-26）**：本頁主要是早期完整功能規劃，不代表所有 Tool
+> 已完成。實際程式狀態以 [實作索引](implementation-index.md) 與
+> [MCP Server README](../src/home_repair_agent/mcp_server/README.md) 為準。
+> 第一階段目前只完成 `search_services`、`resolve_location`、
+> `get_consultation_form` 三個唯讀 Tool。下方八個 Tool 是後續候選設計，名稱與
+> schema 在實作前仍可調整。
+
 ## 1. 本題為什麼適合 MCP / Tool Calling？
 
 智慧管家的本質是「一個大腦、很多雙手」：大腦（LLM）理解需求，手（工具）去查表單、寫諮詢單、搜廠商、改狀態。命題方的產品願景裡，管家未來要調用**不同公司提供的**生活服務（餐廳、清潔、修繕、外送）——這正是 MCP 要解的問題：服務商各自把能力包成標準 MCP Server，任何 Agent（統一的 Lumine one、或使用者自己的智慧管家）即插即用，不需要為每家寫客製整合。
@@ -24,9 +31,11 @@ services/case_service.py   ← 商業邏輯只寫一次
    └── mcp_server/server.py ← MCP 入口（給外部 Agent）
 ```
 
-## 3. 建議包成哪些 tools？（8 個）
+## 3. 後續候選 tools（早期規劃，共 8 個）
 
-> 通則：所有 tool 輸入輸出都是 JSON-serializable；ID 用字串；錯誤回 `{ok: false, error: "..."}` 而非拋例外（LLM 讀得懂才能自我修正）。
+> 這裡保留原始構想供後續取捨，不是目前契約。現在的共同回傳格式是
+> `{ok, data, error}`；可恢復的 domain error 供 Agent 追問，非預期系統錯誤
+> 則使用 MCP `isError=true`。
 
 ### T1. classify_service_type
 - **input**：`{ "utterance": string, "has_image": boolean }`

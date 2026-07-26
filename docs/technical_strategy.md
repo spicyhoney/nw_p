@@ -1,5 +1,10 @@
 # technical_strategy.md — 技術架構方案（3 套）
 
+> **2026-07-26 更新**：本文件保留早期三案比較供決策追溯。工作坊完整資料與
+> AgentCore 路線確認後，現在採用的實作架構以
+> [architecture.md](architecture.md) 為唯一準則；兩份內容衝突時，以該文件為準。
+> Lambda 與 API Gateway 已降為選配，不是為了增加 AWS 方塊而必做。
+>
 > 選型原則（依你們指定的優先序）：
 > 1. **實用性**：大廠在用、對 DS／AI Engineer／AI Infra 求職有幫助
 > 2. **難易度**：兩人、無 AWS 經驗、中低時間內能完成
@@ -127,7 +132,7 @@ External Agent（Lumine one）──MCP protocol──▶ MCP Server ──▶ �
 
 ---
 
-## 方案三：全託管 Serverless＋Bedrock Agents（高分高風險）
+## 方案三：全託管 Serverless＋Bedrock Agents Classic（歷史方案，不採用）
 
 ### 適用情境
 想在「AWS 原生程度」上壓過其他隊、且兩人中至少一人能全職投入時才考慮。
@@ -138,7 +143,7 @@ External Agent（Lumine one）──MCP protocol──▶ MCP Server ──▶ �
 | Frontend | React（Amplify Hosting＋CloudFront） |
 | Backend | 全 Lambda（API Gateway 統一入口），無常駐服務 |
 | Database | DynamoDB（案件、session）＋ S3；或 Aurora Serverless 對齊官方 schema |
-| AI | **Bedrock Agents**（託管 agent：action group 綁 Lambda、自動編排）＋ Knowledge Base |
+| AI | **Bedrock Agents Classic**（託管 agent：action group 綁 Lambda、自動編排）＋ Knowledge Base |
 | MCP | MCP Server 部署為容器（AgentCore／Fargate 類） |
 | Auth | Cognito（真登入） |
 | 編排 | Step Functions（案件狀態流轉） |
@@ -158,11 +163,11 @@ User → CloudFront/Amplify（React）
 
 ### 優點
 - AWS 展示分數天花板最高，架構圖最華麗
-- Bedrock Agents／Step Functions 是雲端職缺的高級關鍵字
+- Bedrock Agents Classic／Step Functions 的 AWS 原生整合程度高
 
 ### 缺點
 - 每一個組件對你們都是新的：學習曲線×10
-- Bedrock Agents 的除錯體驗差（黑盒編排），prompt 行為難控
+- Bedrock Agents Classic 的除錯體驗較黑盒，prompt 行為難控
 - DynamoDB 偏離官方 PostgreSQL schema，資料故事變弱
 - 本機幾乎無法完整重現，現場除錯全靠雲端 console
 
@@ -171,7 +176,8 @@ User → CloudFront/Amplify（React）
 - Demo 依賴網路與多個雲服務同時正常
 
 ### 適合我們嗎？
-**不適合**。這是有 AWS 經驗的 4 人隊方案。你們只取其中兩個元素講在簡報的「未來架構」頁：Bedrock Agents（規模化編排）與 Step Functions（狀態流自動化）。
+**不適合且不採用**。目前改採自製 Agent＋AgentCore Runtime / Gateway；不要再把
+Bedrock Agents Classic 畫進未來架構，以免和已選方案混淆。
 
 ### 推薦程度：★★☆☆☆（2/5，僅取素材）
 

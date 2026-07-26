@@ -72,17 +72,48 @@ python .\scripts\clean_data.py --reference-date 2026-08-01
 
 ## 載入 PostgreSQL
 
-安裝資料套件並啟動 PostgreSQL 後：
+先安裝資料套件：
 
 ```powershell
 pip install -e ".[data]"
+```
+
+### Docker 環境
+
+只有能正常使用 WSL 2 或 Hyper-V 的電腦才採用 Docker：
+
+```powershell
 docker compose up -d postgres
 $env:DATABASE_URL="postgresql://home_repair:home_repair@localhost:5432/home_repair"
 python .\scripts\clean_data.py --reference-date 2026-08-01
 ```
 
-資料會經由 `sql/migrations/001_b_plus_schema.sql` 建表並 upsert。若電腦沒有
-Docker，也能先完成 JSON 清洗；等團隊有可用的 PostgreSQL 後再執行載入。
+### 原生 Windows 環境
+
+若電腦無法使用 WSL 2／Hyper-V，或不適合為 Docker 啟用 Windows hypervisor，
+可從
+[PostgreSQL Windows 官方下載頁](https://www.postgresql.org/download/windows/)
+取得 EDB 提供的 PostgreSQL 16 Windows binary ZIP，在純英文暫存路徑使用
+`initdb`、`pg_ctl` 與非預設連接埠啟動暫時資料庫。
+
+原生 ZIP：
+
+- 不安裝 Windows 服務。
+- 不使用 Docker、WSL、Hyper-V 或虛擬機。
+- 測試完成後以 `pg_ctl stop -m fast` 停止。
+- 資料目錄與 binary 不提交 Git。
+- PostgreSQL 在 Windows 以 UTF-8 初始化時，binary 與 data directory 應避免
+  中文路徑。
+
+資料會經由 `sql/migrations/001_b_plus_schema.sql` 建表並 upsert。設定
+`TEST_DATABASE_URL` 後可執行：
+
+```powershell
+python -m unittest tests.test_postgres_integration -v
+```
+
+本專案已在原生 Windows PostgreSQL 16.14 與 psycopg 3.3.4 通過整合測試，
+詳見 `reports/postgres_integration.md`。
 
 ## 團隊接手規則
 

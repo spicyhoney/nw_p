@@ -6,10 +6,14 @@
 
 | 檔案 | 內容 | 先讀 |
 |---|---|---|
+| [implementation-index.md](implementation-index.md) | **目前真正完成的程式、位置、驗證與下一步** | ⭐ 兩人與 AI 先讀 |
+| [implementation-template.md](implementation-template.md) | 每次功能實作必填的說明模板 | 開發時 |
 | [final_recommendation.md](final_recommendation.md) | 總結：Top 3 題目、唯一技術棧、3 天行動清單 | ⭐ 兩人都先讀 |
 | [brainstorm.md](brainstorm.md) | 10 個候選方向＋SWOT＋評分＋排名 | ⭐ 拍板題目前必讀 |
 | [gantt_plan.md](gantt_plan.md) | 7/8→8/2 甘特圖＋30 小時決賽衝刺表 | ⭐ |
 | [technical_strategy.md](technical_strategy.md) | 3 套架構方案＋推薦（方案二混合雲） | 資工先讀 |
+| [architecture.md](architecture.md) | **目前實際架構、AWS 各服務角色、無憑證開發與完整呼叫流程** | 兩人都讀 |
+| [service-layer.md](service-layer.md) | 第一批三個只讀 Service、錯誤契約、真實查詢結果與下一步 | 兩人與 AI |
 | [data_plan.md](data_plan.md) | **官方資料集實際分析結果**＋資料表設計＋合成資料策略 | 統計先讀 |
 | [data-policy.md](data-policy.md) | B+ 正式、隔離、人工設定與模擬資料政策 | 兩人 |
 | [data-cleaning-runbook.md](data-cleaning-runbook.md) | 清洗規則、產出、重跑與 PostgreSQL 載入方式 | 統計主、資工跟 |

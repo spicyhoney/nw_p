@@ -8,10 +8,11 @@
 ## 第一梯隊：核心命脈（賽前必完成 Top 5）
 
 ### T01. Bedrock 第一次呼叫 ⭐
-- **目的**：驗證帳號、IAM、模型存取全鏈路通
-- **工具**：AWS 帳號、boto3｜**負責**：AB（各自跑通一次）｜⏱ 2h（不含模型審核等待）
-- **成功標準**：`converse()` 回傳 Claude 回覆；量到延遲數字
-- **失敗替代**：模型存取被卡 → 先用 Anthropic 直連 API 開發，介面層抽象化，Bedrock 通了再切
+- **目的**：驗證帳號、IAM、Region 與指定模型全鏈路通
+- **工具**：AWS 帳號、boto3｜**負責**：AB（各自跑通一次）｜⏱ 2h
+- **成功標準**：`converse()` 回傳模型回覆；量到延遲數字
+- **失敗替代**：主辦方尚未提供憑證或模型不可用 → 先用 Mock Model 開發，保留
+  `ModelClient` 介面，Bedrock 可用後再切 adapter
 - **影響**：不通則整個 AWS 故事重寫——**第一天就做**
 
 ### T02. Tool use 迴圈 ⭐
@@ -165,6 +166,6 @@
 
 **不建議現在做**：
 - EDIMUS/Ademus 部署演練——7/18 前規格未知，做了白做；用 T14 容器化替代準備
-- Bedrock Agents / Step Functions PoC——已決定不入架構
+- Bedrock Agents Classic / Step Functions PoC——已決定不入架構
 - 前端美化／動畫——功能閉環前的美化都是負債
 - 壓力測試／併發測試——demo 只有一個使用者：你們自己

@@ -12,7 +12,7 @@
 | 日期 | 任務 | 負責 | ⏱ | 交付物 | 驗收 | 風險 / fallback |
 |---|---|---|---|---|---|---|
 | 7/8–7/9 | 讀完本文件包；兩人對齊題目方向（選主體＝候選 1 or 2）；建 GitHub repo | AB | 3h | 方向決議＋repo | 能各自說出「我們做什麼、不做什麼」 | 猶豫不決 → 7/10 前強制拍板，選不出就選候選 2 骨架 |
-| 7/8–7/9 | AWS 帳號＋IAM＋**Bedrock 模型存取申請**（T01 前半） | A | 2h | 可呼叫的憑證 | `sts get-caller-identity` 成功 | 審核慢 → 先用 Anthropic API 直連開發 |
+| 7/8–7/9 | AWS 帳號／主辦方暫時憑證＋IAM＋Bedrock 可用性（T01 前半） | A | 2h | 可呼叫的暫時憑證 | `sts get-caller-identity` 與指定模型可用 | 尚無憑證 → 先用 Mock Model 開發 |
 | 7/9–7/10 | Docker Postgres＋官方 SQL 匯入（T04） | A | 3h | db 容器＋seed 腳本 | 官方 3 檔匯入零錯、寫入一筆 feedback | DDL 卡 → 調整匯入順序；最壞 SQLite |
 | 7/9–7/11 | 手寫 20 句 eval 語料＋persona 草稿 | B | 3h | eval_cases.json v1 | 覆蓋 6 服務類型＋3 個陷阱題 | 無 |
 | 7/10–7/12 | Bedrock 首呼＋意圖分類 prompt（T01/T03） | B 主 A 協 | 4h | classify prompt＋跑分腳本 | ≥18/20 | 不達標 → 縮場景數 |
@@ -117,7 +117,7 @@
 1. **不碰金流**（官方明說；「訂單成立，請於 X 日前完成付款」一句話帶過）
 2. **不用真實廠商名稱**（官方明說；全用虛構商號，demo 前全文搜一次真品牌字樣）
 3. demo 場景不超過 2 個服務類型（第 3 個用「已支援」示意卡）
-4. 不從零學 Bedrock Agents、Step Functions、k8s、VPC 等重 infra
+4. 不從零學 Bedrock Agents Classic、Step Functions、k8s、VPC 等重 infra
 5. 不做無法 demo 的功能（沒有 UI 入口的後端功能＝不存在）
 6. 不依賴不穩定外部 API（地圖、真餐廳資料、LINE 通知——全用假資料/站內通知）
 7. 不在 7/27 之後加新功能、不在決賽 18h 後寫新 code

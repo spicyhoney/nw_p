@@ -4,15 +4,20 @@ import argparse
 import asyncio
 import json
 import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
+from home_repair_agent.agent.huggingface_model import (
+    HuggingFaceConfigurationError,
+    HuggingFaceModelClient,
+)
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
 from home_repair_agent.agent.models import ConversationSession, ToolTraceEntry
+from home_repair_agent.agent.ports import ModelClient
 from home_repair_agent.backend.models import (
     AvailableProviderSlot,
     ConsultationForm,
@@ -31,9 +36,10 @@ SCRIPTED_INPUTS = (
     "水龍頭漏水",
     "星期六下午",
 )
-DEMO_NOTICE = """\
+DEMO_NOTICE_TEMPLATE = """\
 修繕小隊長｜本機終端 Demo
-模式：Mock Model + 記憶體 Demo 資料（不連 AWS、不寫資料庫、不建立案件）
+模型：{model_label}
+資料：記憶體 Demo 資料（不連 AWS、不寫資料庫、不建立案件）
 用途：人工驗證 Agent → 四個唯讀 MCP Tools → Service Layer 的多輪閉環。
 指令：/help、/reset、/quit
 """
@@ -206,12 +212,14 @@ class DemoReadRepository:
 
 async def run_demo(
     *,
+    model_client: ModelClient | None = None,
+    model_label: str = "Mock Model（規則式）",
     scripted: bool = False,
     show_trace: bool = True,
     input_func: Callable[[str], str] = input,
     output_func: Callable[[str], None] = print,
 ) -> ConversationSession:
-    output_func(DEMO_NOTICE.rstrip())
+    output_func(DEMO_NOTICE_TEMPLATE.format(model_label=model_label).rstrip())
     server = create_mcp_server(ReadServiceLayer(DemoReadRepository()))
     conversation = ConversationSession(session_id="terminal-demo")
 
@@ -220,7 +228,7 @@ async def run_demo(
         raise_exceptions=True,
     ) as mcp_session:
         runner = AgentRunner(
-            model_client=RuleBasedRepairMockModel(),
+            model_client=(model_client if model_client is not None else RuleBasedRepairMockModel()),
             tool_client=MCPToolClient(mcp_session),
         )
         scripted_inputs = iter(SCRIPTED_INPUTS)
@@ -275,7 +283,13 @@ def _without_suffix(value: str, suffixes: tuple[str, ...]) -> str:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run the local no-AWS home repair Agent demo.",
+        description="Run the local home repair Agent demo.",
+    )
+    parser.add_argument(
+        "--model-provider",
+        choices=("mock", "huggingface"),
+        default="mock",
+        help="model adapter to use (default: mock)",
     )
     parser.add_argument(
         "--scripted",
@@ -290,11 +304,32 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _resolve_model_client(
+    model_provider: str,
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> tuple[ModelClient, str]:
+    if model_provider == "mock":
+        return RuleBasedRepairMockModel(), "Mock Model（規則式）"
+    if model_provider == "huggingface":
+        client = HuggingFaceModelClient.from_environment(environ=environ)
+        label = f"Hugging Face｜{client.model_id}（provider={client.provider}）"
+        return client, label
+    raise ValueError(f"unsupported model provider: {model_provider}")
+
+
 def main(argv: Sequence[str] | None = None) -> None:
-    args = _build_parser().parse_args(argv)
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    try:
+        model_client, model_label = _resolve_model_client(args.model_provider)
+    except HuggingFaceConfigurationError as error:
+        parser.error(str(error))
     logging.getLogger("mcp.server.lowlevel.server").setLevel(logging.WARNING)
     asyncio.run(
         run_demo(
+            model_client=model_client,
+            model_label=model_label,
             scripted=args.scripted,
             show_trace=not args.no_trace,
         )

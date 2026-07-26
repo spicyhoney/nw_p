@@ -21,6 +21,7 @@ data = [
 app = [
     "boto3",
     "fastapi",
+    "huggingface_hub>=0.30,<2",
     "mcp>=1.27,<2",
     "uvicorn",
 ]

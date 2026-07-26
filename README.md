@@ -24,7 +24,8 @@
 
 ## 技術方向
 
-- Model：Amazon Bedrock Converse API
+- Model：正式環境目標為 Amazon Bedrock Converse API；本機可用 Mock 或
+  Hugging Face Inference Providers
 - Agent hosting：Amazon Bedrock AgentCore Runtime（比賽環境）
 - Agent tool gateway：AgentCore Gateway / MCP
 - Backend：Python、FastAPI
@@ -37,10 +38,11 @@
 主辦方資料不會用來重新訓練基礎模型。Agent 會透過受控的 MCP Tools 或 API
 查詢清洗後的 PostgreSQL。
 
-目前尚無比賽 AWS 憑證，因此先以 Mock Model、本機 MCP Tools 與本機 PostgreSQL
-開發。拿到憑證後才替換為 Bedrock、AgentCore Gateway / Runtime、RDS 與 S3
-adapter，資料清洗與 Service Layer 不需重寫。各 AWS 服務的角色、聊天與按鈕的
-完整呼叫路徑，請見 [系統與 AWS 架構](docs/architecture.md)。
+目前尚無比賽 AWS 憑證，因此先以 Mock Model 或可選的 Hugging Face hosted
+open model、本機 MCP Tools 與本機 PostgreSQL 開發。拿到憑證後才替換為
+Bedrock、AgentCore Gateway / Runtime、RDS 與 S3 adapter，資料清洗與 Service
+Layer 不需重寫。各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，請見
+[系統與 AWS 架構](docs/architecture.md)。
 
 ## 專案結構
 
@@ -90,6 +92,7 @@ docs/             架構、計畫與競賽文件
 - [x] 完成唯讀 Service Layer：服務、行政區、諮詢表單、synthetic 師傅媒合
 - [x] 完成四個唯讀 MCP Tools 與 protocol tests
 - [x] 完成可替換模型的 Agent 核心迴圈與 Mock 多輪測試
+- [x] 完成 Hugging Face hosted open-model adapter 與顯式 CLI mode
 - [ ] 完成 Bedrock adapter、案件／訂單寫入 Service Layer、Demo UI
 - [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
 
@@ -152,3 +155,15 @@ python -m home_repair_agent.agent.demo --scripted
 移除 `--scripted` 可自行輸入對話。這個 Demo 使用明確標示的記憶體合成資料，
 會走完四個唯讀 MCP Tools 並顯示 synthetic 師傅候選；它只驗證編排流程，
 不建立案件、不保留時段，也不代表 Bedrock 的語意品質。
+
+若要用 Hugging Face hosted open model 驗證真正的 tool calling，先建立具有
+Inference Providers 權限的 token，只在目前 PowerShell session 設定後啟動：
+
+```powershell
+$env:HF_TOKEN = "hf_..."
+python -m home_repair_agent.agent.demo --model-provider huggingface
+```
+
+預設模型為 `Qwen/Qwen3-4B-Instruct-2507`，可用 `HF_MODEL_ID`、
+`HF_PROVIDER` 與 `HF_MAX_TOKENS` 覆寫。未設定 `HF_TOKEN` 時會立即提示並停止，
+不會靜默切回 Mock；呼叫 hosted provider 需要網路，並可能受帳號額度限制。

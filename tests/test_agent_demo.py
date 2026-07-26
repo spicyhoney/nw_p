@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import unittest
 
-from home_repair_agent.agent.demo import DemoReadRepository, run_demo
+from home_repair_agent.agent.demo import (
+    DemoReadRepository,
+    _resolve_model_client,
+    run_demo,
+)
+from home_repair_agent.agent.huggingface_model import (
+    HuggingFaceConfigurationError,
+)
+from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
 from home_repair_agent.backend.services import ReadServiceLayer
 
 
@@ -56,6 +64,21 @@ class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("安心修繕 A 組", transcript)
         self.assertIn("沒有保留時段或建立案件", transcript)
         self.assertGreaterEqual(len(conversation.messages), 3)
+
+
+class DemoModelRoutingTests(unittest.TestCase):
+    def test_mock_is_the_explicit_default_without_credentials(self) -> None:
+        model, label = _resolve_model_client("mock", environ={})
+
+        self.assertIsInstance(model, RuleBasedRepairMockModel)
+        self.assertIn("Mock Model", label)
+
+    def test_huggingface_mode_does_not_silently_fall_back(self) -> None:
+        with self.assertRaisesRegex(
+            HuggingFaceConfigurationError,
+            "HF_TOKEN is required",
+        ):
+            _resolve_model_client("huggingface", environ={})
 
 
 if __name__ == "__main__":

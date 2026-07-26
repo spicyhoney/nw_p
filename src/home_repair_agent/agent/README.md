@@ -1,6 +1,7 @@
 # Agent 對話迴圈實作說明
 
-狀態：本機核心迴圈與終端 Demo 已驗證，尚未串接真正 LLM 與 AWS
+狀態：本機核心迴圈、終端 Demo 與 Hugging Face adapter 已驗證；live token
+呼叫與 AWS 尚待環境驗證
 
 最後更新：2026-07-27
 
@@ -16,6 +17,7 @@
 | `MCPToolClient` | `mcp_client.py` | 將 MCP `ClientSession` 轉成 Agent 可用的工具介面 |
 | `RuleBasedRepairMockModel` | `mock_model.py` | 無 AWS 時可重現的修繕流程替身 |
 | `ScriptedModelClient` | `mock_model.py` | 精確控制 Tool Call 的測試替身 |
+| `HuggingFaceModelClient` | `huggingface_model.py` | 將對話與工具轉成 Hugging Face chat completion/function calling |
 | 本機終端 Demo | `demo.py` | 互動或腳本化展示 Agent、MCP 與 Service Layer 閉環 |
 
 它已能保存同一個 session 的多輪訊息、呼叫四個唯讀 MCP Tools、把結果交回
@@ -24,10 +26,11 @@ ModelClient，直到模型給出使用者回覆或觸發安全停止。Rule-base
 
 ## 為什麼現在能做
 
-Agent「部署在哪裡」和「怎麼執行對話迴圈」是兩件事。迴圈可以先在本機使用
-Mock Model 與記憶體內 MCP transport 驗證；之後只要新增
-`BedrockModelClient`，並把同一個 `AgentRunner` 放進 AgentCore Runtime，不必
-重寫流程。
+Agent「部署在哪裡」和「怎麼執行對話迴圈」是兩件事。迴圈可在本機使用
+Mock Model 與記憶體內 MCP transport 做 deterministic 驗證，也可用
+Hugging Face Inference Providers 驗證真正的語意理解與 tool calling；之後
+新增 `BedrockModelClient` 並把同一個 `AgentRunner` 放進 AgentCore Runtime，
+不必重寫流程。
 
 ## 本機終端 Demo
 
@@ -55,12 +58,49 @@ python -m home_repair_agent.agent.demo
 
 此 Demo 使用 `DemoReadRepository` 的合成服務、兩個行政區、縮短表單與兩位
 synthetic 師傅候選，所有資料都只存在程序記憶體。它不讀主辦方資料集、不連
-PostgreSQL、不連 AWS，也不寫入、不保留時段或建立案件；用途是驗證編排，
-不是展示 Bedrock 語意品質。
+PostgreSQL、不連 AWS，也不寫入、不保留時段或建立案件。Hugging Face mode
+只會把對話、system prompt 與唯讀 Tool schema／結果送到所選 hosted provider；
+不會上傳資料庫或主辦方檔案。
 
 目前 Rule-based Mock 會保存「星期六下午」等回答，但不會把它解析成精確、
 含時區的媒合時間窗；媒合呼叫只傳正式 `service_id`、`location_id` 與
 `limit`，因此 Demo 會排序該地點的所有 synthetic 可用時段。
+
+## Hugging Face 模型模式
+
+安裝 `app` extra 後，在 Hugging Face 建立具有 Inference Providers 權限的
+token。token 只放在目前 shell，不要寫入程式、commit 或對話：
+
+```powershell
+$env:HF_TOKEN = "hf_..."
+python -m home_repair_agent.agent.demo --model-provider huggingface
+```
+
+可選設定：
+
+| 環境變數 | 預設 | 用途 |
+|---|---|---|
+| `HF_MODEL_ID` | `Qwen/Qwen3-4B-Instruct-2507` | 支援 function calling 的模型 |
+| `HF_PROVIDER` | `auto` | 由 Hugging Face router 選擇可用 provider，或指定 provider |
+| `HF_MAX_TOKENS` | `512` | 單次模型輸出的 token 上限 |
+
+`HuggingFaceModelClient` 做四件事：
+
+1. 將內部 user／assistant／tool result 對話轉為 chat-completion messages。
+2. 將 MCP `ToolDefinition` 轉為 OpenAI-compatible function schema。
+3. 將模型文字轉為 `ModelTurn.answer()`。
+4. 驗證 tool call ID、名稱與 JSON object 參數，再轉為
+   `ModelTurn.use_tools()`。
+
+provider 錯誤與不合法回覆會轉成固定 adapter error，再由 `AgentRunner` 顯示
+安全訊息。CLI 的 `mock` 與 `huggingface` 是顯式選擇；缺少 token、套件或錯誤
+設定時 Hugging Face mode 會 fail fast，不會偷偷 fallback。預設 open model
+與 provider 可替換，模型品質仍需用固定 eval cases 實測，不能以 adapter
+單元測試代替。
+
+參考：[Hugging Face function calling 指南](https://huggingface.co/docs/inference-providers/guides/function-calling)、
+[InferenceClient API](https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client)、
+[Qwen3-4B-Instruct-2507 model card](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507)。
 
 ## 資料流
 
@@ -152,10 +192,18 @@ credentials 由標準 credential provider chain 或 IAM role 提供，不得寫�
 執行：
 
 ```powershell
-python -m pytest tests/test_agent_loop.py -q
+python -m pytest tests/test_huggingface_model.py tests/test_agent_loop.py tests/test_agent_demo.py -q
 ```
 
-2026-07-27 結果：14 passed。涵蓋：
+Hugging Face adapter 新增的測試涵蓋：
+
+- 環境設定、預設模型與缺 token fail-fast。
+- system/user/assistant/tool messages 與 function schema 的轉換。
+- 文字回覆、結構化 tool call、JSON argument 驗證。
+- provider 錯誤遮罩，且不把 token 放入物件 repr。
+- Demo provider routing 不會靜默 fallback。
+
+既有 Agent／Demo 測試涵蓋：
 
 - 一句話依序呼叫三個真實 MCP Tools。
 - scripted model 與 Rule-based Mock 都能呼叫第四個唯讀媒合 Tool。
@@ -173,12 +221,15 @@ python -m pytest tests/test_agent_loop.py -q
 完整 test suite 的數字取決於本機是否具備主辦方資料集與
 `TEST_DATABASE_URL`。2026-07-26 在有主辦方資料集、未設定測試資料庫的
 工作區為 44 passed、9 skipped、40 subtests passed；本分支在沒有主辦方
-資料集與測試資料庫的乾淨工作區為 48 passed、10 skipped、40 subtests
-passed。10 個 skipped 中 9 個需要 PostgreSQL，另 1 個需要主辦方資料集。
+資料集與測試資料庫的工作區為 60 passed、10 skipped、40 subtests passed。
+10 個 skipped 中 9 個需要 PostgreSQL，另 1 個需要主辦方資料集。Hugging Face
+live call 另需 `HF_TOKEN`，本次未設定，因此只驗證 adapter contract 與真實
+SDK API，不宣稱模型端到端品質。
 
 ## 尚未做
 
-- `BedrockModelClient` 與真實 LLM tool-selection eval。
+- Hugging Face live token smoke test 與固定的真實 LLM tool-selection eval。
+- `BedrockModelClient` 與 Bedrock tool-selection eval。
 - AgentCore Runtime / Gateway 部署與 IAM 驗證。
 - FastAPI／瀏覽器 Demo UI、Speech-to-Text、Text-to-Speech 與前端麥克風。
 - 回答自動對映到任意表單 topic 的 LLM slot filling。
@@ -186,5 +237,6 @@ passed。10 個 skipped 中 9 個需要 PostgreSQL，另 1 個需要主辦方資
 - 建立案件、保留時段、確認媒合與訂單寫入。
 - session 的 PostgreSQL / Redis 永久保存。
 
-下一階段應先接 Bedrock adapter 並以固定 eval cases 比較 Tool 選擇；寫入功能
-要等確認與冪等契約完成後再加入。
+下一階段應先用非敏感 synthetic prompts 跑 Hugging Face live eval，記錄工具
+選擇、參數與成本／延遲，再以同一組 cases 接 Bedrock 比較；寫入功能要等確認
+與冪等契約完成後再加入。

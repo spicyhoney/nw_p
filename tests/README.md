@@ -14,4 +14,6 @@
 - Agent 能完成多步 Tool loop、跨輪保存訊息並停在寫入確認前。
 - 媒合規則的資格篩選、透明分數、同師傅去重與空結果不猜測。
 - Agent 只看見唯讀 Tool，且未知 Tool、外部錯誤與無限迴圈會安全停止。
+- Hugging Face adapter 能轉換多輪訊息與 function schema、解析 tool call，
+  並在缺 token、provider 錯誤或不合法回覆時 fail safe。
 - 建立案件與訂單前必須取得使用者確認。

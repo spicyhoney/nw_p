@@ -21,7 +21,7 @@ data = [
 app = [
     "boto3",
     "fastapi",
-    "mcp",
+    "mcp>=1.27,<2",
     "uvicorn",
 ]
 dev = [
@@ -32,6 +32,7 @@ dev = [
 [project.scripts]
 home-repair-clean = "home_repair_agent.data_cleaning.cli:main"
 home-repair-fetch-reference = "home_repair_agent.data_cleaning.reference_cli:main"
+home-repair-mcp = "home_repair_agent.mcp_server.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

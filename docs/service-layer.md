@@ -155,8 +155,10 @@ location = services.resolve_location(
 form = services.get_consultation_form(service_id=17)
 ```
 
-目前這是 Python 內部介面。下一步才會分別包成 FastAPI endpoint 與 MCP Tool；
-兩種入口都使用同一個 `ReadServiceLayer` instance。
+目前這個 Python 內部介面已由三個 FastMCP Tools 共用；實作與契約請見
+[MCP Server README](../src/home_repair_agent/mcp_server/README.md)。FastAPI
+read endpoints 尚未實作，未來也必須呼叫同一個 `ReadServiceLayer`，不可複製
+規則或 SQL。
 
 ## 測試
 
@@ -173,7 +175,8 @@ $env:TEST_DATABASE_URL="postgresql://home_repair@127.0.0.1:55434/home_repair"
 python -m unittest discover -s tests -v
 ```
 
-2026-07-26 已在真實 PostgreSQL 16.14 完成 28 項測試，包含：
+2026-07-26 已在真實 PostgreSQL 16.14 完成原有 28 項測試；加入 MCP 後，
+無測試資料庫的完整 suite 為 26 passed、8 skipped。驗證包含：
 
 - 查詢文字中的 alias 能找出 `service_id=17`。
 - `台北`、`大安` 能唯一解析為 `ORG-01-007`。
@@ -183,7 +186,7 @@ python -m unittest discover -s tests -v
 
 ## 下一階段
 
-1. 將三個 Service 包成 FastMCP Tools。
-2. 加入 FastAPI read endpoints，和 MCP 共用同一層。
-3. 實作 `match_service_providers` 只讀媒合。
+1. 加入 FastAPI read endpoints，和 MCP 共用同一層。
+2. 實作 `match_service_providers` 只讀媒合。
+3. 建立 Agent 對話骨架並評估是否正確選用三個 MCP Tools。
 4. 設計使用者確認契約後，才實作建案與建單等寫入 Service。

@@ -23,13 +23,13 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 | 資料清洗 | 已完成 B+ pipeline 與品質報告 | 持續補測試資料 |
 | PostgreSQL | 已在真實 PostgreSQL 16.14 通過 migration、loader、view、constraint 測試 | 實作最小權限與正式 RDS 連線 |
 | Service Layer | 已完成服務、行政區、諮詢表單三個只讀功能 | 下一步做媒合，再做需確認的寫入 |
-| MCP Tools | 尚未實作 | 先在本機以 FastMCP 測通 |
+| MCP Tools | 已完成三個唯讀 Tool 與記憶體內 protocol tests | 接入 Mock Agent 並做 tool-selection 評估 |
 | Agent | 尚未實作 | 先接 Mock Model，再切換 Bedrock |
 | AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
 | UI | 尚未實作 | 最後串接聊天與直接操作按鈕 |
 
-目前的 13 項通過測試只證明「資料與 PostgreSQL 層」符合已寫下的規則，不代表
-Agent、MCP、FastAPI 或 AWS 已經端到端完成。
+目前無測試資料庫時為 26 passed、8 skipped，已驗證資料清洗、Service Layer 與
+MCP 協定；仍不代表 Agent、FastAPI 或 AWS 已經端到端完成。
 
 ## 一句話如何變成資料庫查詢
 
@@ -197,8 +197,8 @@ role。AWS SDK 會從標準 credential provider chain 取得身分，不需要�
 
 1. 已完成 Service Layer 的 `search_services`、`resolve_location`、
    `get_consultation_form`，並通過真實 PostgreSQL 測試。
-2. 下一步把同一批函式包成 FastMCP Tools，使用本機 MCP client 測試。
-3. 用 Mock Model 跑完「理解 -> tool call -> tool result -> 回覆」迴圈。
+2. 已把同一批函式包成 FastMCP Tools，並通過本機 MCP client protocol tests。
+3. 下一步用 Mock Model 跑完「理解 -> tool call -> tool result -> 回覆」迴圈。
 4. 加入需確認的 `create_consultation_case` 與 `confirm_booking`。
 5. 拿到 AWS 憑證後實作 `BedrockModelClient`，不改工具與資料庫邏輯。
 6. 部署 Agent / MCP Server 到 AgentCore Runtime，接上 Gateway。

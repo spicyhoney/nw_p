@@ -5,10 +5,9 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #4 `feature/agent-prototype` 已補上地點更正、多地點安全重試與回歸測試，
-PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 Bedrock、
-寫入/媒合服務與 Demo UI 尚未完成。最新版本以遠端 PR head 為準，不在文件
-硬編會隨下一個 commit 失效的 SHA。
+PR #4 `feature/agent-prototype` 的地點更正、多地點安全重試與回歸測試已由
+雙方複查通過，進入 Ready / merge 交接，但尚未合併。Mock Agent 與唯讀 MCP
+閉環可測；真實 Bedrock、寫入/媒合服務與 Demo UI 尚未完成。
 
 ## 2. 本次 session 完成（帶證據）
 
@@ -18,7 +17,8 @@ PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 
   `tests/test_agent_loop.py`）。
 - 驗證：Agent 測試 `12 passed`；本工作區有主辦方資料集、未設定
   `TEST_DATABASE_URL` 時，完整測試為 `38 passed, 8 skipped,
-  25 subtests passed`；Agent 範圍 Ruff 通過。
+  25 subtests passed`。另一個無主辦方資料集的乾淨工作區複查為
+  `37 passed, 9 skipped, 25 subtests passed`；Agent 範圍 Ruff 通過。
 - 修正細節與重現步驟：
   `docs/ENGINEER_LOG-pr4-location-fix.md`。
 - PR #4 已留下審查、bug、修正 commit 與測試結果紀錄：
@@ -26,18 +26,13 @@ PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 先同步並驗證 PR #4：
-   `git switch feature/agent-prototype && git pull --ff-only &&`
-   `.\.venv\Scripts\python.exe -m pytest -q`
-   結果會依本機是否有主辦方資料集與 `TEST_DATABASE_URL` 而異；Agent
-   專屬測試應為 `12 passed`。
-2. 組員審查 PR #4 與 model-mode 提案。現階段建議只評估顯式的
-   `bedrock / local / mock`，`auto` fallback 暫緩。
-3. 若提案通過，先在最新 `main` 建立獨立分支，再修改
+1. 等 PR #4 合併通知；合併後第一個動作：
+   `git switch main && git pull --ff-only origin main`。
+2. 從最新 `main` 建立 `feature/matching-service`，先定義 matching service
+   的唯讀候選查詢契約與測試，不直接開放案件／訂單寫入。
+3. 顯式 `bedrock / local / mock` provider routing 另開獨立分支，再修改
    `src/home_repair_agent/agent/`；不要把 provider routing 混進
    matching-service 分支。
-4. 若提案未通過，維持現有 `ModelClient` port，Bedrock adapter 與本機
-   Demo 各自顯式選擇 provider，不做自動 fallback。
 
 ## 4. 條目（全部為 active）
 
@@ -50,6 +45,8 @@ PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 
   （原話：「我們先把對方的要求完成」，2026-07-26）。
 - [active] 向組員提議：AWS 未設定時顯示清楚提示，並可切換到以開源模型
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
+- [active] PR #4 複查通過，可改為 Ready；仍不直接合併
+  （原話：「好 那你做吧」，2026-07-26；承接「確認複查通過並改 Ready」）。
 
 ### Agent assumptions（可質疑）
 
@@ -63,11 +60,10 @@ PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 
 - [active] 本機開源模型應實作成新的 `ModelClient` adapter，重用既有
   `AgentRunner` 與 MCP tool loop；實際 runtime/model（例如本機相容 API）
   尚未選定。
-- [active] PR #4 暫留 Draft 等組員最後審查；未取得明確指示前不合併。
 
 ### Open issues（待決）
 
-- [active] 組員是否同意顯式的 `bedrock / local / mock` provider mode？
+- [active] 顯式 `bedrock / local / mock` provider routing 何時實作、由誰負責？
 - [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
 - [active] 本機開源模型 runtime、model 尺寸、硬體需求及 tool-calling
   相容性尚未評估。
@@ -94,10 +90,10 @@ PR 仍是 Draft、尚未合併。Mock Agent 與唯讀 MCP 閉環可測；真實 
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、
   `docs/ENGINEER_LOG-pr4-location-fix.md`、PR #4。
-- 危險區：不要 force-push；不要在沒有明確授權時將 PR 改 Ready 或合併。
+- 危險區：不要 force-push；PR #4 已授權改 Ready，但未授權直接合併。
 
 ## 7. 授權狀態
 
 - 使用者已授權：建立並提交本 handoff；在 PR #4 向組員提出 AWS/local mode
-  架構討論（2026-07-26）。
+  架構討論；複查通過後將 PR 改 Ready（2026-07-26）。
 - 未授權：合併 PR #4、啟用寫入 MCP Tools、部署 AWS 資源或選定特定本機模型。

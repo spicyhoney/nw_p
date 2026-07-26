@@ -20,6 +20,8 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
   scoped Ruff、format、`compileall`、`git diff --check` 均通過。
 - 功能 commit：`4d1a8e1`。無 `TEST_DATABASE_URL`，不可宣稱媒合 SQL 已在真實
   PostgreSQL 複驗。
+- 已在 PR #5 留下下一階段分工：
+  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084316544`。
 
 ## 3. 下一步（具體到第一個動作）
 

@@ -7,7 +7,8 @@
 
 PR #5 已於 2026-07-27 以一般 merge commit `73a6e45` 合併至 `main`；HF
 stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與 Demo
-過期時段。固定 eval、HF stack PR 與 Web vertical slice 尚待後續完成。
+過期時段，並已開啟 Ready for review 的 PR #8。固定 eval 與 Web vertical
+slice 尚待後續完成。
 
 ## 2. 本次 session 完成（帶證據）
 
@@ -27,15 +28,15 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
   Live Demo 部署網址；完成度評分包含使用體驗。因此 CLI 只保留工程 smoke。
 - HF token 曾出現在使用者提供的終端 transcript；使用者已撤銷／refresh。
   不保留或記錄新 token，該 transcript 不可提交或再次分享。
-- 已在 PR #5 提出 Web scope／分工與驗收標準，待組員回覆：
-  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084536753`。
+- 已建立 terminal＋HF 正式 PR #8：`https://github.com/spicyhoney/nw_p/pull/8`；
+  Web scope／分工提案仍待組員在 PR #5 討論串回覆。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 先等組員在 PR #5 討論串確認 Web scope／分工；今天不開始 UI 實作。
-2. 同意後第一個動作：
-   `git fetch origin --prune`，確認 HF stack 是否先開 PR／合併；再從團隊同意
-   的最新整合基線建立 `feature/web-demo-vertical-slice`，不要再盲目疊分支。
+1. 組員先 review PR #8，並在 PR #5 討論串確認 Web scope／分工；此前不開始
+   UI 實作。
+2. 若 PR #8 有 review finding，在同一分支修正並複驗；若核准則合併 PR #8、
+   同步 `main`，再由最新整合基線建立 `feature/web-demo-vertical-slice`。
 3. P0 consumer vertical slice TODO（依序）：
    - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
    - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
@@ -72,6 +73,8 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 - [active] HF token 已 refresh；舊 token 視為失效，不重新要求或記錄新 token。
 - [active] 已授權修正 HF branch review findings、測試、提交並推送，讓對方排程
   AI 定時檢查與更新（原話：「好 那你幫我修正吧」，2026-07-27）。
+- [active] 已授權把 terminal＋HF stack 開成正式 PR #8；尚未授權合併該 PR
+  （原話：「好啊 做吧」，2026-07-27）。
 
 ### Agent assumptions（可質疑）
 
@@ -90,8 +93,7 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 ### Open issues（待決）
 
 - [active] 組員是否同意 P0/P1 scope、技術棧與分工？
-- [active] Web branch 要直接從已合併 PR #5 的 `main` 開，還是先把 terminal/HF
-  stack 送 PR／整合後再開？
+- [active] Web branch 是否應先等 PR #8 review／合併，再從更新後的 `main` 開？
 - [active] consultation session state P0 存 memory；何時切 PostgreSQL？
 - [active] Bedrock provider routing 何時實作、由誰負責？
 - [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
@@ -124,7 +126,7 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 - Repo：`https://github.com/spicyhoney/nw_p`
 - `main`：`73a6e45`（PR #5 regular merge）；本機與 `origin/main` 已同步。
 - 當前分支：`feature/huggingface-model-adapter`，stacked on terminal Demo；
-  與 `main` 的 merge-base 為 PR #5 head `55110e3`，尚未建立 PR。
+  與 `main` 的 merge-base 為 PR #5 head `55110e3`；PR #8 已開啟、待 review。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -136,6 +138,6 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 - 使用者已授權：PR #4 squash merge；實作、測試、審查並以 regular merge
   合併 PR #5；完成只讀 matching terminal Demo 與 Hugging Face adapter
   （2026-07-26～27）。
-- 已授權本次：同步／驗證 HF adapter 修正與合併 PR #5；UI 不在本次 scope。
-- 未授權：今天開始 UI、啟用寫入 MCP Tools、部署 AWS 資源或選定特定
-  本機模型。
+- 已授權本次：同步／驗證 HF adapter 修正、合併 PR #5、建立正式 PR #8。
+- 未授權：合併 PR #8、今天開始 UI、啟用寫入 MCP Tools、部署 AWS 資源或
+  選定特定本機模型。

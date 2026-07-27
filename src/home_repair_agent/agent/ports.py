@@ -12,7 +12,7 @@ from home_repair_agent.agent.models import (
 
 
 class ModelClient(Protocol):
-    """Model adapter implemented by the local mock and future Bedrock client."""
+    """Model adapter implemented by mock, hosted, and future Bedrock clients."""
 
     async def complete(
         self,

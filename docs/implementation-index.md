@@ -12,8 +12,9 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 唯讀 Service Layer | 已驗證；媒合 SQL 待 PostgreSQL 複驗 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md) | 單元測試；既有 PostgreSQL 整合測試 |
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | 未開始 | 尚無 | 預計拆成案件、確認媒合、訂單 | 尚無 |
-| Agent 核心迴圈 | 已驗證 Mock 版本 | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | 14 個 Agent / MCP 測試 |
-| 本機終端 Demo | 已驗證四工具閉環 | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 smoke test、4 個 Demo 測試 |
+| Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
+| Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
 | FastAPI / Demo UI | 未開始 | 尚無 | [系統架構](architecture.md) | 尚無 |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
@@ -37,9 +38,22 @@ MCP Client / 測試 Agent
 但還不能永久保存 session、建立案件、保留時段或下單。Rule-based Mock 會在
 表單必填資訊完成後呼叫媒合；尚未把「星期六下午」等自由文字轉成時區化
 `preferred_start` / `preferred_end`，所以 Demo 目前查詢該地點的所有空檔。
+CLI 可顯式切換到 Hugging Face hosted open model 做真實 tool calling；沒有
+`HF_TOKEN` 時會停止並提示，不會靜默切回 Mock。Demo synthetic 時段依啟動
+時間產生在下一個未來星期六；hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-27：修正 HF adapter review findings：將 SDK 下限對齊已驗證的
+  `huggingface_hub 1.24`、新增預設 60 秒 request timeout、禁止模型自行換算
+  相對日期，並將 Demo 時段改成可注入時鐘的下一個未來星期六。focused
+  34 passed；完整 suite 65 passed、9 skipped、40 subtests passed；Mock
+  四工具 smoke 通過。本次沒有 token，因此沒有重跑 live。
+- 2026-07-27：新增 Hugging Face Inference Providers adapter、function/tool
+  schema 轉換、顯式 `mock / huggingface` CLI routing 與 fail-fast 設定檢查；
+  真實 `huggingface_hub 1.24.0` API 已確認；初始完整 suite 為 60 passed、
+  10 skipped、40 subtests passed。後續團隊 handoff 記錄一次 synthetic
+  四工具 live smoke 成功，但尚未形成可重複的固定 eval。
 - 2026-07-27：本機終端 Demo 自動走完四個唯讀 MCP Tools，顯示有來源標籤的
   synthetic 候選、時段與分數；完整 suite 為 48 passed、10 skipped、
   40 subtests passed。

@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 
-from home_repair_agent.agent.demo import DemoReadRepository, run_demo
+from home_repair_agent.agent.demo import (
+    TAIPEI_TIMEZONE,
+    DemoReadRepository,
+    _resolve_model_client,
+    run_demo,
+)
+from home_repair_agent.agent.huggingface_model import (
+    HuggingFaceConfigurationError,
+)
+from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
 from home_repair_agent.backend.services import ReadServiceLayer
 
 
@@ -37,6 +47,28 @@ class DemoRepositoryTests(unittest.TestCase):
             all(candidate.source_type == "synthetic" for candidate in result.candidates)
         )
 
+    def test_demo_slots_move_to_the_next_future_saturday(self) -> None:
+        reference_time = datetime(2026, 8, 1, 18, 30, tzinfo=TAIPEI_TIMEZONE)
+        repository = DemoReadRepository(reference_time=reference_time)
+
+        slots = repository.list_available_provider_slots(
+            service_id=17,
+            location_id="DEMO-63000030",
+            preferred_start=None,
+            preferred_end=None,
+            candidate_limit=3,
+        )
+
+        self.assertEqual(2, len(slots))
+        self.assertEqual(datetime(2026, 8, 8, 13, tzinfo=TAIPEI_TIMEZONE), slots[0].starts_at)
+        self.assertTrue(all(slot.starts_at > reference_time for slot in slots))
+
+    def test_demo_reference_time_requires_timezone(self) -> None:
+        naive_reference = datetime(2026, 8, 1, 12)  # noqa: DTZ001
+
+        with self.assertRaisesRegex(ValueError, "reference_time must include a timezone"):
+            DemoReadRepository(reference_time=naive_reference)
+
 
 class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):
     async def test_scripted_demo_runs_the_real_four_tool_loop(self) -> None:
@@ -56,6 +88,21 @@ class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("安心修繕 A 組", transcript)
         self.assertIn("沒有保留時段或建立案件", transcript)
         self.assertGreaterEqual(len(conversation.messages), 3)
+
+
+class DemoModelRoutingTests(unittest.TestCase):
+    def test_mock_is_the_explicit_default_without_credentials(self) -> None:
+        model, label = _resolve_model_client("mock", environ={})
+
+        self.assertIsInstance(model, RuleBasedRepairMockModel)
+        self.assertIn("Mock Model", label)
+
+    def test_huggingface_mode_does_not_silently_fall_back(self) -> None:
+        with self.assertRaisesRegex(
+            HuggingFaceConfigurationError,
+            "HF_TOKEN is required",
+        ):
+            _resolve_model_client("huggingface", environ={})
 
 
 if __name__ == "__main__":

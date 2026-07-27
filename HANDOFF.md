@@ -5,31 +5,28 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #4 `feature/agent-prototype` 的地點更正、多地點安全重試與回歸測試已由
-雙方複查通過，進入 Ready / merge 交接，但尚未合併。Mock Agent 與唯讀 MCP
-閉環可測；真實 Bedrock、寫入/媒合服務與 Demo UI 尚未完成。
+PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for review；
+沒有發現 merge blocker，尚未合併。第四個唯讀 MCP Tool 與可解釋 synthetic
+師傅媒合已完成；真實 Bedrock、寫入流程、FastAPI 與 Demo UI 尚未完成。
 
 ## 2. 本次 session 完成（帶證據）
 
-- PR #4 地點流程已強化：失敗的行政區可在下一輪更正；同一句含新、舊地點時
-  不猜測，會要求只輸入更正後地點（程式：
-  `src/home_repair_agent/agent/mock_model.py`；測試：
-  `tests/test_agent_loop.py`）。
-- 驗證：Agent 測試 `12 passed`；本工作區有主辦方資料集、未設定
-  `TEST_DATABASE_URL` 時，完整測試為 `38 passed, 8 skipped,
-  25 subtests passed`。另一個無主辦方資料集的乾淨工作區複查為
-  `37 passed, 9 skipped, 25 subtests passed`；Agent 範圍 Ruff 通過。
-- 修正細節與重現步驟：
-  `docs/ENGINEER_LOG-pr4-location-fix.md`。
-- PR #4 已留下審查、bug、修正 commit 與測試結果紀錄：
-  https://github.com/spicyhoney/nw_p/pull/4
+- 審查 PR #5 head `703d4cb`：契約、查無候選、`matching_v1` 實作與文件、
+  result/candidate 的 synthetic 標籤均一致，未發現阻塞問題。
+- 本機完整 suite：`43 passed, 10 skipped, 40 subtests passed`；比作者工作區
+  多一個 skip 是因本機沒有 organizer dataset。Scoped Ruff、`compileall` 與
+  `git diff --check` 通過；repo-wide format check 仍含既有未格式化檔案。
+- PR 審查紀錄：`https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084270645`；
+  PR 已由 Draft 改為 Ready for review，未執行 merge。
+- 無 `TEST_DATABASE_URL`，所以 PostgreSQL 媒合案例仍為 skip；不可宣稱 SQL
+  已在真實 PostgreSQL 複驗。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 等 PR #4 合併通知；合併後第一個動作：
-   `git switch main && git pull --ff-only origin main`。
-2. 從最新 `main` 建立 `feature/matching-service`，先定義 matching service
-   的唯讀候選查詢契約與測試，不直接開放案件／訂單寫入。
+1. 組員閱讀 PR #5 審查紀錄並決定是否合併；合併前若能取得隔離的測試
+   PostgreSQL，設定 `TEST_DATABASE_URL` 後執行 `python -m pytest -q`。
+2. 真實供應商資料接入前，調整 PostgreSQL 候選池：目前先按開始時間取 100
+   個 slot，再由 Service 排名／去重；大量時段可能降低候選師傅多樣性。
 3. 顯式 `bedrock / local / mock` provider routing 另開獨立分支，再修改
    `src/home_repair_agent/agent/`；不要把 provider routing 混進
    matching-service 分支。
@@ -41,12 +38,12 @@ PR #4 `feature/agent-prototype` 的地點更正、多地點安全重試與回歸
 - [active] `docs/` 多數內容是早期 brainstorm 遺留資料；兩份 PDF 是比賽方
   提供的正式資訊（原話，2026-07-26）。實作狀態以
   `docs/implementation-index.md` 和程式/測試為準。
-- [active] 先完成組員對 PR #4 的要求：審查、測試、修 bug、留下可追溯紀錄
-  （原話：「我們先把對方的要求完成」，2026-07-26）。
 - [active] 向組員提議：AWS 未設定時顯示清楚提示，並可切換到以開源模型
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
-- [active] PR #4 複查通過，可改為 Ready；仍不直接合併
-  （原話：「好 那你做吧」，2026-07-26；承接「確認複查通過並改 Ready」）。
+- [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
+  （原話：「行那你就幫我弄吧」，2026-07-26）。
+- [active] 已授權審查 PR #5、必要時修正、留下審查紀錄並改為 Ready；
+  尚未授權 merge（原話：「好 請吧」，2026-07-26）。
 
 ### Agent assumptions（可質疑）
 
@@ -68,14 +65,18 @@ PR #4 `feature/agent-prototype` 的地點更正、多地點安全重試與回歸
 - [active] 本機開源模型 runtime、model 尺寸、硬體需求及 tool-calling
   相容性尚未評估。
 - [active] 真實 Bedrock adapter 由誰實作、何時能取得 AWS 環境仍待確認。
-- [active] matching service 的 API、資料模型、寫入確認與冪等邊界尚未定案。
+- [active] `matching_v1` 已通過本機程式審查，但是否符合產品偏好仍由組員
+  決定；真實資料接入前不得宣稱媒合準確率。
+- [active] PostgreSQL repository 先取 100 個 slot 再排名／去重，真實規模下
+  可能讓多早期空檔的單一師傅佔滿候選池；目前 3 位 synthetic Demo 不受影響。
+- [active] 案件、保留時段、確認媒合與訂單的寫入／冪等邊界尚未定案。
 
 ## 5. 目前架構與工作邊界
 
-- 已完成：資料清洗、PostgreSQL schema/loader、唯讀 Service Layer、三個唯讀
-  MCP Tools、Mock Agent tool loop。
-- 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、媒合、確認與
-  訂單。
+- 已完成：資料清洗、PostgreSQL schema/loader、四個唯讀 Service／MCP
+  Tools、`matching_v1` synthetic 媒合、Mock Agent tool loop。
+- 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、時段保留、
+  確認媒合與訂單。
 - Agent 介面：`src/home_repair_agent/agent/ports.py` 的 `ModelClient` /
   `ToolClient`；設計說明見 `src/home_repair_agent/agent/README.md`。
 - 現有 Agent 只允許 read-only tools；不要在未做確認、冪等與授權設計前開放
@@ -85,15 +86,16 @@ PR #4 `feature/agent-prototype` 的地點更正、多地點安全重試與回歸
 ## 6. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 當前分支：`feature/agent-prototype`，追蹤
-  `origin/feature/agent-prototype`。
+- 當前分支：`feature/matching-service`，PR #5 Ready for review，尚未合併。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
-- 主要證據：`docs/implementation-index.md`、
-  `docs/ENGINEER_LOG-pr4-location-fix.md`、PR #4。
-- 危險區：不要 force-push；PR #4 已授權改 Ready，但未授權直接合併。
+- 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
+  程式與測試。
+- 危險區：不要 force-push；不要把 synthetic 師傅說成真實合作廠商；不要在
+  此分支加入寫入 Tool。
 
 ## 7. 授權狀態
 
-- 使用者已授權：建立並提交本 handoff；在 PR #4 向組員提出 AWS/local mode
-  架構討論；複查通過後將 PR 改 Ready（2026-07-26）。
-- 未授權：合併 PR #4、啟用寫入 MCP Tools、部署 AWS 資源或選定特定本機模型。
+- 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將
+  `feature/matching-service` PR #5 改為 Ready for review（2026-07-26）。
+- 未授權：合併 matching-service PR、啟用寫入 MCP Tools、部署 AWS 資源或
+  選定特定本機模型。

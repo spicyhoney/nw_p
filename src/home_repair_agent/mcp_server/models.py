@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from home_repair_agent.backend.errors import ServiceLayerError
 from home_repair_agent.backend.models import (
     ConsultationForm,
+    ProviderMatchResult,
     ResolvedLocation,
     ServiceSearchResult,
 )
@@ -66,4 +67,8 @@ class ResolveLocationToolResponse(ToolResponse[ResolvedLocation]):
 
 
 class ConsultationFormToolResponse(ToolResponse[ConsultationForm]):
+    pass
+
+
+class ProviderMatchToolResponse(ToolResponse[ProviderMatchResult]):
     pass

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import unittest
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
+
+from pydantic import ValidationError
 
 from home_repair_agent.backend.errors import ServiceLayerError
 from home_repair_agent.backend.models import (
+    AvailableProviderSlot,
     ConsultationForm,
     FormTopic,
     ResolvedLocation,
@@ -12,6 +16,7 @@ from home_repair_agent.backend.models import (
 )
 from home_repair_agent.backend.postgres_repository import (
     FIND_LOCATIONS_SQL,
+    LIST_AVAILABLE_PROVIDER_SLOTS_SQL,
     LIST_CONSULTATION_FORMS_SQL,
     SEARCH_SERVICES_SQL,
     _assemble_forms,
@@ -61,11 +66,38 @@ def _form(form_key: str, version: int) -> ConsultationForm:
     )
 
 
+def _slot(
+    *,
+    provider_id: str = "SYN-PROVIDER-001",
+    availability_id: str = "SYN-SLOT-001",
+    start_hour: int = 13,
+    end_hour: int = 17,
+    rating: float = 4.8,
+    completed_jobs: int = 128,
+    fee: float = 300,
+) -> AvailableProviderSlot:
+    taipei_timezone = timezone(timedelta(hours=8))
+    return AvailableProviderSlot(
+        provider_id=provider_id,
+        display_name=f"師傅 {provider_id[-3:]}",
+        service_id=17,
+        rating=rating,
+        completed_jobs=completed_jobs,
+        base_inspection_fee=fee,
+        location_id="NLSC-63000030",
+        location_name="台北市大安區",
+        availability_id=availability_id,
+        starts_at=datetime(2026, 7, 27, start_hour, tzinfo=taipei_timezone),
+        ends_at=datetime(2026, 7, 27, end_hour, tzinfo=taipei_timezone),
+    )
+
+
 class StubReadRepository:
     def __init__(self) -> None:
         self.service_results: list[ServiceSummary] = []
         self.location_results: list[ResolvedLocation] = []
         self.form_results: list[ConsultationForm] = []
+        self.slot_results: list[AvailableProviderSlot] = []
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
@@ -102,6 +134,29 @@ class StubReadRepository:
             ("list_consultation_forms", {"service_id": service_id})
         )
         return self.form_results
+
+    def list_available_provider_slots(
+        self,
+        *,
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None,
+        preferred_end: datetime | None,
+        candidate_limit: int,
+    ) -> list[AvailableProviderSlot]:
+        self.calls.append(
+            (
+                "list_available_provider_slots",
+                {
+                    "service_id": service_id,
+                    "location_id": location_id,
+                    "preferred_start": preferred_start,
+                    "preferred_end": preferred_end,
+                    "candidate_limit": candidate_limit,
+                },
+            )
+        )
+        return self.slot_results
 
 
 class ReadServiceLayerTests(unittest.TestCase):
@@ -235,6 +290,175 @@ class ReadServiceLayerTests(unittest.TestCase):
 
         self.assertEqual([], self.repository.calls)
 
+    def test_match_service_providers_ranks_and_deduplicates_candidates(
+        self,
+    ) -> None:
+        self.repository.slot_results = [
+            _slot(),
+            _slot(
+                provider_id="SYN-PROVIDER-002",
+                availability_id="SYN-SLOT-002",
+                start_hour=14,
+                end_hour=18,
+                rating=4.6,
+                completed_jobs=86,
+                fee=250,
+            ),
+            _slot(
+                provider_id="SYN-PROVIDER-001",
+                availability_id="SYN-SLOT-004",
+                start_hour=15,
+                end_hour=18,
+                fee=350,
+            ),
+            _slot(
+                provider_id="SYN-PROVIDER-003",
+                availability_id="SYN-SLOT-003",
+                start_hour=9,
+                end_hour=12,
+                rating=5,
+                completed_jobs=999,
+                fee=100,
+            ),
+        ]
+        taipei_timezone = timezone(timedelta(hours=8))
+        preferred_start = datetime(2026, 7, 27, 13, tzinfo=taipei_timezone)
+        preferred_end = datetime(2026, 7, 27, 17, tzinfo=taipei_timezone)
+
+        result = self.service_layer.match_service_providers(
+            service_id=17,
+            location_id=" NLSC-63000030 ",
+            preferred_start=preferred_start,
+            preferred_end=preferred_end,
+            limit=3,
+        )
+
+        self.assertEqual(2, result.count)
+        self.assertEqual(
+            ["SYN-PROVIDER-001", "SYN-PROVIDER-002"],
+            [candidate.provider_id for candidate in result.candidates],
+        )
+        self.assertGreater(
+            result.candidates[0].match_score,
+            result.candidates[1].match_score,
+        )
+        self.assertEqual("synthetic", result.data_source)
+        self.assertEqual("synthetic", result.candidates[0].source_type)
+        self.assertEqual("台北市大安區", result.candidates[0].location_name)
+        self.assertEqual(1.0, result.candidates[0].score_breakdown.schedule_fit)
+        self.assertIn(
+            "可用時段與偏好重疊 100%",
+            result.candidates[0].reasons,
+        )
+        self.assertEqual(
+            (
+                "list_available_provider_slots",
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-63000030",
+                    "preferred_start": preferred_start,
+                    "preferred_end": preferred_end,
+                    "candidate_limit": 100,
+                },
+            ),
+            self.repository.calls[0],
+        )
+
+    def test_match_service_providers_returns_empty_without_guessing(self) -> None:
+        result = self.service_layer.match_service_providers(
+            service_id=17,
+            location_id="NLSC-65000010",
+        )
+
+        self.assertEqual(0, result.count)
+        self.assertEqual([], result.candidates)
+        self.assertIsNone(result.preferred_start)
+        self.assertIsNone(result.preferred_end)
+
+    def test_match_service_providers_rejects_invalid_inputs(self) -> None:
+        aware_start = datetime(2026, 7, 27, 13, tzinfo=UTC)
+        aware_end = datetime(2026, 7, 27, 17, tzinfo=UTC)
+        invalid_cases = [
+            ({"service_id": 0, "location_id": "NLSC-A"}, "INVALID_SERVICE_ID"),
+            ({"service_id": 17, "location_id": ""}, "INVALID_LOCATION_ID"),
+            ({"service_id": 17, "location_id": 123}, "INVALID_LOCATION_ID"),
+            (
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-A",
+                    "preferred_start": aware_start,
+                },
+                "INVALID_TIME_WINDOW",
+            ),
+            (
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-A",
+                    "preferred_start": aware_start.replace(tzinfo=None),
+                    "preferred_end": aware_end.replace(tzinfo=None),
+                },
+                "INVALID_TIME_WINDOW",
+            ),
+            (
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-A",
+                    "preferred_start": aware_end,
+                    "preferred_end": aware_start,
+                },
+                "INVALID_TIME_WINDOW",
+            ),
+            (
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-A",
+                    "preferred_start": aware_start,
+                    "preferred_end": aware_start + timedelta(days=32),
+                },
+                "INVALID_TIME_WINDOW",
+            ),
+            (
+                {"service_id": 17, "location_id": "NLSC-A", "limit": 0},
+                "INVALID_MATCH_LIMIT",
+            ),
+            (
+                {"service_id": 17, "location_id": "NLSC-A", "limit": 11},
+                "INVALID_MATCH_LIMIT",
+            ),
+            (
+                {"service_id": 17, "location_id": "NLSC-A", "limit": True},
+                "INVALID_MATCH_LIMIT",
+            ),
+        ]
+        for arguments, expected_code in invalid_cases:
+            with self.subTest(arguments=arguments):
+                with self.assertRaises(ServiceLayerError) as raised:
+                    self.service_layer.match_service_providers(**arguments)
+                self.assertEqual(expected_code, raised.exception.code)
+
+        self.assertEqual([], self.repository.calls)
+
+    def test_provider_slot_requires_ordered_timezone_aware_times(self) -> None:
+        valid_slot = _slot()
+        invalid_windows = [
+            {
+                "starts_at": valid_slot.starts_at.replace(tzinfo=None),
+                "ends_at": valid_slot.ends_at.replace(tzinfo=None),
+            },
+            {
+                "starts_at": valid_slot.ends_at,
+                "ends_at": valid_slot.starts_at,
+            },
+        ]
+        for window in invalid_windows:
+            with self.subTest(window=window), self.assertRaises(ValidationError):
+                AvailableProviderSlot.model_validate(
+                    {
+                        **valid_slot.model_dump(),
+                        **window,
+                    }
+                )
+
     def test_expected_error_has_stable_agent_safe_shape(self) -> None:
         error = ServiceLayerError(
             code="LOCATION_NOT_FOUND",
@@ -261,6 +485,7 @@ class PostgresReadRepositoryContractTests(unittest.TestCase):
             SEARCH_SERVICES_SQL,
             FIND_LOCATIONS_SQL,
             LIST_CONSULTATION_FORMS_SQL,
+            LIST_AVAILABLE_PROVIDER_SLOTS_SQL,
         )
         for statement in statements:
             with self.subTest(statement=statement[:40]):
@@ -268,6 +493,7 @@ class PostgresReadRepositoryContractTests(unittest.TestCase):
                 self.assertNotIn("core.", statement)
                 self.assertNotIn("quarantine.", statement)
                 self.assertNotIn("staging.", statement)
+                self.assertNotIn("demo.", statement)
 
     def test_form_rows_are_assembled_into_topics_and_options(self) -> None:
         rows = [

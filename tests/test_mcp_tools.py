@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest import mock
 
@@ -9,6 +10,7 @@ from mcp.shared.memory import create_connected_server_and_client_session
 from mcp.types import TextContent
 
 from home_repair_agent.backend.models import (
+    AvailableProviderSlot,
     ConsultationForm,
     FormTopic,
     ResolvedLocation,
@@ -60,11 +62,29 @@ def _form() -> ConsultationForm:
     )
 
 
+def _slot() -> AvailableProviderSlot:
+    taipei_timezone = timezone(timedelta(hours=8))
+    return AvailableProviderSlot(
+        provider_id="SYN-PROVIDER-001",
+        display_name="安心修繕 A 組",
+        service_id=17,
+        rating=4.8,
+        completed_jobs=128,
+        base_inspection_fee=300,
+        location_id="NLSC-63000030",
+        location_name="臺北市大安區",
+        availability_id="SYN-SLOT-001",
+        starts_at=datetime(2026, 7, 27, 13, tzinfo=taipei_timezone),
+        ends_at=datetime(2026, 7, 27, 17, tzinfo=taipei_timezone),
+    )
+
+
 class StubReadRepository:
     def __init__(self) -> None:
         self.service_results = [_service()]
         self.location_results = [_location()]
         self.form_results = [_form()]
+        self.slot_results = [_slot()]
 
     def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
         return self.service_results[:limit]
@@ -86,6 +106,17 @@ class StubReadRepository:
     ) -> list[ConsultationForm]:
         return self.form_results
 
+    def list_available_provider_slots(
+        self,
+        *,
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None,
+        preferred_end: datetime | None,
+        candidate_limit: int,
+    ) -> list[AvailableProviderSlot]:
+        return self.slot_results[:candidate_limit]
+
 
 class ExplodingReadRepository(StubReadRepository):
     def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
@@ -97,7 +128,7 @@ class MCPToolProtocolTests(unittest.IsolatedAsyncioTestCase):
         self.repository = StubReadRepository()
         self.server = create_mcp_server(ReadServiceLayer(self.repository))
 
-    async def test_lists_exactly_three_read_only_tools(self) -> None:
+    async def test_lists_exactly_four_read_only_tools(self) -> None:
         async with create_connected_server_and_client_session(
             self.server,
             raise_exceptions=True,
@@ -110,6 +141,7 @@ class MCPToolProtocolTests(unittest.IsolatedAsyncioTestCase):
                 "search_services",
                 "resolve_location",
                 "get_consultation_form",
+                "match_service_providers",
             },
             set(tools),
         )
@@ -129,6 +161,10 @@ class MCPToolProtocolTests(unittest.IsolatedAsyncioTestCase):
             ["service_id"],
             tools["get_consultation_form"].inputSchema["required"],
         )
+        self.assertEqual(
+            {"service_id", "location_id"},
+            set(tools["match_service_providers"].inputSchema["required"]),
+        )
 
     async def test_calls_all_tools_with_structured_success_results(self) -> None:
         async with create_connected_server_and_client_session(
@@ -147,6 +183,14 @@ class MCPToolProtocolTests(unittest.IsolatedAsyncioTestCase):
                 "get_consultation_form",
                 {"service_id": 17},
             )
+            match_result = await session.call_tool(
+                "match_service_providers",
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-63000030",
+                    "limit": 3,
+                },
+            )
 
         self.assertFalse(service_result.isError)
         self.assertEqual(
@@ -161,10 +205,44 @@ class MCPToolProtocolTests(unittest.IsolatedAsyncioTestCase):
             "repair_form_v1",
             form_result.structuredContent["data"]["form_key"],
         )
-        for result in (service_result, location_result, form_result):
+        self.assertEqual(
+            "SYN-PROVIDER-001",
+            match_result.structuredContent["data"]["candidates"][0]["provider_id"],
+        )
+        self.assertEqual(
+            "synthetic",
+            match_result.structuredContent["data"]["data_source"],
+        )
+        for result in (
+            service_result,
+            location_result,
+            form_result,
+            match_result,
+        ):
             with self.subTest(result=result):
                 self.assertEqual(True, result.structuredContent["ok"])
                 self.assertIsNone(result.structuredContent["error"])
+
+    async def test_match_time_window_error_is_structured(self) -> None:
+        async with create_connected_server_and_client_session(
+            self.server,
+            raise_exceptions=True,
+        ) as session:
+            result = await session.call_tool(
+                "match_service_providers",
+                {
+                    "service_id": 17,
+                    "location_id": "NLSC-63000030",
+                    "preferred_start": "2026-07-27T13:00:00+08:00",
+                },
+            )
+
+        self.assertFalse(result.isError)
+        self.assertFalse(result.structuredContent["ok"])
+        self.assertEqual(
+            "INVALID_TIME_WINDOW",
+            result.structuredContent["error"]["code"],
+        )
 
     async def test_domain_error_remains_structured_for_agent_recovery(self) -> None:
         self.repository.location_results = []

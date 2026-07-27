@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from home_repair_agent.backend.models import (
+    AvailableProviderSlot,
     ConsultationForm,
     FormOption,
     FormTopic,
     ResolvedLocation,
     ServiceSummary,
 )
-
 
 SEARCH_SERVICES_SQL = """
 WITH scored AS (
@@ -130,6 +131,35 @@ ORDER BY
 """
 
 
+LIST_AVAILABLE_PROVIDER_SLOTS_SQL = """
+SELECT
+    provider_id,
+    display_name,
+    service_id,
+    rating,
+    completed_jobs,
+    base_inspection_fee,
+    location_id,
+    location_name,
+    availability_id,
+    starts_at,
+    ends_at
+FROM agent.available_provider_slot
+WHERE
+    service_id = %(service_id)s
+    AND location_id = %(location_id)s
+    AND (
+        CAST(%(preferred_start)s AS timestamptz) IS NULL
+        OR (
+            starts_at < CAST(%(preferred_end)s AS timestamptz)
+            AND ends_at > CAST(%(preferred_start)s AS timestamptz)
+        )
+    )
+ORDER BY starts_at, ends_at, provider_id, availability_id
+LIMIT %(candidate_limit)s
+"""
+
+
 class PostgresReadRepository:
     """Static, parameterized queries against Agent-safe PostgreSQL views."""
 
@@ -174,6 +204,27 @@ class PostgresReadRepository:
             {"service_id": service_id},
         )
         return _assemble_forms(rows)
+
+    def list_available_provider_slots(
+        self,
+        *,
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None,
+        preferred_end: datetime | None,
+        candidate_limit: int,
+    ) -> list[AvailableProviderSlot]:
+        rows = self._fetch_all(
+            LIST_AVAILABLE_PROVIDER_SLOTS_SQL,
+            {
+                "service_id": service_id,
+                "location_id": location_id,
+                "preferred_start": preferred_start,
+                "preferred_end": preferred_end,
+                "candidate_limit": candidate_limit,
+            },
+        )
+        return [AvailableProviderSlot.model_validate(row) for row in rows]
 
     def _fetch_all(
         self,

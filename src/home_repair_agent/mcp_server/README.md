@@ -2,13 +2,14 @@
 
 ## 做了什麼
 
-本模組把既有的 `ReadServiceLayer` 包成三個標準 MCP Tools：
+本模組把既有的 `ReadServiceLayer` 包成四個標準 MCP Tools：
 
 | Tool | 輸入 | 回傳 | 用途 |
 |---|---|---|---|
 | `search_services` | 問題描述、筆數上限 | 支援的服務清單 | 從「水龍頭漏水」找出正式 `service_id` |
 | `resolve_location` | 縣市、行政區 | 唯一行政區 ID | 將「台北市、大安區」對到正式地點 |
 | `get_consultation_form` | `service_id` | 最新諮詢單與題目 | 告訴 Agent 接下來該追問哪些欄位 |
+| `match_service_providers` | 服務 ID、地點 ID、選填時段、筆數 | synthetic 師傅候選、分數與理由 | 查詢可用師傅，不保留時段 |
 
 ## 為什麼這樣做
 
@@ -63,11 +64,13 @@ schema。
 
 ## 安全邊界
 
-- 三個 Tool 均標示 `readOnlyHint=true`、`destructiveHint=false`、
+- 四個 Tool 均標示 `readOnlyHint=true`、`destructiveHint=false`、
   `idempotentHint=true`、`openWorldHint=false`。
 - 不建立案件、不建立訂單、不修改資料。
 - 不接受任意 SQL、資料表名稱或欄位名稱。
 - 找不到或結果不唯一時回傳錯誤碼，不自行猜 ID。
+- 媒合查無候選時回傳空清單；所有師傅結果標示為 `synthetic`。
+- 媒合時段必須成對、包含時區且不超過 31 天。
 - `DATABASE_URL` 僅由環境變數讀取，不得寫入 Git。
 
 ## 本機執行
@@ -101,15 +104,17 @@ HTTP MCP endpoint 為 `http://127.0.0.1:8000/mcp`。正式部署到 AWS 時才�
 
 `tests/test_mcp_tools.py` 使用官方 SDK 的記憶體內 Client/Server 連線，檢查：
 
-1. Agent 能列出三個 Tool 與唯讀 annotations。
-2. 三個 Tool 的成功 structured content。
+1. Agent 能列出四個 Tool 與唯讀 annotations。
+2. 四個 Tool 的成功 structured content。
 3. 可恢復的 domain error 契約。
 4. 非預期錯誤不洩漏內部資訊。
 5. 缺少 `DATABASE_URL` 與錯誤 port 設定會提早失敗。
 
+2026-07-26：`7 passed, 11 subtests passed`。
+
 ## 尚未做
 
-- 建立諮詢案件、媒合、確認訂單等寫入 Tool。
+- 建立諮詢案件、保留時段、確認媒合與訂單等寫入 Tool。
 - MCP HTTP 的 OAuth / Gateway 驗證。
 - 真實 Bedrock 模型的 tool-selection 評估。
 - AWS AgentCore Gateway、Lambda 與 RDS 部署。

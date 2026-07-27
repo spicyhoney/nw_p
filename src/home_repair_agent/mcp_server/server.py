@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from typing import Literal, cast
 
 from mcp.server.fastmcp import FastMCP
@@ -12,6 +13,7 @@ from home_repair_agent.backend.postgres_repository import PostgresReadRepository
 from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.mcp_server.models import (
     ConsultationFormToolResponse,
+    ProviderMatchToolResponse,
     ResolveLocationToolResponse,
     SearchServicesToolResponse,
 )
@@ -46,7 +48,8 @@ def create_mcp_server(
         instructions=(
             "Use these read-only tools to identify a supported repair service, "
             "resolve a Taiwan county and district, and obtain the consultation "
-            "form. Never invent IDs when a tool returns ok=false."
+            "form or synthetic provider candidates. Never invent IDs when a "
+            "tool returns ok=false or returns no candidates."
         ),
         host=host,
         port=port,
@@ -125,6 +128,39 @@ def _register_read_tools(mcp: FastMCP, read_services: ReadServiceLayer) -> None:
         except Exception as error:
             raise _unavailable_tool_error() from error
         return ConsultationFormToolResponse.success(result)
+
+    @mcp.tool(
+        name="match_service_providers",
+        title="Match available synthetic service providers",
+        description=(
+            "Return ranked synthetic provider candidates for a service_id and "
+            "location_id previously returned by read tools. Optional preferred "
+            "times must both include a timezone. An empty candidate list means "
+            "no eligible provider; never invent one. This tool never reserves "
+            "a slot or changes data."
+        ),
+        annotations=READ_ONLY_ANNOTATIONS,
+    )
+    def match_service_providers(
+        service_id: int,
+        location_id: str,
+        preferred_start: datetime | None = None,
+        preferred_end: datetime | None = None,
+        limit: int = 3,
+    ) -> ProviderMatchToolResponse:
+        try:
+            result = read_services.match_service_providers(
+                service_id=service_id,
+                location_id=location_id,
+                preferred_start=preferred_start,
+                preferred_end=preferred_end,
+                limit=limit,
+            )
+        except ServiceLayerError as error:
+            return ProviderMatchToolResponse.from_service_error(error)
+        except Exception as error:
+            raise _unavailable_tool_error() from error
+        return ProviderMatchToolResponse.success(result)
 
 
 def _unavailable_tool_error() -> ToolError:

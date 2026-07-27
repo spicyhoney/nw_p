@@ -140,3 +140,15 @@ home-repair-mcp
 
 Agent 的模型／工具介面、多輪狀態、安全停止、Mock 限制及語音接法請見
 [Agent 對話迴圈實作說明](src/home_repair_agent/agent/README.md)。
+
+## 執行本機 Agent Demo
+
+不需要 PostgreSQL 或 AWS 即可先驗證 Agent、MCP 與 Service Layer：
+
+```powershell
+python -m home_repair_agent.agent.demo --scripted
+```
+
+移除 `--scripted` 可自行輸入對話。這個 Demo 使用明確標示的記憶體合成資料，
+會走完四個唯讀 MCP Tools 並顯示 synthetic 師傅候選；它只驗證編排流程，
+不建立案件、不保留時段，也不代表 Bedrock 的語意品質。

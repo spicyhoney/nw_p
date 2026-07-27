@@ -19,6 +19,7 @@ REQUIRED_READ_TOOLS = {
     "search_services",
     "resolve_location",
     "get_consultation_form",
+    "match_service_providers",
 }
 COUNTY_NAMES = (
     "基隆市",
@@ -89,12 +90,21 @@ class RuleBasedRepairMockModel:
         if missing_tools:
             return ModelTurn.answer("目前缺少必要的修繕查詢工具，請稍後再試。")
 
+        match_result = _latest_tool_result(messages, "match_service_providers")
         form_result = _latest_tool_result(messages, "get_consultation_form")
-        if form_result is not None:
-            return _continue_form_collection(messages, form_result)
-
         location_result = _latest_tool_result(messages, "resolve_location")
         service_result = _latest_tool_result(messages, "search_services")
+
+        if match_result is not None:
+            return _summarize_match_result(match_result)
+
+        if form_result is not None:
+            return _continue_form_collection(
+                messages,
+                form_result,
+                service_result=service_result,
+                location_result=location_result,
+            )
 
         if location_result is not None and _is_success(location_result.payload):
             service_id = _unique_service_id(service_result)
@@ -169,6 +179,9 @@ def _search_latest_user(
 def _continue_form_collection(
     messages: Sequence[ConversationMessage],
     form_result: ToolResultMessage,
+    *,
+    service_result: ToolResultMessage | None,
+    location_result: ToolResultMessage | None,
 ) -> ModelTurn:
     if not _is_success(form_result.payload):
         return ModelTurn.answer("目前找不到可使用的諮詢表單，請改由人工協助。")
@@ -185,8 +198,20 @@ def _continue_form_collection(
     ]
     answers = _user_messages_after(messages, form_result)
     if len(answers) >= len(required_topics):
-        return ModelTurn.answer(
-            "必要資訊已收集完成。目前是唯讀原型，尚未建立案件；請確認資料後再進入送出流程。"
+        service_id = _unique_service_id(service_result)
+        location_id = _resolved_location_id(location_result)
+        if service_id is None or location_id is None:
+            return ModelTurn.answer("必要資訊已收集，但目前無法安全確認服務或地點 ID。")
+        return ModelTurn.use_tools(
+            _tool_call(
+                messages,
+                name="match_service_providers",
+                arguments={
+                    "service_id": service_id,
+                    "location_id": location_id,
+                    "limit": 3,
+                },
+            )
         )
 
     topic = required_topics[len(answers)]
@@ -230,6 +255,53 @@ def _unique_service_id(result: ToolResultMessage | None) -> int | None:
         return None
     service_id = service.get("service_id")
     return service_id if isinstance(service_id, int) else None
+
+
+def _resolved_location_id(result: ToolResultMessage | None) -> str | None:
+    if result is None or not _is_success(result.payload):
+        return None
+    data = result.payload.get("data")
+    if not isinstance(data, dict):
+        return None
+    location_id = data.get("location_id")
+    return location_id if isinstance(location_id, str) and location_id else None
+
+
+def _summarize_match_result(result: ToolResultMessage) -> ModelTurn:
+    if not _is_success(result.payload):
+        return ModelTurn.answer("必要資訊已收集，但目前無法取得師傅候選，請稍後再試。")
+
+    data = result.payload.get("data")
+    if not isinstance(data, dict) or data.get("data_source") != "synthetic":
+        return ModelTurn.answer("媒合結果缺少可驗證的 synthetic 來源標籤，已停止顯示。")
+    candidates = data.get("candidates")
+    if not isinstance(candidates, list):
+        return ModelTurn.answer("媒合結果格式異常，已停止顯示。")
+    if not candidates:
+        return ModelTurn.answer(
+            "必要資訊已收集，但目前沒有符合條件的 synthetic 師傅候選；我不會自行捏造人選。"
+        )
+
+    first = candidates[0]
+    if not isinstance(first, dict) or first.get("source_type") != "synthetic":
+        return ModelTurn.answer("候選資料缺少可驗證的 synthetic 來源標籤，已停止顯示。")
+    display_name = first.get("display_name")
+    starts_at = first.get("starts_at")
+    ends_at = first.get("ends_at")
+    match_score = first.get("match_score")
+    if (
+        not isinstance(display_name, str)
+        or not isinstance(starts_at, str)
+        or not isinstance(ends_at, str)
+        or not isinstance(match_score, int | float)
+    ):
+        return ModelTurn.answer("候選資料格式異常，已停止顯示。")
+
+    return ModelTurn.answer(
+        f"找到 {len(candidates)} 位 synthetic 師傅候選。"
+        f"首選「{display_name}」，可用時段 {starts_at} 至 {ends_at}，"
+        f"媒合分數 {match_score:.4f}。目前只提供候選，尚未建立案件，也未保留時段。"
+    )
 
 
 def _is_success(payload: dict[str, Any]) -> bool:

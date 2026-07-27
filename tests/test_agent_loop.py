@@ -425,7 +425,7 @@ class AgentMCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("需要處理的問題", corrected.reply)
 
-    async def test_form_answers_persist_across_turns_until_confirmation(
+    async def test_form_answers_trigger_read_only_matching_after_collection(
         self,
     ) -> None:
         async with create_connected_server_and_client_session(
@@ -453,9 +453,54 @@ class AgentMCPIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual([], second.tool_trace)
         self.assertIn("希望服務時間", second.reply)
-        self.assertEqual([], third.tool_trace)
+        self.assertEqual(
+            ["match_service_providers"],
+            [entry.name for entry in third.tool_trace],
+        )
+        self.assertEqual(
+            {
+                "service_id": 17,
+                "location_id": "NLSC-63000030",
+                "limit": 3,
+            },
+            third.tool_trace[0].arguments,
+        )
+        self.assertIn("synthetic 師傅候選", third.reply)
+        self.assertIn("安心修繕 A 組", third.reply)
         self.assertIn("尚未建立案件", third.reply)
-        self.assertIn("請確認", third.reply)
+
+    async def test_empty_match_result_does_not_invent_provider(self) -> None:
+        self.repository.slot_results = []
+
+        async with create_connected_server_and_client_session(
+            self.server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            runner = AgentRunner(
+                model_client=RuleBasedRepairMockModel(),
+                tool_client=MCPToolClient(mcp_session),
+            )
+            conversation = ConversationSession(session_id="empty-match")
+
+            await runner.run_turn(
+                session=conversation,
+                user_text="台北市大安區水龍頭漏水",
+            )
+            await runner.run_turn(
+                session=conversation,
+                user_text="水龍頭漏水",
+            )
+            result = await runner.run_turn(
+                session=conversation,
+                user_text="星期六下午",
+            )
+
+        self.assertEqual(
+            ["match_service_providers"],
+            [entry.name for entry in result.tool_trace],
+        )
+        self.assertIn("沒有符合條件", result.reply)
+        self.assertIn("不會自行捏造人選", result.reply)
 
     async def test_empty_service_result_does_not_invent_service_id(self) -> None:
         self.repository.service_results = []

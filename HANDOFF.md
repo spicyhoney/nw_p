@@ -1,35 +1,36 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-07-26　更新者：Codex
+> 更新：2026-07-27　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先以本檔為準，再按連結讀細節。
 
 ## 1. 目前狀態（3 行內）
 
-PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for review；
-沒有發現 merge blocker，尚未合併。第四個唯讀 MCP Tool 與可解釋 synthetic
-師傅媒合已完成；真實 Bedrock、寫入流程、FastAPI 與 Demo UI 尚未完成。
+PR #5 已於 2026-07-27 以 merge commit `73a6e45` 合併至 `main`。本分支完成
+可人工操作的四工具 synthetic 媒合 Demo，正準備建立後續 Draft PR；其上的
+Hugging Face adapter 仍在獨立 stacked branch，尚未進入 `main`。
 
 ## 2. 本次 session 完成（帶證據）
 
-- 審查 PR #5 head `703d4cb`：契約、查無候選、`matching_v1` 實作與文件、
-  result/candidate 的 synthetic 標籤均一致，未發現阻塞問題。
-- 本機完整 suite：`43 passed, 10 skipped, 40 subtests passed`；比作者工作區
-  多一個 skip 是因本機沒有 organizer dataset。Scoped Ruff、`compileall` 與
-  `git diff --check` 通過；repo-wide format check 仍含既有未格式化檔案。
-- PR 審查紀錄：`https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084270645`；
-  PR 已由 Draft 改為 Ready for review，未執行 merge。
-- 無 `TEST_DATABASE_URL`，所以 PostgreSQL 媒合案例仍為 skip；不可宣稱 SQL
-  已在真實 PostgreSQL 複驗。
+- 移植既有 terminal demo，並讓 `RuleBasedRepairMockModel` 在表單必填回答完成後
+  呼叫 `match_service_providers`；顯示 synthetic 候選、時段與分數。
+- Demo 使用記憶體合成資料，不連 AWS/PostgreSQL、不寫資料、不保留時段或建單；
+  詳見 `docs/ENGINEER_LOG.md` 與 `src/home_repair_agent/agent/README.md`。
+- 腳本化 smoke：`python -m home_repair_agent.agent.demo --scripted` 成功；
+  2026-07-27 重新驗證完整 suite 為
+  `49 passed, 9 skipped, 40 subtests passed`。9 個 skip 均需測試資料庫。
+- 功能 commit：`4d1a8e1`。無 `TEST_DATABASE_URL`，不可宣稱媒合 SQL 已在真實
+  PostgreSQL 複驗。
+- 已在 PR #5 留下下一階段分工：
+  `https://github.com/spicyhoney/nw_p/pull/5#issuecomment-5084316544`。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 組員閱讀 PR #5 審查紀錄並決定是否合併；合併前若能取得隔離的測試
-   PostgreSQL，設定 `TEST_DATABASE_URL` 後執行 `python -m pytest -q`。
-2. 真實供應商資料接入前，調整 PostgreSQL 候選池：目前先按開始時間取 100
-   個 slot，再由 Service 排名／去重；大量時段可能降低候選師傅多樣性。
-3. 顯式 `bedrock / local / mock` provider routing 另開獨立分支，再修改
-   `src/home_repair_agent/agent/`；不要把 provider routing 混進
-   matching-service 分支。
+1. 建立本分支到 `main` 的 Draft PR；組員審查 terminal flow、synthetic
+   標示、無寫入邊界與腳本化 Demo，不自動合併。
+2. Hugging Face adapter 已在 `feature/huggingface-model-adapter`，先以本分支
+   為 base 建立 stacked Draft PR；本 PR 合併後再將其 base 改為 `main`。
+3. 兩個 PR 通過後再開始 Web Demo vertical slice；不要重做既有
+   `ModelClient`、`AgentRunner` 或 MCP tool loop。
 
 ## 4. 條目（全部為 active）
 
@@ -42,8 +43,11 @@ PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for re
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已授權審查 PR #5、必要時修正、留下審查紀錄並改為 Ready；
-  尚未授權 merge（原話：「好 請吧」，2026-07-26）。
+- [active] PR #5 已由 `y-row` 合併；本次已授權同步最新交接紀錄並建立
+  terminal／Hugging Face 後續 PR，不自動合併（原話：「好那你幫我弄」，
+  2026-07-27）。
+- [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
+  matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 
 ### Agent assumptions（可質疑）
 
@@ -69,12 +73,14 @@ PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for re
   決定；真實資料接入前不得宣稱媒合準確率。
 - [active] PostgreSQL repository 先取 100 個 slot 再排名／去重，真實規模下
   可能讓多早期空檔的單一師傅佔滿候選池；目前 3 位 synthetic Demo 不受影響。
+- [active] Rule-based Mock 尚未把「星期六下午」轉成含時區時間窗；Demo
+  目前不傳 `preferred_start` / `preferred_end`，只排序該地點所有空檔。
 - [active] 案件、保留時段、確認媒合與訂單的寫入／冪等邊界尚未定案。
 
 ## 5. 目前架構與工作邊界
 
 - 已完成：資料清洗、PostgreSQL schema/loader、四個唯讀 Service／MCP
-  Tools、`matching_v1` synthetic 媒合、Mock Agent tool loop。
+  Tools、`matching_v1` synthetic 媒合、Mock Agent tool loop 與 terminal Demo。
 - 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、時段保留、
   確認媒合與訂單。
 - Agent 介面：`src/home_repair_agent/agent/ports.py` 的 `ModelClient` /
@@ -86,7 +92,9 @@ PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for re
 ## 6. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 當前分支：`feature/matching-service`，PR #5 Ready for review，尚未合併。
+- `main`：`73a6e45`（PR #5 merge commit）。
+- 當前分支：`feature/matching-terminal-demo`，由 PR #5 head 延伸，正準備
+  建立到 `main` 的 Draft PR。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -95,7 +103,6 @@ PR #5（`feature/matching-service`）已完成本機審查並改為 Ready for re
 
 ## 7. 授權狀態
 
-- 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將
-  `feature/matching-service` PR #5 改為 Ready for review（2026-07-26）。
-- 未授權：合併 matching-service PR、啟用寫入 MCP Tools、部署 AWS 資源或
-  選定特定本機模型。
+- 使用者已授權：PR #4 squash merge；完成 matching service 與只讀 terminal
+  Demo；同步最新文件並建立 terminal／Hugging Face Draft PR（2026-07-26～27）。
+- 未授權：自動合併後續 PR、啟用寫入 MCP Tools、部署 AWS 資源或開始 Web UI。

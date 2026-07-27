@@ -5,9 +5,9 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #5 已合併至 `main`；terminal Demo Draft PR #6 與其上的 HF Draft PR #7
-已建立。HF branch 已同步 PR #6 base；同時建立的重複 PR #8 已關閉。固定
-eval 與 Web vertical slice 尚未完成。
+terminal Demo PR #6 已以 merge commit `ee056e5` 合併至 `main`。HF PR #7
+已 retarget 到 `main`、無衝突並 Ready for review；重複 PR #8 維持關閉。
+固定 eval 與 Web vertical slice 尚未完成。
 
 ## 2. 本次 session 完成（帶證據）
 
@@ -16,11 +16,11 @@ eval 與 Web vertical slice 尚未完成。
   `match_service_providers`；尚未形成固定 eval，不宣稱模型品質。
 - Review 修正：`huggingface_hub>=1.24,<2`；`HF_TIMEOUT_SECONDS=60`；相對日期
   不得由模型自行轉換；Demo slots 由可注入時鐘產生在下一個未來星期六。
-- focused 34 passed；組員環境完整 suite 65 passed、9 skipped；本機複驗
-  64 passed、10 skipped、40 subtests passed（多 1 skip 為缺主辦方資料集）。
-  Mock 四工具 smoke、scoped Ruff、compileall、diff check 通過。
-- terminal Demo Draft PR #6：`https://github.com/spicyhoney/nw_p/pull/6`；
-  HF stacked Draft PR #7：`https://github.com/spicyhoney/nw_p/pull/7`。
+- PR #6 合併後複驗：focused 34 passed；完整 suite 64 passed、10 skipped、
+  40 subtests passed（多 1 skip 為缺主辦方資料集）；PR #7 對 `main` 的
+  14-file diff check 通過，GitHub 顯示無衝突。
+- terminal Demo PR #6：`https://github.com/spicyhoney/nw_p/pull/6`；HF 正式
+  review PR #7：`https://github.com/spicyhoney/nw_p/pull/7`。
 - 本次修正環境沒有 `HF_TOKEN`，未重跑 live，也未對外傳送對話。
 - 模型輸出的 Markdown `☐` 不是 UI；目前 `AgentTurnResult` 只有 reply/trace，
   沒有可供前端渲染的 form/session view model，也未保存 validated form answers。
@@ -33,10 +33,10 @@ eval 與 Web vertical slice 尚未完成。
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 組員 review PR #6、PR #7，並在 PR #5 討論串確認 Web scope／分工；此前
-   不開始 UI 實作。
-2. PR #6 核准／合併後，將 PR #7 base 改為 `main` 並重新確認 diff 與測試；
-   review finding 在原分支修正，兩張 PR 都不得自動合併。
+1. 組員 review 已 retarget 到 `main` 的 PR #7，並在 PR #5 討論串確認 Web
+   scope／分工；此前不開始 UI 實作。
+2. PR #7 有 review finding 時在原分支修正並複驗；只有核准且使用者再次明確
+   授權後才能合併，再由最新 `main` 建立 Web branch。
 3. P0 consumer vertical slice TODO（依序）：
    - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
    - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
@@ -61,8 +61,8 @@ eval 與 Web vertical slice 尚未完成。
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已授權並完成以一般 merge commit 合併 PR #5；後續 terminal／HF
-  PR 只建立與整理，不自動合併（原話：「gogo」「做吧」，2026-07-27）。
+- [active] 已授權並完成以一般 merge commit 合併 PR #5 與 PR #6；PR #7
+  尚未授權合併（原話：「gogo」「他說pr6審查過但要你合併」，2026-07-27）。
 - [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
   matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 - [active] 已授權串接 Hugging Face 模型（原話：「幫我做一件事情，就是串一下
@@ -73,8 +73,8 @@ eval 與 Web vertical slice 尚未完成。
 - [active] HF token 已 refresh；舊 token 視為失效，不重新要求或記錄新 token。
 - [active] 已授權修正 HF branch review findings、測試、提交並推送，讓對方排程
   AI 定時檢查與更新（原話：「好 那你幫我修正吧」，2026-07-27）。
-- [active] 組員已建立 Draft PR #6／#7；同時建立的 PR #8 因重複而關閉，
-  不影響任何 branch commit（2026-07-27）。
+- [active] 組員建立的 PR #6 已合併；PR #7 已 retarget／Ready for review；
+  同時建立的 PR #8 因重複而關閉，不影響 branch commit（2026-07-27）。
 
 ### Agent assumptions（可質疑）
 
@@ -125,10 +125,10 @@ eval 與 Web vertical slice 尚未完成。
 ## 6. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- `main`：`73a6e45`（PR #5 regular merge）；本機與 `origin/main` 已同步。
-- terminal Demo：Draft PR #6，head `feature/matching-terminal-demo`。
-- 當前分支：`feature/huggingface-model-adapter`，已同步 PR #6 base；Draft
-  PR #7 以 terminal branch 為 base，待 review。
+- `main`：`ee056e5`（PR #6 regular merge）；本機與 `origin/main` 已同步。
+- terminal Demo：PR #6 已合併；head branch 未刪除。
+- 當前分支：`feature/huggingface-model-adapter`；PR #7 已以 `main` 為 base、
+  Ready for review，尚未合併。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -140,6 +140,6 @@ eval 與 Web vertical slice 尚未完成。
 - 使用者已授權：PR #4 squash merge；實作、測試、審查並以 regular merge
   合併 PR #5；完成只讀 matching terminal Demo 與 Hugging Face adapter
   （2026-07-26～27）。
-- 已授權本次：同步／驗證 HF adapter 修正、合併 PR #5、整理後續 PR。
-- 未授權：自動合併 PR #6／#7、開始 UI、啟用寫入 MCP Tools、部署 AWS
-  資源或選定特定本機模型。
+- 已授權本次：同步／驗證 HF adapter、合併 PR #5／#6、retarget 並送審 PR #7。
+- 未授權：合併 PR #7、開始 UI、啟用寫入 MCP Tools、部署 AWS 資源或選定
+  特定本機模型。

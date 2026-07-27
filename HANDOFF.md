@@ -3,144 +3,109 @@
 > 更新：2026-07-27　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先以本檔為準，再按連結讀細節。
 
-## 1. 目前狀態（3 行內）
+## 1. 目前狀態
 
-terminal Demo PR #6 已以 merge commit `ee056e5` 合併至 `main`。HF PR #7
-已 retarget 到 `main`、無衝突並 Ready for review；重複 PR #8 維持關閉。
-固定 eval 與 Web vertical slice 尚未完成。
+PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
+`codex/web-demo-p0`（PR #9），本機唯讀 Web vertical slice 已完成 review 修正；
+尚未公開部署。
+固定模型 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
 
-## 2. 本次 session 完成（帶證據）
+## 2. 本分支完成
 
-- 團隊紀錄的 HF live run 已以 `Qwen/Qwen3-4B-Instruct-2507` 成功呼叫
-  `search_services`、`resolve_location`、`get_consultation_form`、
-  `match_service_providers`；尚未形成固定 eval，不宣稱模型品質。
-- Review 修正：`huggingface_hub>=1.24,<2`；`HF_TIMEOUT_SECONDS=60`；相對日期
-  不得由模型自行轉換；Demo slots 由可注入時鐘產生在下一個未來星期六。
-- PR #6 合併後複驗：focused 34 passed；完整 suite 64 passed、10 skipped、
-  40 subtests passed（多 1 skip 為缺主辦方資料集）；PR #7 對 `main` 的
-  14-file diff check 通過，GitHub 顯示無衝突。
-- terminal Demo PR #6：`https://github.com/spicyhoney/nw_p/pull/6`；HF 正式
-  review PR #7：`https://github.com/spicyhoney/nw_p/pull/7`。
-- 本次修正環境沒有 `HF_TOKEN`，未重跑 live，也未對外傳送對話。
-- 模型輸出的 Markdown `☐` 不是 UI；目前 `AgentTurnResult` 只有 reply/trace，
-  沒有可供前端渲染的 form/session view model，也未保存 validated form answers。
-- 主辦方 PDF 明定彈性諮詢單、服務廠商管理者後台／操作介面，決賽需交
-  Live Demo 部署網址；完成度評分包含使用體驗。因此 CLI 只保留工程 smoke。
-- HF token 曾出現在使用者提供的終端 transcript；使用者已撤銷／refresh。
-  不保留或記錄新 token，該 transcript 不可提交或再次分享。
-- 同時建立的 PR #8 因與 #7 重複已關閉；Web scope／分工提案仍待組員在
-  PR #5 討論串回覆。
+- 新增 FastAPI `session / message / form / reset` API。
+- 新增 deterministic `SessionView`，保存 service、location、form answers、
+  preferred window、candidates；LLM reply 不作 business state。
+- 需求文字仍由 `AgentRunner` 呼叫前三個 MCP Tools；表單通過伺服器驗證後，
+  `WebSessionService` 才呼叫第四個 `match_service_providers` Tool。
+- 動態表單支援 `single_select` radio、文字欄位與 `datetime_range`。
+- 希望時段由 UI 送出 `Asia/Taipei +08:00` ISO 8601；後端重驗時區、順序與
+  12 小時上限，模型不得自行換算相對日期。
+- 消費者頁含進度、聊天、表單、候選卡、Tool 查詢紀錄與 reset。
+- 桌面三欄、手機三分頁；候選與素材皆明確標示 synthetic。
+- 前端不直接呼叫 HF／Bedrock、MCP、Service Layer、SQL 或資料庫。
+- CSP、no-store、禁止 iframe、`textContent` rendering 與安全 API errors 已加入。
+- 專案專用修繕 workbench 圖由 built-in ImageGen 產生並壓成 30 KB WebP。
+- Review 修正：Web 對話只向模型公開前三個 Tool；模型即使自行要求媒合也會被
+  Runner 白名單與 session workflow 雙層拒絕。
+- 媒合完成後拒絕重送表單；reset 原地清空 record，保留同一把 session lock。
+- 前端送出前檢查必填 radio／multi-select／文字與時段，伺服器仍會再次驗證。
 
-## 3. 下一步（具體到第一個動作）
+## 3. 驗證證據
 
-1. 組員 review 已 retarget 到 `main` 的 PR #7，並在 PR #5 討論串確認 Web
-   scope／分工；此前不開始 UI 實作。
-2. PR #7 有 review finding 時在原分支修正並複驗；若組員確認無問題，可由
-   組員直接合併，不必再等使用者／Codex批准，再由最新 `main` 建立 Web branch。
-3. P0 consumer vertical slice TODO（依序）：
-   - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
-   - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
-   - 結構化 session state：service/location/form answers/time window/candidates。
-   - `single_select` 用 radio；日期時間由 UI 產生 Asia/Taipei aware ISO window。
-   - 必填完成且時間驗證通過後才媒合；禁止模型捏造日期、修改偏好或替換服務。
-   - provider label／debug trace 可見；切 HF→Bedrock 時 UI/API contract 不變。
-4. P1 TODO：最小服務廠商後台（案件列表、摘要、狀態）；需先完成有確認與冪等的
-   case submission contract。語音、登入、付款、真實師傅、照片、完整後台、
-   AWS 部署皆不納入 P0。
-5. P0 驗收：需求文字 → 三個真 Tool → 手動完成欄位 → validated matching Tool
-   → 顯示 tool result 的 synthetic 候選；換 `ModelClient` 時前端零修改。
+- `tests/test_web_app.py`：13 passed；Web + Agent loop focused：27 passed。
+- 完整 suite：77 passed、10 skipped、40 subtests passed。
+- 10 skipped 是缺少測試 PostgreSQL／選配 live 環境時依設計略過。
+- 受影響檔案 Ruff、format、compileall、JavaScript syntax、diff check 通過。
+- 全 repo Ruff 仍會指出既有 `data_cleaning` 格式／lint debt；本分支未擴改。
+- 真實瀏覽器桌面與 `390x844` 均完成：
+  需求 → 三個 Tool → 動態表單 → `+08:00` 時段 → 媒合 Tool → 兩位候選。
+- 手機無水平 overflow，三分頁與 reset 正常；全流程無 console error。
+- FastAPI TestClient 有第三方 `httpx2` 遷移 deprecation warning；不影響結果。
+- 本次未使用 `HF_TOKEN`，沒有對外傳送對話。
 
-## 4. 條目（全部為 active）
+主要文件：
 
-### User decisions（照做，不重新問）
+- `src/home_repair_agent/web/README.md`
+- `docs/implementation-index.md`
+- `docs/architecture.md`
+- `tests/test_web_app.py`
 
-- [active] `docs/` 多數內容是早期 brainstorm 遺留資料；兩份 PDF 是比賽方
-  提供的正式資訊（原話，2026-07-26）。實作狀態以
-  `docs/implementation-index.md` 和程式/測試為準。
-- [active] 向組員提議：AWS 未設定時顯示清楚提示，並可切換到以開源模型
-  驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
-- [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
-  （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已完成合併 PR #5／#6；組員確認 PR #7 無問題後，可由組員直接
-  合併，不必再回來等待批准（原話：「他確認沒問題就請他合併」，2026-07-27）。
-- [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
-  matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
-- [active] 已授權串接 Hugging Face 模型（原話：「幫我做一件事情，就是串一下
-  huggingface的模型來做這件問題」，2026-07-27）。
-- [active] 下一步改為可操作 UI＋正確模型 Demo，並保持日後串 AWS 只需替換
-  adapter；今天先列 TODO、更新 handoff、徵求組員同意，明天再做
-  （使用者原話，2026-07-27）。
-- [active] HF token 已 refresh；舊 token 視為失效，不重新要求或記錄新 token。
-- [active] 已授權修正 HF branch review findings、測試、提交並推送，讓對方排程
-  AI 定時檢查與更新（原話：「好 那你幫我修正吧」，2026-07-27）。
-- [active] 組員建立的 PR #6 已合併；PR #7 已 retarget／Ready for review；
-  同時建立的 PR #8 因重複而關閉，不影響 branch commit（2026-07-27）。
+## 4. 下一步
 
-### Agent assumptions（可質疑）
+1. 組員重新確認 PR #9 的 review 修正，通過後合併至 `main`。
+2. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
+3. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
+4. P1 前先設計 case submission contract：
+   明確確認、idempotency key、授權、交易與 audit event。
+5. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
 
-- [active] terminal Demo 已採顯式 `mock / huggingface`；`bedrock` 日後獨立
-  加入。`huggingface` 是 hosted open model，不等於本機離線 runtime。
-- [active] 目前不建議跨 ModelClient 的自動 fallback。HF SDK 的
-  `provider=auto` 只負責在 HF Inference Providers 內路由，不等於
-  `huggingface -> mock` fallback；`bedrock` mode 不得靜默降級。
-- [active] Hugging Face adapter 重用既有 `ModelClient`、`AgentRunner` 與 MCP
-  tool loop；live 已證明 transport 可用，但尚未完成固定 eval。
-- [active] P0 建議同 repo 以 FastAPI＋輕量 web frontend 提供單一部署網址，
-  但 React/Vite 或無 build 的 HTML/CSS/JS 尚待組員確認。
-- [active] UI state 應由 deterministic backend view model 驅動；LLM reply
-  只作說明，不作 checkbox、日期或 business state 的 source of truth。
+## 5. 團隊分工
 
-### Open issues（待決）
+- 使用者／Codex：Web P0、FastAPI session/view model、資料與 Service/MCP 邊界。
+- 組員：模型固定 eval、語音、Bedrock/AWS 部署準備。
+- 共同：驗收 Web 對話與 Agent/MCP 串接、決定 Demo 文案與部署方案。
+- 不要讓兩邊同時修改 `src/home_repair_agent/web/`；需調整先在 PR 討論。
 
-- [active] 組員是否同意 P0/P1 scope、技術棧與分工？
-- [active] Web branch 等 terminal/HF stack 完成整合後再由最新 `main` 建立；
-  React/Vite 或無 build HTML/CSS/JS 尚待團隊確認。
-- [active] consultation session state P0 存 memory；何時切 PostgreSQL？
-- [active] Bedrock provider routing 何時實作、由誰負責？
-- [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
-- [active] 若要完全離線的本機 open model，runtime、模型尺寸、硬體與
-  tool-calling 相容性仍未評估；目前 HF adapter 是 hosted API。
-- [active] 真實 Bedrock adapter 由誰實作、何時能取得 AWS 環境仍待確認。
-- [active] `matching_v1` 已通過本機程式審查，但是否符合產品偏好仍由組員
-  決定；真實資料接入前不得宣稱媒合準確率。
-- [active] PostgreSQL repository 先取 100 個 slot 再排名／去重，真實規模下
-  可能讓多早期空檔的單一師傅佔滿候選池；目前 3 位 synthetic Demo 不受影響。
-- [active] Rule-based Mock 尚未把「星期六下午」轉成含時區時間窗；Demo
-  目前不傳 `preferred_start` / `preferred_end`，只排序該地點所有未來空檔；
-  hosted model 也不得自行把相對日期換成年月日。
-- [active] 案件、保留時段、確認媒合與訂單的寫入／冪等邊界尚未定案。
+## 6. 現有架構
 
-## 5. 目前架構與工作邊界
+已完成：
 
-- 已完成：資料清洗、PostgreSQL schema/loader、四個唯讀 Service／MCP
-  Tools、`matching_v1` synthetic 媒合、Mock terminal Demo、HF live adapter。
-- 未完成：真實 Bedrock/AgentCore、FastAPI/Demo UI、案件寫入、時段保留、
-  確認媒合與訂單。
-- Agent 介面：`src/home_repair_agent/agent/ports.py` 的 `ModelClient` /
-  `ToolClient`；設計說明見 `src/home_repair_agent/agent/README.md`。
-- 現有 Agent 只允許 read-only tools；不要在未做確認、冪等與授權設計前開放
-  寫入 tool。
-- 未推送的本機實驗分支不屬於可重現的團隊狀態，不作為接手依據。
+- B+ 資料清洗、PostgreSQL schema/loader 與資料來源政策。
+- 四個唯讀 Service／MCP Tools 與 `matching_v1` synthetic 媒合。
+- Mock Agent loop、terminal Demo、Hugging Face hosted adapter。
+- 本機唯讀 FastAPI/Web P0。
 
-## 6. 環境快照
+尚未完成：
+
+- PostgreSQL session persistence。
+- 案件、時段保留、確認媒合與訂單寫入。
+- 最小服務廠商後台。
+- Bedrock adapter、AgentCore、RDS、S3 與 CloudWatch。
+- 語音與公開部署。
+
+## 7. 不可破壞邊界
+
+- 原始資料不可覆寫；不明代碼與斷裂關聯不可猜測。
+- synthetic 資料必須保留來源標籤，不得宣稱是真實合作廠商。
+- Agent 不得執行任意 SQL，只能呼叫白名單 Service／MCP Tool。
+- FastAPI 與 MCP 是 adapter；商業規則放 Service，SQL 放 repository。
+- token、密碼、AWS 金鑰、`.env` 與含 token 的 transcript 不得提交。
+- 目前四個 MCP Tools 全部唯讀；沒有確認、冪等、授權與 audit 前不得加寫入。
+- Hugging Face 是外部 hosted API，不是本機模型；不得靜默 fallback。
+- 不要 force-push 或刪除隊友分支。
+
+## 8. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- `main`：`ee056e5`（PR #6 regular merge）；本機與 `origin/main` 已同步。
-- terminal Demo：PR #6 已合併；head branch 未刪除。
-- 當前分支：`feature/huggingface-model-adapter`；PR #7 已以 `main` 為 base、
-  Ready for review，尚未合併。
-- Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
-- 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
-  程式與測試。
-- 危險區：不要 force-push；不要把 synthetic 師傅說成真實合作廠商；不要在
-  此分支加入寫入 Tool。
+- 穩定 `main`：`afe6dba`，PR #7 regular merge。
+- 工作分支：`codex/web-demo-p0`，對應 PR #9。
+- Python：`>=3.11`；本機驗證使用 `.venv`。
+- Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
+- Web session 只在記憶體；process 重啟即消失。
+- 本機 Demo repository 不連 PostgreSQL、AWS，也不寫資料。
 
-## 7. 授權狀態
+## 9. 授權狀態
 
-- 使用者已授權：PR #4 squash merge；實作、測試、審查並以 regular merge
-  合併 PR #5；完成只讀 matching terminal Demo 與 Hugging Face adapter
-  （2026-07-26～27）。
-- 已授權本次：同步／驗證 HF adapter、合併 PR #5／#6、retarget 並送審 PR #7；
-  組員可在自行確認後直接合併 PR #7。
-- 未授權：Codex 未經新指示自行合併 PR #7、開始 UI、啟用寫入 MCP Tools、
-  部署 AWS 資源或選定特定本機模型。
+- 使用者與組員已確認 Web P0 分工並授權開始實作。
+- 已授權本分支完成實作、測試、文件與 PR。
+- 未授權啟用寫入 MCP Tool、建立正式案件、部署 AWS 資源或提交任何金鑰。

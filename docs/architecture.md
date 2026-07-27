@@ -26,12 +26,12 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 | MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests | 以真實模型做 tool-selection 評估 |
 | Agent | 已完成核心迴圈、MCP Client 與 Mock 多輪測試 | 實作 BedrockModelClient 與 tool-selection eval |
 | AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
-| UI | 尚未實作 | 最後串接聊天與直接操作按鈕 |
+| Web / FastAPI | 已完成本機唯讀 P0：聊天、動態表單、結構化 session、候選卡 | 固定模型 eval、公開部署，再設計有確認的案件寫入 |
 
-目前有主辦方資料集、無測試資料庫的工作區為 44 passed、9 skipped、
-40 subtests passed；缺少主辦方資料集時會再跳過 1 個資料清洗整合測試。
-這些測試已驗證資料清洗、Service Layer、MCP 協定與 Mock Agent 迴圈，但仍
-不代表 Bedrock、FastAPI、語音或 AWS 部署已經端到端完成。
+目前無測試資料庫的工作區為 76 passed、9 skipped、40 subtests passed。
+這些測試已驗證資料清洗、Service Layer、MCP 協定、Mock/HF adapter contract、
+FastAPI 與本機 Web P0；仍不代表 Bedrock、語音、案件寫入或 AWS 部署已經
+端到端完成。
 
 ## 一句話如何變成資料庫查詢
 

@@ -18,4 +18,6 @@
   並在缺 token、provider 錯誤、不合法回覆或請求逾時時 fail safe。
 - Demo synthetic 時段由可注入時鐘產生在下一個未來星期六，不會因寫死日期
   過期。
+- FastAPI Web session、三個初始查詢 Tool、動態表單、`+08:00` 時段驗證、
+  第四個媒合 Tool、synthetic 候選、reset、安全 header 與未知欄位拒絕。
 - 建立案件與訂單前必須取得使用者確認。

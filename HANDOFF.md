@@ -8,7 +8,8 @@
 PR #9 已以 merge commit `ec6d741` 合併至 `main`；本機唯讀 Web vertical
 slice 與 review 修正均已進入穩定基線，並在最新 `main` 重跑安裝、測試與啟動
 smoke。尚未公開部署。
-固定模型 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
+單一固定 HF Web live case 已通過；多案例 eval、Bedrock/AWS、案件寫入與
+服務廠商後台尚未完成。
 
 ## 2. 目前完成
 
@@ -38,6 +39,12 @@ smoke。尚未公開部署。
   `tests/test_web_app.py` 為 13 passed。
 - `python -m home_repair_agent.web.app` 啟動後，`/api/health` 與首頁均回 200；
   smoke 結束後已關閉 process，8080 沒有留下本次背景服務。
+- 真實 HF Web live：`Qwen/Qwen3-4B-Instruct-2507`、`provider=auto`，
+  synthetic「台北市大安區水龍頭漏水」於 7.41 秒依序成功呼叫
+  `search_services`、`resolve_location`、`get_consultation_form`，得到
+  水電修繕、臺北市大安區與 `demo_repair_form_v1`，狀態為 `awaiting_form`。
+- Windows PowerShell 將 here-string pipe 給 Python 時可能把中文變成 `?`；
+  live harness 必須用 UTF-8 檔案或 Unicode escape，且先驗證輸入 code points。
 - 10 skipped 是缺少測試 PostgreSQL／選配 live 環境時依設計略過。
 - 受影響檔案 Ruff、format、compileall、JavaScript syntax、diff check 通過。
 - 全 repo Ruff 仍會指出既有 `data_cleaning` 格式／lint debt；本分支未擴改。
@@ -45,7 +52,8 @@ smoke。尚未公開部署。
   需求 → 三個 Tool → 動態表單 → `+08:00` 時段 → 媒合 Tool → 兩位候選。
 - 手機無水平 overflow，三分頁與 reset 正常；全流程無 console error。
 - FastAPI TestClient 有第三方 `httpx2` 遷移 deprecation warning；不影響結果。
-- 本次未使用 `HF_TOKEN`，沒有對外傳送對話。
+- live case 只向 HF hosted inference 傳送 synthetic 文字與唯讀 Tool schema；
+  token 未輸出、未提交。
 
 主要文件：
 
@@ -56,7 +64,8 @@ smoke。尚未公開部署。
 
 ## 4. 下一步
 
-1. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
+1. 把單一 HF live case 擴成可重跑的固定案例矩陣：正常、模糊服務、缺地點、
+   多地點與 provider error；live 測試不得進預設 CI。
 2. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
 3. P1 前先設計 case submission contract：
    明確確認、idempotency key、授權、交易與 audit event。
@@ -104,6 +113,7 @@ smoke。尚未公開部署。
 - 目前本機分支：`main`。
 - Python：`>=3.11`；本機驗證使用 `.venv`。
 - Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
+- 本機 `.env` 受 `.gitignore` 保護，含 HF live 所需設定；不得顯示或提交。
 - Web session 只在記憶體；process 重啟即消失。
 - 本機 Demo repository 不連 PostgreSQL、AWS，也不寫資料。
 

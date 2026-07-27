@@ -14,7 +14,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 寫入 Service / MCP Tools | 未開始 | 尚無 | 預計拆成案件、確認媒合、訂單 | 尚無 |
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
-| Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
+| Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
 | FastAPI / Demo UI | 已驗證本機唯讀 P0；尚未公開部署 | `src/home_repair_agent/web/` | [Web P0 README](../src/home_repair_agent/web/README.md) | 13 個 API tests、桌面／手機瀏覽器 E2E |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
@@ -46,6 +46,11 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-27：真實 HF Web fixed case 使用
+  `Qwen/Qwen3-4B-Instruct-2507`、`provider=auto`；synthetic「台北市大安區
+  水龍頭漏水」於 7.41 秒依序完成三個查詢 Tool，取得水電修繕、臺北市大安區與
+  `demo_repair_form_v1`，並停在 `awaiting_form`。Windows PowerShell 臨時 harness
+  必須以 Unicode-safe 方式傳入中文；先前 `?` 輸入的結果不算模型 eval。
 - 2026-07-27：完成 Web P0 review：限制模型 Tool 白名單、拒絕重複媒合表單、
   reset 保留 session lock，並補前端必填驗證。Web focused 13 passed；完整
   suite 77 passed、10 skipped、40 subtests passed；受影響檔案 Ruff／format、

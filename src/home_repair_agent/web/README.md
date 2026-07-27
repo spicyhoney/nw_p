@@ -146,6 +146,12 @@ synthetic 候選、reset 與安全 404。
 - 受影響檔案 Ruff／format、Python compileall、JavaScript syntax check 通過。
 - 實際瀏覽器在 `1280x720` 與 `390x844` 完成完整流程。
 - 兩個 viewport 均無 console error、無文字或控制項重疊。
+- 真實 HF Web fixed case 使用 `Qwen/Qwen3-4B-Instruct-2507`、
+  `provider=auto`：synthetic「台北市大安區水龍頭漏水」於 7.41 秒依序完成
+  `search_services`、`resolve_location`、`get_consultation_form`，正確停在
+  `awaiting_form`，媒合 Tool 未提前暴露或執行。
+- 從 Windows PowerShell 以 pipe 執行臨時 Python live harness 時，中文必須使用
+  UTF-8 檔案或 Unicode escape 並驗證 code points，避免測試輸入被轉成 `?`。
 
 測試環境會出現 FastAPI `TestClient` 對未來 `httpx2` 遷移的第三方
 deprecation warning；目前不影響功能或測試結果。
@@ -154,8 +160,8 @@ deprecation warning；目前不影響功能或測試結果。
 
 P0 尚需：
 
-- 組員 review Web PR，確認文案與分工。
-- 用有效 `HF_TOKEN` 跑一次固定 Web eval，不只做人工 smoke。
+- 將已通過的單一 HF live case 擴成正常、模糊服務、缺地點、多地點與 provider
+  error 的固定矩陣；live 測試不放進預設 CI。
 - 決定 Demo 部署環境並提供公開網址。
 
 P1 才做：

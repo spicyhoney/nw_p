@@ -354,7 +354,9 @@ function renderChoiceTopic(group, topic) {
     input.type = topic.input_type === "single_select" ? "radio" : "checkbox";
     input.name = `answer:${topic.topic_key}`;
     input.value = option.value;
-    input.required = Boolean(topic.is_required && index === 0);
+    input.required = Boolean(
+      topic.is_required && topic.input_type === "single_select" && index === 0,
+    );
 
     const text = document.createElement("span");
     text.textContent = option.label;
@@ -440,6 +442,7 @@ function createDateTimePart(labelText, name, suggestedValue) {
 
 function collectFormPayload(form) {
   const answers = {};
+  const fieldErrors = {};
   let preferredStart = "";
   let preferredEnd = "";
 
@@ -464,10 +467,23 @@ function collectFormPayload(form) {
     } else {
       answers[topic.topic_key] = controls[0]?.value?.trim() || "";
     }
+    if (
+      topic.is_required &&
+      (answers[topic.topic_key] === "" ||
+        (Array.isArray(answers[topic.topic_key]) &&
+          answers[topic.topic_key].length === 0))
+    ) {
+      fieldErrors[topic.topic_key] = "此欄位為必填。";
+    }
   }
 
   if (!preferredStart || !preferredEnd) {
-    showFormError(new Error("請選擇希望服務的開始與結束時間。"));
+    fieldErrors.preferred_time = "請選擇開始與結束時間。";
+  }
+  if (Object.keys(fieldErrors).length > 0) {
+    const error = new Error("請完成必填欄位後再送出。");
+    error.fields = fieldErrors;
+    showFormError(error);
     return null;
   }
   return {
@@ -568,7 +584,8 @@ function updateControls() {
   const submitButton =
     elements.consultationForm.querySelector('button[type="submit"]');
   if (submitButton) {
-    submitButton.disabled = store.busy;
+    submitButton.disabled =
+      store.busy || !Boolean(store.session?.can_submit_form);
     submitButton.textContent = store.busy ? "媒合中…" : "查看媒合結果 →";
   }
 }

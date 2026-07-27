@@ -2,11 +2,33 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
+from home_repair_agent.agent.models import ModelTurn, ToolCall
 from home_repair_agent.web.app import create_app
+
+
+class _MatchingAttemptModel:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.exposed_tool_names: set[str] = set()
+
+    async def complete(self, *, messages, tools) -> ModelTurn:
+        del messages
+        self.calls += 1
+        self.exposed_tool_names = {tool.name for tool in tools}
+        if self.calls == 1:
+            return ModelTurn.use_tools(
+                ToolCall(
+                    call_id="unsafe-match-attempt",
+                    name="match_service_providers",
+                    arguments={},
+                )
+            )
+        return ModelTurn.answer("已停止未經人工確認的媒合要求。")
 
 
 class WebAppTests(unittest.TestCase):
@@ -121,6 +143,45 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual("2026-08-01T13:00:00+08:00", result["preferred_start"])
         self.assertIn("leaking_faucet", result["answers"].values())
         self.assertFalse(result["can_send_message"])
+        self.assertFalse(result["can_submit_form"])
+
+    def test_web_model_cannot_match_before_manual_form_confirmation(self) -> None:
+        model = _MatchingAttemptModel()
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "review model"),
+            ),
+            TestClient(create_app()) as client,
+        ):
+            session = client.post("/api/sessions").json()
+            response = client.post(
+                f"/api/sessions/{session['session_id']}/messages",
+                json={"text": "請直接幫我配對師傅"},
+            )
+
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertNotIn(
+            "match_service_providers",
+            model.exposed_tool_names,
+        )
+        self.assertEqual("error", result["state"])
+        self.assertEqual([], result["candidates"])
+        self.assertFalse(result["tool_trace"][-1]["ok"])
+
+    def test_completed_match_rejects_duplicate_form_submission(self) -> None:
+        session = self.prepare_form()
+        endpoint = f"/api/sessions/{session['session_id']}/form"
+        first = self.client.post(endpoint, json=self.valid_form_payload())
+        second = self.client.post(endpoint, json=self.valid_form_payload())
+
+        self.assertEqual(200, first.status_code)
+        self.assertEqual(409, second.status_code)
+        self.assertEqual(
+            "MATCH_ALREADY_COMPLETED",
+            second.json()["error"]["code"],
+        )
 
     def test_form_rejects_unknown_fields_instead_of_guessing(self) -> None:
         session = self.prepare_form()
@@ -199,11 +260,16 @@ class WebAppTests(unittest.TestCase):
 
     def test_reset_clears_structured_state_without_creating_a_case(self) -> None:
         session = self.prepare_form()
+        service = self.client.app.state.web_sessions
+        record_before_reset = service._sessions[session["session_id"]]
         response = self.client.post(
             f"/api/sessions/{session['session_id']}/reset",
         )
+        record_after_reset = service._sessions[session["session_id"]]
 
         self.assertEqual(200, response.status_code)
+        self.assertIs(record_before_reset, record_after_reset)
+        self.assertIs(record_before_reset.lock, record_after_reset.lock)
         reset = response.json()
         self.assertEqual(session["session_id"], reset["session_id"])
         self.assertEqual("collecting_need", reset["state"])

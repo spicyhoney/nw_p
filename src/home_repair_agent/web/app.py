@@ -33,6 +33,7 @@ from home_repair_agent.web.models import (
     SessionView,
 )
 from home_repair_agent.web.service import (
+    WEB_CHAT_TOOL_NAMES,
     WebSessionConflictError,
     WebSessionError,
     WebSessionInputError,
@@ -73,6 +74,7 @@ def create_app(
                 runner=AgentRunner(
                     model_client=model_client,
                     tool_client=tool_client,
+                    allowed_tool_names=set(WEB_CHAT_TOOL_NAMES),
                 ),
                 tool_client=tool_client,
                 provider=ProviderView(

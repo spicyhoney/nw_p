@@ -15,11 +15,10 @@ from home_repair_agent.agent.models import (
     UserMessage,
 )
 
-REQUIRED_READ_TOOLS = {
+REQUIRED_DISCOVERY_TOOLS = {
     "search_services",
     "resolve_location",
     "get_consultation_form",
-    "match_service_providers",
 }
 COUNTY_NAMES = (
     "基隆市",
@@ -86,7 +85,7 @@ class RuleBasedRepairMockModel:
         tools: Sequence[ToolDefinition],
     ) -> ModelTurn:
         available_tools = {tool.name for tool in tools}
-        missing_tools = REQUIRED_READ_TOOLS - available_tools
+        missing_tools = REQUIRED_DISCOVERY_TOOLS - available_tools
         if missing_tools:
             return ModelTurn.answer("目前缺少必要的修繕查詢工具，請稍後再試。")
 
@@ -104,6 +103,7 @@ class RuleBasedRepairMockModel:
                 form_result,
                 service_result=service_result,
                 location_result=location_result,
+                matching_is_available="match_service_providers" in available_tools,
             )
 
         if location_result is not None and _is_success(location_result.payload):
@@ -182,6 +182,7 @@ def _continue_form_collection(
     *,
     service_result: ToolResultMessage | None,
     location_result: ToolResultMessage | None,
+    matching_is_available: bool,
 ) -> ModelTurn:
     if not _is_success(form_result.payload):
         return ModelTurn.answer("目前找不到可使用的諮詢表單，請改由人工協助。")
@@ -198,6 +199,8 @@ def _continue_form_collection(
     ]
     answers = _user_messages_after(messages, form_result)
     if len(answers) >= len(required_topics):
+        if not matching_is_available:
+            return ModelTurn.answer("諮詢表單已準備完成，請確認表單與服務時段後再進行媒合。")
         service_id = _unique_service_id(service_result)
         location_id = _resolved_location_id(location_result)
         if service_id is None or location_id is None:

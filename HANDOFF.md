@@ -6,7 +6,8 @@
 ## 1. 目前狀態
 
 PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
-`codex/web-demo-p0`，正在交付本機唯讀 Web vertical slice；尚未公開部署。
+`codex/web-demo-p0`（PR #9），本機唯讀 Web vertical slice 已完成 review 修正；
+尚未公開部署。
 固定模型 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
 
 ## 2. 本分支完成
@@ -24,16 +25,21 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 - 前端不直接呼叫 HF／Bedrock、MCP、Service Layer、SQL 或資料庫。
 - CSP、no-store、禁止 iframe、`textContent` rendering 與安全 API errors 已加入。
 - 專案專用修繕 workbench 圖由 built-in ImageGen 產生並壓成 30 KB WebP。
+- Review 修正：Web 對話只向模型公開前三個 Tool；模型即使自行要求媒合也會被
+  Runner 白名單與 session workflow 雙層拒絕。
+- 媒合完成後拒絕重送表單；reset 原地清空 record，保留同一把 session lock。
+- 前端送出前檢查必填 radio／multi-select／文字與時段，伺服器仍會再次驗證。
 
 ## 3. 驗證證據
 
-- `tests/test_web_app.py`：11 passed。
-- 完整 suite：76 passed、9 skipped、40 subtests passed。
-- 9 skipped 是沒有提供測試 PostgreSQL 時依設計略過的整合測試。
-- Ruff、Python compileall、JavaScript syntax check 通過。
-- 真實瀏覽器 `1280x720` 與 `390x844` 均完成：
+- `tests/test_web_app.py`：13 passed；Web + Agent loop focused：27 passed。
+- 完整 suite：77 passed、10 skipped、40 subtests passed。
+- 10 skipped 是缺少測試 PostgreSQL／選配 live 環境時依設計略過。
+- 受影響檔案 Ruff、format、compileall、JavaScript syntax、diff check 通過。
+- 全 repo Ruff 仍會指出既有 `data_cleaning` 格式／lint debt；本分支未擴改。
+- 真實瀏覽器桌面與 `390x844` 均完成：
   需求 → 三個 Tool → 動態表單 → `+08:00` 時段 → 媒合 Tool → 兩位候選。
-- 兩個 viewport 無 console error、無文字或控制項重疊。
+- 手機無水平 overflow，三分頁與 reset 正常；全流程無 console error。
 - FastAPI TestClient 有第三方 `httpx2` 遷移 deprecation warning；不影響結果。
 - 本次未使用 `HF_TOKEN`，沒有對外傳送對話。
 
@@ -46,7 +52,7 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 
 ## 4. 下一步
 
-1. Review `codex/web-demo-p0` 的 API contract、安全邊界與桌面／手機流程。
+1. 組員重新確認 PR #9 的 review 修正，通過後合併至 `main`。
 2. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
 3. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
 4. P1 前先設計 case submission contract：
@@ -92,7 +98,7 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 
 - Repo：`https://github.com/spicyhoney/nw_p`
 - 穩定 `main`：`afe6dba`，PR #7 regular merge。
-- 工作分支：`codex/web-demo-p0`。
+- 工作分支：`codex/web-demo-p0`，對應 PR #9。
 - Python：`>=3.11`；本機驗證使用 `.venv`。
 - Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
 - Web session 只在記憶體；process 重啟即消失。

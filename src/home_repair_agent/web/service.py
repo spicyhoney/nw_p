@@ -33,6 +33,13 @@ from home_repair_agent.web.models import (
 GREETING = "你好，我是修繕小隊長。請告訴我服務地點和需要處理的問題。"
 FORM_LOCKED_MESSAGE = "諮詢表單已準備完成，請先填完表單，或重新開始更正需求。"
 MATCHED_LOCKED_MESSAGE = "本次媒合已完成；若要更改需求，請重新開始。"
+WEB_CHAT_TOOL_NAMES = frozenset(
+    {
+        "search_services",
+        "resolve_location",
+        "get_consultation_form",
+    }
+)
 TOOL_LABELS = {
     "search_services": "確認服務",
     "resolve_location": "確認地點",
@@ -133,15 +140,15 @@ class WebSessionService:
     async def send_message(self, session_id: str, user_text: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
-            if record.consultation_form is not None:
-                raise WebSessionConflictError(
-                    code="FORM_ALREADY_READY",
-                    message=FORM_LOCKED_MESSAGE,
-                )
             if record.state in {"matched", "no_candidates"}:
                 raise WebSessionConflictError(
                     code="MATCH_ALREADY_COMPLETED",
                     message=MATCHED_LOCKED_MESSAGE,
+                )
+            if record.consultation_form is not None:
+                raise WebSessionConflictError(
+                    code="FORM_ALREADY_READY",
+                    message=FORM_LOCKED_MESSAGE,
                 )
 
             record.messages.append(self._message("user", user_text))
@@ -165,8 +172,14 @@ class WebSessionService:
     ) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            if record.state in {"matched", "no_candidates"}:
+                raise WebSessionConflictError(
+                    code="MATCH_ALREADY_COMPLETED",
+                    message=MATCHED_LOCKED_MESSAGE,
+                )
             if (
-                record.service is None
+                record.state != "awaiting_form"
+                or record.service is None
                 or record.location is None
                 or record.consultation_form is None
             ):
@@ -257,8 +270,18 @@ class WebSessionService:
         record = await self._get_record(session_id)
         async with record.lock:
             replacement = self._new_record(session_id)
-            self._sessions[session_id] = replacement
-            return self._to_view(replacement)
+            record.conversation = replacement.conversation
+            record.messages = replacement.messages
+            record.state = replacement.state
+            record.service = None
+            record.location = None
+            record.consultation_form = None
+            record.answers.clear()
+            record.preferred_start = None
+            record.preferred_end = None
+            record.candidates.clear()
+            record.tool_trace.clear()
+            return self._to_view(record)
 
     async def _get_record(self, session_id: str) -> _SessionRecord:
         async with self._sessions_lock:
@@ -293,7 +316,8 @@ class WebSessionService:
     ) -> bool:
         trace_is_valid = True
         for entry in trace:
-            ok = entry.result.get("ok") is True and not entry.mcp_is_error
+            is_allowed = entry.name in WEB_CHAT_TOOL_NAMES
+            ok = is_allowed and entry.result.get("ok") is True and not entry.mcp_is_error
             record.tool_trace.append(
                 ToolTraceView(
                     name=entry.name,
@@ -301,6 +325,9 @@ class WebSessionService:
                     ok=ok,
                 )
             )
+            if not is_allowed:
+                trace_is_valid = False
+                continue
             if not ok:
                 continue
             data = entry.result.get("data")
@@ -312,9 +339,6 @@ class WebSessionService:
                     record.location = ResolvedLocation.model_validate(data)
                 elif entry.name == "get_consultation_form":
                     record.consultation_form = ConsultationForm.model_validate(data)
-                elif entry.name == "match_service_providers":
-                    result = ProviderMatchResult.model_validate(data)
-                    record.candidates = list(result.candidates)
             except Exception:  # noqa: BLE001 - invalid tool payload is not exposed
                 trace_is_valid = False
         record.tool_trace = record.tool_trace[-8:]
@@ -347,7 +371,8 @@ class WebSessionService:
             tool_trace=list(record.tool_trace),
             can_send_message=record.consultation_form is None
             and record.state not in {"matched", "no_candidates"},
-            can_submit_form=record.consultation_form is not None
+            can_submit_form=record.state == "awaiting_form"
+            and record.consultation_form is not None
             and record.service is not None
             and record.location is not None,
         )

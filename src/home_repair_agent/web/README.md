@@ -30,6 +30,10 @@ FastAPI route 只做 HTTP adapter。`WebSessionService` 負責 session workflow�
 媒合規則仍在 Service Layer。日後把 Mock／Hugging Face 換成 Bedrock 時，
 Web API 與前端不需改契約。
 
+Web 對話只向模型公開前三個查詢 Tool；第四個 `match_service_providers` 不在
+模型白名單內，只能在使用者手動送出且後端驗證表單後執行。媒合完成後不能重送
+同一份表單，必須 reset 才能修改需求。
+
 P0 使用無 build 的 HTML/CSS/JavaScript，原因是：
 
 - 本機與比賽環境都可直接由 FastAPI 提供同一個網址。
@@ -132,13 +136,14 @@ python -m pytest -q tests/test_web_app.py
 ```
 
 涵蓋首頁、素材、安全 header、health、session、三個初始 MCP Tools、動態表單、
-未知欄位拒絕、`+08:00` 驗證、第四個媒合 Tool、synthetic 候選、reset 與安全 404。
+未知欄位拒絕、`+08:00` 驗證、模型媒合白名單、重複送出拒絕、第四個媒合 Tool、
+synthetic 候選、reset 與安全 404。
 
 2026-07-27 實際結果：
 
-- Web focused：`11 passed`。
-- 完整 suite：`76 passed, 9 skipped, 40 subtests passed`。
-- Ruff、Python compileall、JavaScript syntax check 通過。
+- Web focused：`13 passed`。
+- 完整 suite：`77 passed, 10 skipped, 40 subtests passed`。
+- 受影響檔案 Ruff／format、Python compileall、JavaScript syntax check 通過。
 - 實際瀏覽器在 `1280x720` 與 `390x844` 完成完整流程。
 - 兩個 viewport 均無 console error、無文字或控制項重疊。
 

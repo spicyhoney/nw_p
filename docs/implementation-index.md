@@ -16,7 +16,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證本機唯讀 P0；尚未公開部署 | `src/home_repair_agent/web/` | [Web P0 README](../src/home_repair_agent/web/README.md) | 11 個 API tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證本機唯讀 P0；尚未公開部署 | `src/home_repair_agent/web/` | [Web P0 README](../src/home_repair_agent/web/README.md) | 13 個 API tests、桌面／手機瀏覽器 E2E |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -36,7 +36,8 @@ MCP Client / 測試 Agent
 這個閉環目前只讀。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
 代碼、該服務要填哪些諮詢欄位」；Web P0 另提供記憶體 session、結構化
 `SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
-確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool。
+確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
+只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
 
 目前仍不能永久保存 session、建立案件、保留時段或下單。CLI 與 Web 可顯式
 切換到 Hugging Face hosted open model；沒有 `HF_TOKEN` 時會停止並提示，不會
@@ -45,6 +46,11 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-27：完成 Web P0 review：限制模型 Tool 白名單、拒絕重複媒合表單、
+  reset 保留 session lock，並補前端必填驗證。Web focused 13 passed；完整
+  suite 77 passed、10 skipped、40 subtests passed；受影響檔案 Ruff／format、
+  compileall、JavaScript syntax 通過；桌面與 `390x844` 人工流程無 console
+  error，手機無水平 overflow。
 - 2026-07-27：新增 FastAPI Web P0：session/message/form/reset API、結構化
   view model、動態諮詢單、`+08:00` 時段驗證、四個 MCP Tools、進度與
   synthetic 候選卡。Web focused 11 passed；完整 suite 76 passed、9 skipped、

@@ -20,6 +20,7 @@ from home_repair_agent.agent.models import (
 DEFAULT_HF_MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
 DEFAULT_HF_PROVIDER = "auto"
 DEFAULT_HF_MAX_TOKENS = 512
+DEFAULT_HF_TIMEOUT_SECONDS = 60
 DEFAULT_SYSTEM_PROMPT = """\
 你是居家修繕服務助理。請使用繁體中文，並遵守以下規則：
 1. 服務、行政區、表單、師傅、時段與 ID 只能來自工具結果，不可自行猜測。
@@ -27,7 +28,9 @@ DEFAULT_SYSTEM_PROMPT = """\
 3. 工具回傳 ok=false 時，向使用者詢問缺少或需要修正的資訊。
 4. 表單必填資訊足夠後，才可查詢師傅候選。
 5. 目前工具都是唯讀；不得聲稱已建立案件、保留時段、預約或下單。
-6. 只收集完成當前修繕諮詢所需的最少資訊。
+6. 只有使用者明確提供完整且含時區的開始、結束時間時，才可傳入 preferred_start
+   與 preferred_end。不得自行把「星期六下午」等相對日期換成年月日，也不得修改偏好。
+7. 只收集完成當前修繕諮詢所需的最少資訊。
 """
 
 
@@ -64,6 +67,7 @@ class HuggingFaceModelClient:
         provider: str = DEFAULT_HF_PROVIDER,
         system_prompt: str | None = DEFAULT_SYSTEM_PROMPT,
         max_tokens: int = DEFAULT_HF_MAX_TOKENS,
+        timeout_seconds: int = DEFAULT_HF_TIMEOUT_SECONDS,
     ) -> None:
         normalized_model_id = model_id.strip()
         normalized_provider = provider.strip()
@@ -73,12 +77,15 @@ class HuggingFaceModelClient:
             raise ValueError("provider must not be empty")
         if max_tokens <= 0:
             raise ValueError("max_tokens must be positive")
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
 
         self._client = client
         self._model_id = normalized_model_id
         self._provider = normalized_provider
         self._system_prompt = system_prompt.strip() if system_prompt else None
         self._max_tokens = max_tokens
+        self._timeout_seconds = timeout_seconds
 
     @property
     def model_id(self) -> str:
@@ -87,6 +94,10 @@ class HuggingFaceModelClient:
     @property
     def provider(self) -> str:
         return self._provider
+
+    @property
+    def timeout_seconds(self) -> int:
+        return self._timeout_seconds
 
     @classmethod
     def from_environment(
@@ -114,9 +125,15 @@ class HuggingFaceModelClient:
             name="HF_MAX_TOKENS",
             default=DEFAULT_HF_MAX_TOKENS,
         )
+        timeout_seconds = _parse_positive_int(
+            environment.get("HF_TIMEOUT_SECONDS"),
+            name="HF_TIMEOUT_SECONDS",
+            default=DEFAULT_HF_TIMEOUT_SECONDS,
+        )
         resolved_client = client or _create_inference_client(
             token=token,
             provider=provider,
+            timeout_seconds=timeout_seconds,
         )
         return cls(
             client=resolved_client,
@@ -124,6 +141,7 @@ class HuggingFaceModelClient:
             provider=provider,
             system_prompt=system_prompt,
             max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
         )
 
     async def complete(
@@ -170,6 +188,7 @@ def _create_inference_client(
     *,
     token: str,
     provider: str,
+    timeout_seconds: int,
 ) -> HuggingFaceChatClient:
     try:
         from huggingface_hub import InferenceClient
@@ -181,7 +200,11 @@ def _create_inference_client(
     try:
         return cast(
             HuggingFaceChatClient,
-            InferenceClient(api_key=token, provider=provider),
+            InferenceClient(
+                api_key=token,
+                provider=provider,
+                timeout=timeout_seconds,
+            ),
         )
     except Exception as error:
         raise HuggingFaceConfigurationError(

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 
 from home_repair_agent.agent.demo import (
+    TAIPEI_TIMEZONE,
     DemoReadRepository,
     _resolve_model_client,
     run_demo,
@@ -44,6 +46,28 @@ class DemoRepositoryTests(unittest.TestCase):
         self.assertTrue(
             all(candidate.source_type == "synthetic" for candidate in result.candidates)
         )
+
+    def test_demo_slots_move_to_the_next_future_saturday(self) -> None:
+        reference_time = datetime(2026, 8, 1, 18, 30, tzinfo=TAIPEI_TIMEZONE)
+        repository = DemoReadRepository(reference_time=reference_time)
+
+        slots = repository.list_available_provider_slots(
+            service_id=17,
+            location_id="DEMO-63000030",
+            preferred_start=None,
+            preferred_end=None,
+            candidate_limit=3,
+        )
+
+        self.assertEqual(2, len(slots))
+        self.assertEqual(datetime(2026, 8, 8, 13, tzinfo=TAIPEI_TIMEZONE), slots[0].starts_at)
+        self.assertTrue(all(slot.starts_at > reference_time for slot in slots))
+
+    def test_demo_reference_time_requires_timezone(self) -> None:
+        naive_reference = datetime(2026, 8, 1, 12)  # noqa: DTZ001
+
+        with self.assertRaisesRegex(ValueError, "reference_time must include a timezone"):
+            DemoReadRepository(reference_time=naive_reference)
 
 
 class ScriptedDemoTests(unittest.IsolatedAsyncioTestCase):

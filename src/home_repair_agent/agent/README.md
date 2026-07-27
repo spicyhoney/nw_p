@@ -1,7 +1,7 @@
 # Agent 對話迴圈實作說明
 
-狀態：本機核心迴圈、終端 Demo 與 Hugging Face adapter 已驗證；live token
-呼叫與 AWS 尚待環境驗證
+狀態：本機核心迴圈、終端 Demo 與 Hugging Face adapter contract 已驗證；
+團隊紀錄已有一次 synthetic live smoke，固定 eval 與 AWS 尚待驗證
 
 最後更新：2026-07-27
 
@@ -62,9 +62,14 @@ PostgreSQL、不連 AWS，也不寫入、不保留時段或建立案件。Huggin
 只會把對話、system prompt 與唯讀 Tool schema／結果送到所選 hosted provider；
 不會上傳資料庫或主辦方檔案。
 
+兩個 synthetic 時段會依 Demo 啟動時間產生在下一個仍屬未來的星期六；測試可
+注入固定 `reference_time`，因此不依賴系統日期，也不會在寫死日期後失效。
+
 目前 Rule-based Mock 會保存「星期六下午」等回答，但不會把它解析成精確、
 含時區的媒合時間窗；媒合呼叫只傳正式 `service_id`、`location_id` 與
-`limit`，因此 Demo 會排序該地點的所有 synthetic 可用時段。
+`limit`，因此 Demo 會排序該地點的所有 synthetic 可用時段。Hosted model
+也被明確禁止把相對日期自行換成年月日；只有使用者提供完整、含時區的開始與
+結束時間時，才可傳 `preferred_start` / `preferred_end`。
 
 ## Hugging Face 模型模式
 
@@ -83,6 +88,7 @@ python -m home_repair_agent.agent.demo --model-provider huggingface
 | `HF_MODEL_ID` | `Qwen/Qwen3-4B-Instruct-2507` | 支援 function calling 的模型 |
 | `HF_PROVIDER` | `auto` | 由 Hugging Face router 選擇可用 provider，或指定 provider |
 | `HF_MAX_TOKENS` | `512` | 單次模型輸出的 token 上限 |
+| `HF_TIMEOUT_SECONDS` | `60` | hosted inference 單次請求的最長等待秒數 |
 
 `HuggingFaceModelClient` 做四件事：
 
@@ -94,9 +100,9 @@ python -m home_repair_agent.agent.demo --model-provider huggingface
 
 provider 錯誤與不合法回覆會轉成固定 adapter error，再由 `AgentRunner` 顯示
 安全訊息。CLI 的 `mock` 與 `huggingface` 是顯式選擇；缺少 token、套件或錯誤
-設定時 Hugging Face mode 會 fail fast，不會偷偷 fallback。預設 open model
-與 provider 可替換，模型品質仍需用固定 eval cases 實測，不能以 adapter
-單元測試代替。
+設定時 Hugging Face mode 會 fail fast，不會偷偷 fallback；外部服務未回覆時
+也會在設定的 timeout 後停止。預設 open model 與 provider 可替換，模型品質
+仍需用固定 eval cases 實測，不能以 adapter 單元測試代替。
 
 參考：[Hugging Face function calling 指南](https://huggingface.co/docs/inference-providers/guides/function-calling)、
 [InferenceClient API](https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client)、
@@ -198,6 +204,7 @@ python -m pytest tests/test_huggingface_model.py tests/test_agent_loop.py tests/
 Hugging Face adapter 新增的測試涵蓋：
 
 - 環境設定、預設模型與缺 token fail-fast。
+- timeout 設定驗證，且設定值確實傳入真實 SDK constructor。
 - system/user/assistant/tool messages 與 function schema 的轉換。
 - 文字回覆、結構化 tool call、JSON argument 驗證。
 - provider 錯誤遮罩，且不把 token 放入物件 repr。
@@ -214,21 +221,22 @@ Hugging Face adapter 新增的測試涵蓋：
 - 查無服務與行政區錯誤時不猜 ID。
 - 行政區查詢失敗後，下一輪可改用使用者最新提供的地點。
 - 腳本化終端 Demo 可走完四個真實 MCP Tools、多輪追問與候選摘要。
+- synthetic 時段永遠落在下一個未來星期六，且測試時間必須含時區。
 - 寫入 Tool 從模型可見 catalog 移除並拒絕執行。
 - 未知 Tool、Tool 例外與 catalog 例外的安全處理。
 - 重複 Tool Call 在最大步數停止。
 
 完整 test suite 的數字取決於本機是否具備主辦方資料集與
 `TEST_DATABASE_URL`。2026-07-26 在有主辦方資料集、未設定測試資料庫的
-工作區為 44 passed、9 skipped、40 subtests passed；本分支在沒有主辦方
-資料集與測試資料庫的工作區為 60 passed、10 skipped、40 subtests passed。
-10 個 skipped 中 9 個需要 PostgreSQL，另 1 個需要主辦方資料集。Hugging Face
-live call 另需 `HF_TOKEN`，本次未設定，因此只驗證 adapter contract 與真實
-SDK API，不宣稱模型端到端品質。
+工作區為 44 passed、9 skipped、40 subtests passed；本次修正工作區為
+65 passed、9 skipped、40 subtests passed，9 個 skipped 都需要
+`TEST_DATABASE_URL`。團隊 handoff 紀錄已有一次使用 synthetic prompt 的
+Hugging Face 四工具 live smoke；本次修正環境沒有 `HF_TOKEN`，沒有重跑 live，
+也仍不宣稱模型品質或完成固定 eval。
 
 ## 尚未做
 
-- Hugging Face live token smoke test 與固定的真實 LLM tool-selection eval。
+- 可重複的 Hugging Face 固定 LLM tool-selection eval、延遲與額度紀錄。
 - `BedrockModelClient` 與 Bedrock tool-selection eval。
 - AgentCore Runtime / Gateway 部署與 IAM 驗證。
 - FastAPI／瀏覽器 Demo UI、Speech-to-Text、Text-to-Speech 與前端麥克風。
@@ -237,6 +245,6 @@ SDK API，不宣稱模型端到端品質。
 - 建立案件、保留時段、確認媒合與訂單寫入。
 - session 的 PostgreSQL / Redis 永久保存。
 
-下一階段應先用非敏感 synthetic prompts 跑 Hugging Face live eval，記錄工具
-選擇、參數與成本／延遲，再以同一組 cases 接 Bedrock 比較；寫入功能要等確認
-與冪等契約完成後再加入。
+下一階段應把既有 synthetic live smoke 整理成可重複 eval，記錄工具選擇、
+參數與成本／延遲，再以同一組 cases 接 Bedrock 比較；寫入功能要等確認與
+冪等契約完成後再加入。

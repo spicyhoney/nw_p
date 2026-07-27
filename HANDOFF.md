@@ -5,23 +5,24 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成功 live
-呼叫四個唯讀 Tools。實測暴露出純 CLI／LLM-rendered checklist、未保存結構化
-表單狀態與模型捏造時間等問題；下一步擬改做 Web vertical slice，待組員同意。
+PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已修正 SDK 版本、
+request timeout、相對日期防猜測與 Demo 過期時段。團隊紀錄已有一次四工具
+synthetic live smoke；固定 eval 與 Web vertical slice 尚待後續完成。
 
 ## 2. 本次 session 完成（帶證據）
 
-- HF live run 已以 `Qwen/Qwen3-4B-Instruct-2507` 成功呼叫
+- 團隊紀錄的 HF live run 已以 `Qwen/Qwen3-4B-Instruct-2507` 成功呼叫
   `search_services`、`resolve_location`、`get_consultation_form`、
-  `match_service_providers`；adapter／MCP transport 本身可運作。
-- 「查不到」root cause：模型把「每天下午五點後」捏成 2023 時間窗，但 Demo
-  slots 固定在 2026-08-01，合法查詢自然回空；第一次還只傳 start，觸發正確的
-  paired-window validation。之後模型又未經同意自行改成 16:00–20:00。
+  `match_service_providers`；尚未形成固定 eval，不宣稱模型品質。
+- Review 修正：`huggingface_hub>=1.24,<2`；`HF_TIMEOUT_SECONDS=60`；相對日期
+  不得由模型自行轉換；Demo slots 由可注入時鐘產生在下一個未來星期六。
+- 驗證：focused 34 passed；完整 suite 65 passed、9 skipped、40 subtests
+  passed；Mock 四工具 smoke、scoped Ruff、compileall、diff check 通過。
+- 本次修正環境沒有 `HF_TOKEN`，未重跑 live，也未對外傳送對話。
 - 模型輸出的 Markdown `☐` 不是 UI；目前 `AgentTurnResult` 只有 reply/trace，
   沒有可供前端渲染的 form/session view model，也未保存 validated form answers。
 - 主辦方 PDF 明定彈性諮詢單、服務廠商管理者後台／操作介面，決賽需交
   Live Demo 部署網址；完成度評分包含使用體驗。因此 CLI 只保留工程 smoke。
-- 功能 commit：`d2e953c`；遠端分支已推送。
 - HF token 曾出現在使用者提供的終端 transcript；使用者已撤銷／refresh。
   不保留或記錄新 token，該 transcript 不可提交或再次分享。
 - 已在 PR #5 提出 Web scope／分工與驗收標準，待組員回覆：
@@ -67,14 +68,16 @@ PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成
   adapter；今天先列 TODO、更新 handoff、徵求組員同意，明天再做
   （使用者原話，2026-07-27）。
 - [active] HF token 已 refresh；舊 token 視為失效，不重新要求或記錄新 token。
+- [active] 已授權修正 HF branch review findings、測試、提交並推送，讓對方排程
+  AI 定時檢查與更新（原話：「好 那你幫我修正吧」，2026-07-27）。
 
 ### Agent assumptions（可質疑）
 
 - [active] terminal Demo 已採顯式 `mock / huggingface`；`bedrock` 日後獨立
   加入。`huggingface` 是 hosted open model，不等於本機離線 runtime。
-- [active] 目前不建議實作 `auto`。若未來加入，必須由設定明確啟用，且
-  fallback 必須在 log、CLI/UI 與回應 metadata 可見；`bedrock` mode 不得
-  靜默降級。
+- [active] 目前不建議跨 ModelClient 的自動 fallback。HF SDK 的
+  `provider=auto` 只負責在 HF Inference Providers 內路由，不等於
+  `huggingface -> mock` fallback；`bedrock` mode 不得靜默降級。
 - [active] Hugging Face adapter 重用既有 `ModelClient`、`AgentRunner` 與 MCP
   tool loop；live 已證明 transport 可用，但尚未完成固定 eval。
 - [active] P0 建議同 repo 以 FastAPI＋輕量 web frontend 提供單一部署網址，
@@ -97,7 +100,8 @@ PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成
 - [active] PostgreSQL repository 先取 100 個 slot 再排名／去重，真實規模下
   可能讓多早期空檔的單一師傅佔滿候選池；目前 3 位 synthetic Demo 不受影響。
 - [active] Rule-based Mock 尚未把「星期六下午」轉成含時區時間窗；Demo
-  目前不傳 `preferred_start` / `preferred_end`，只排序該地點所有空檔。
+  目前不傳 `preferred_start` / `preferred_end`，只排序該地點所有未來空檔；
+  hosted model 也不得自行把相對日期換成年月日。
 - [active] 案件、保留時段、確認媒合與訂單的寫入／冪等邊界尚未定案。
 
 ## 5. 目前架構與工作邊界
@@ -128,6 +132,7 @@ PR #5 仍為 Ready for review、尚未合併；HF stacked branch 已完成並成
 - 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將 PR #5
   改為 Ready；完成只讀 matching terminal Demo 與 Hugging Face adapter
   （2026-07-26～27）。
-- 已授權本次：只更新 Web scope/TODO/handoff 並徵求組員同意；UI 明天再做。
+- 已授權本次：修正 HF adapter review findings、測試、提交並推送；UI 不在
+  本次 scope。
 - 未授權：合併 matching-service PR、今天開始 UI、啟用寫入 MCP Tools、
   部署 AWS 資源或選定特定本機模型。

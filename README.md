@@ -154,7 +154,8 @@ python -m home_repair_agent.agent.demo --scripted
 
 移除 `--scripted` 可自行輸入對話。這個 Demo 使用明確標示的記憶體合成資料，
 會走完四個唯讀 MCP Tools 並顯示 synthetic 師傅候選；它只驗證編排流程，
-不建立案件、不保留時段，也不代表 Bedrock 的語意品質。
+不建立案件、不保留時段，也不代表 Bedrock 的語意品質。候選時段會依啟動時間
+產生在下一個仍屬未來的星期六，不會因範例日期過期而失效。
 
 若要用 Hugging Face hosted open model 驗證真正的 tool calling，先建立具有
 Inference Providers 權限的 token，只在目前 PowerShell session 設定後啟動：
@@ -165,5 +166,6 @@ python -m home_repair_agent.agent.demo --model-provider huggingface
 ```
 
 預設模型為 `Qwen/Qwen3-4B-Instruct-2507`，可用 `HF_MODEL_ID`、
-`HF_PROVIDER` 與 `HF_MAX_TOKENS` 覆寫。未設定 `HF_TOKEN` 時會立即提示並停止，
-不會靜默切回 Mock；呼叫 hosted provider 需要網路，並可能受帳號額度限制。
+`HF_PROVIDER`、`HF_MAX_TOKENS` 與 `HF_TIMEOUT_SECONDS` 覆寫。請求預設 60 秒
+逾時；未設定 `HF_TOKEN` 時會立即提示並停止，不會靜默切回 Mock。呼叫 hosted
+provider 需要網路、會傳送對話與 Tool 資料，並可能受帳號額度限制。

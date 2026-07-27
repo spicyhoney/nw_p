@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import sys
 import unittest
+from types import ModuleType
 from typing import Any
+from unittest.mock import patch
 
 from home_repair_agent.agent.huggingface_model import (
     DEFAULT_HF_MODEL_ID,
+    DEFAULT_HF_TIMEOUT_SECONDS,
     HuggingFaceConfigurationError,
     HuggingFaceModelClient,
     HuggingFaceRequestError,
     HuggingFaceResponseError,
+    _create_inference_client,
 )
 from home_repair_agent.agent.models import (
     AssistantToolCalls,
@@ -72,11 +77,13 @@ class HuggingFaceConfigurationTests(unittest.TestCase):
                 "HF_MODEL_ID": "org/model",
                 "HF_PROVIDER": "test-provider",
                 "HF_MAX_TOKENS": "123",
+                "HF_TIMEOUT_SECONDS": "45",
             },
         )
 
         self.assertEqual("org/model", model.model_id)
         self.assertEqual("test-provider", model.provider)
+        self.assertEqual(45, model.timeout_seconds)
         self.assertNotIn("test-only-token", repr(model))
 
     def test_default_model_is_a_configurable_open_model(self) -> None:
@@ -90,6 +97,7 @@ class HuggingFaceConfigurationTests(unittest.TestCase):
         )
 
         self.assertEqual(DEFAULT_HF_MODEL_ID, model.model_id)
+        self.assertEqual(DEFAULT_HF_TIMEOUT_SECONDS, model.timeout_seconds)
 
     def test_invalid_max_tokens_is_rejected_before_request(self) -> None:
         with self.assertRaisesRegex(
@@ -116,6 +124,50 @@ class HuggingFaceConfigurationTests(unittest.TestCase):
                     "HF_MODEL_ID": " ",
                 },
             )
+
+    def test_invalid_timeout_is_rejected_before_request(self) -> None:
+        with self.assertRaisesRegex(
+            HuggingFaceConfigurationError,
+            "HF_TIMEOUT_SECONDS must be a positive integer",
+        ):
+            HuggingFaceModelClient.from_environment(
+                client=RecordingChatClient({}),
+                environ={
+                    "HF_TOKEN": "test-only-token",
+                    "HF_TIMEOUT_SECONDS": "0",
+                },
+            )
+
+    def test_timeout_is_passed_to_real_sdk_constructor(self) -> None:
+        captured: dict[str, Any] = {}
+
+        class FakeInferenceClient:
+            def __init__(self, **kwargs: Any) -> None:
+                captured.update(kwargs)
+
+            def chat_completion(self, **kwargs: Any) -> object:
+                del kwargs
+                return {}
+
+        fake_hub = ModuleType("huggingface_hub")
+        fake_hub.InferenceClient = FakeInferenceClient
+
+        with patch.dict(sys.modules, {"huggingface_hub": fake_hub}):
+            client = _create_inference_client(
+                token="test-only-token",
+                provider="auto",
+                timeout_seconds=37,
+            )
+
+        self.assertIsInstance(client, FakeInferenceClient)
+        self.assertEqual(
+            {
+                "api_key": "test-only-token",
+                "provider": "auto",
+                "timeout": 37,
+            },
+            captured,
+        )
 
 
 class HuggingFaceModelClientTests(unittest.IsolatedAsyncioTestCase):
@@ -148,6 +200,7 @@ class HuggingFaceModelClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("org/model", request["model"])
         self.assertEqual("auto", request["tool_choice"])
         self.assertEqual("system", request["messages"][0]["role"])
+        self.assertIn("不得自行把", request["messages"][0]["content"])
         self.assertEqual(
             {"role": "user", "content": "水龍頭漏水"},
             request["messages"][1],

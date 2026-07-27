@@ -1,15 +1,14 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-07-27　更新者：Codex
+> 更新：2026-07-28　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先以本檔為準，再按連結讀細節。
 
 ## 1. 目前狀態
 
-PR #9 已以 merge commit `ec6d741` 合併至 `main`；本機唯讀 Web vertical
-slice 與 review 修正均已進入穩定基線，並在最新 `main` 重跑安裝、測試與啟動
-smoke。尚未公開部署。
-單一固定 HF Web live case 已通過；多案例 eval、Bedrock/AWS、案件寫入與
-服務廠商後台尚未完成。
+PR #9 已合併；唯讀 Web vertical slice、review 修正與 Qwen HF live case
+均已進入穩定基線。使用者已在 2026-07-28 完成人工 Demo，回饋良好；團隊
+接下來以 Hugging Face AI model mode 作為整合／Demo 基線，由組員接手完善
+新功能。多案例 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
 
 ## 2. 目前完成
 
@@ -62,19 +61,23 @@ smoke。尚未公開部署。
 - `docs/architecture.md`
 - `tests/test_web_app.py`
 
-## 4. 下一步
+## 4. 下一步（active open issues）
 
-1. 把單一 HF live case 擴成可重跑的固定案例矩陣：正常、模糊服務、缺地點、
+1. 組員先在 repo 執行 `git switch main` 與 `git pull --ff-only origin main`，
+   再依第 8 節啟動 HF AI mode；smoke 成功後從最新 `main` 建新功能分支。
+2. 把單一 HF live case 擴成可重跑的固定案例矩陣：正常、模糊服務、缺地點、
    多地點與 provider error；live 測試不得進預設 CI。
-2. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
-3. P1 前先設計 case submission contract：
+3. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
+4. P1 前先設計 case submission contract：
    明確確認、idempotency key、授權、交易與 audit event。
-4. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
+5. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
 
 ## 5. 團隊分工
 
-- 使用者／Codex：Web P0、FastAPI session/view model、資料與 Service/MCP 邊界。
-- 組員：模型固定 eval、語音、Bedrock/AWS 部署準備。
+- 使用者／Codex：Web P0、FastAPI session/view model、資料與 Service/MCP
+  邊界已完成；後續以 review／驗收為主。
+- 組員：從最新 `main` 接手新功能，優先完善模型固定 eval，再處理語音與
+  Bedrock/AWS 部署準備。
 - 共同：驗收 Web 對話與 Agent/MCP 串接、決定 Demo 文案與部署方案。
 - 不要讓兩邊同時修改 `src/home_repair_agent/web/`；需調整先在 PR 討論。
 
@@ -112,13 +115,33 @@ smoke。尚未公開部署。
 - PR #9 merge baseline：`ec6d741`；目前 `main` 另含本段驗證紀錄。
 - 目前本機分支：`main`。
 - Python：`>=3.11`；本機驗證使用 `.venv`。
-- Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
+- Web：`http://127.0.0.1:8080`。程式安全預設仍是 `mock`，但團隊整合／
+  Demo 基線已切換為 Hugging Face AI mode，必須明確設定
+  `WEB_MODEL_PROVIDER=huggingface`。
 - 本機 `.env` 受 `.gitignore` 保護，含 HF live 所需設定；不得顯示或提交。
+- `HF_TOKEN` 是每位開發者自己的 Hugging Face account token，不是
+  `Qwen/Qwen3-4B-Instruct-2507` 專屬 token。請在 Hugging Face 帳號建立
+  具 inference 權限的 token；不得貼到 PR、聊天、terminal output 或 Git。
+- 專案不會自動載入 `.env`。PowerShell 啟動 HF Web 的最小流程如下；若 token
+  存在本機 `.env`，先將值載入目前 shell：
+
+  ```powershell
+  $env:HF_TOKEN = ((Get-Content .env | Where-Object { $_ -like 'HF_TOKEN=*' }) -split '=', 2)[1]
+  $env:HF_MODEL_ID = 'Qwen/Qwen3-4B-Instruct-2507'
+  $env:HF_PROVIDER = 'auto'
+  $env:WEB_MODEL_PROVIDER = 'huggingface'
+  .\.venv\Scripts\python.exe -m home_repair_agent.web.app
+  ```
+
+  啟動後開 `http://127.0.0.1:8080/`；若沒有自己的 token，不能宣稱正在跑
+  AI mode，應明確使用 mock 或先取得 token。
 - Web session 只在記憶體；process 重啟即消失。
 - 本機 Demo repository 不連 PostgreSQL、AWS，也不寫資料。
 
-## 9. 授權狀態
+## 9. 授權狀態（active user decisions）
 
 - 使用者與組員已確認 Web P0 分工並授權開始實作。
 - 已授權本分支完成實作、測試、文件與 PR。
+- **user decision（2026-07-28）**：人工 Demo 已完成且結果良好；後續交由
+  組員完善新功能，團隊整合／Demo 以 HF AI model mode 為基線。
 - 未授權啟用寫入 MCP Tool、建立正式案件、部署 AWS 資源或提交任何金鑰。

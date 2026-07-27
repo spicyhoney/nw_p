@@ -5,9 +5,9 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #5 已於 2026-07-27 以一般 merge commit `73a6e45` 合併至 `main`；HF
-stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與 Demo
-過期時段。固定 eval、HF stack PR 與 Web vertical slice 尚待後續完成。
+PR #5 已合併至 `main`；terminal Demo 已建立 Draft PR #6。本 HF branch 已
+同步 PR #6 base，並完成 SDK 版本、timeout、相對日期防猜測與未來 Demo 時段
+修正，正準備建立 stacked Draft PR；固定 eval 與 Web slice 尚未完成。
 
 ## 2. 本次 session 完成（帶證據）
 
@@ -16,10 +16,11 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
   `match_service_providers`；尚未形成固定 eval，不宣稱模型品質。
 - Review 修正：`huggingface_hub>=1.24,<2`；`HF_TIMEOUT_SECONDS=60`；相對日期
   不得由模型自行轉換；Demo slots 由可注入時鐘產生在下一個未來星期六。
-- 原修正環境驗證：focused 34 passed；完整 suite 65 passed、9 skipped。
-  本機同步後複驗為 34 passed；完整 suite 64 passed、10 skipped、40 subtests
-  passed（多 1 skip 為缺主辦方本地資料集）；Mock 四工具 smoke、scoped Ruff、
-  compileall、diff check 通過。
+- 目前工作區驗證：focused 34 passed；完整 suite
+  `65 passed, 9 skipped, 40 subtests passed`；Mock 四工具 smoke、scoped
+  Ruff、compileall、diff check 通過。9 個 skip 均需測試資料庫。
+- terminal Demo Draft PR：`https://github.com/spicyhoney/nw_p/pull/6`；本分支
+  已以一般 merge 同步其最新 base，不重寫歷史或 force-push。
 - 本次修正環境沒有 `HF_TOKEN`，未重跑 live，也未對外傳送對話。
 - 模型輸出的 Markdown `☐` 不是 UI；目前 `AgentTurnResult` 只有 reply/trace，
   沒有可供前端渲染的 form/session view model，也未保存 validated form answers。
@@ -32,10 +33,10 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 先等組員在 PR #5 討論串確認 Web scope／分工；今天不開始 UI 實作。
-2. 同意後第一個動作：
-   `git fetch origin --prune`，確認 HF stack 是否先開 PR／合併；再從團隊同意
-   的最新整合基線建立 `feature/web-demo-vertical-slice`，不要再盲目疊分支。
+1. 以 `feature/matching-terminal-demo` 為 base，建立本分支的 stacked Draft
+   PR；審查 adapter 契約、fail-fast、timeout、日期邊界與無 fallback 行為。
+2. PR #6 合併後將 HF PR base 改為 `main`，重新確認 diff 與測試；兩個 PR
+   都不得自動合併。
 3. P0 consumer vertical slice TODO（依序）：
    - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
    - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
@@ -60,8 +61,9 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已授權並完成以一般 merge commit 合併 PR #5，保留 stacked branch
-  共同祖先（原話：「好啊 gogo」，2026-07-27）。
+- [active] PR #5 已由 `y-row` 合併；本次已授權同步最新交接紀錄並建立
+  terminal／Hugging Face 後續 PR，不自動合併（原話：「好那你幫我弄」，
+  2026-07-27）。
 - [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
   matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 - [active] 已授權串接 Hugging Face 模型（原話：「幫我做一件事情，就是串一下
@@ -90,8 +92,8 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 ### Open issues（待決）
 
 - [active] 組員是否同意 P0/P1 scope、技術棧與分工？
-- [active] Web branch 要直接從已合併 PR #5 的 `main` 開，還是先把 terminal/HF
-  stack 送 PR／整合後再開？
+- [active] Web branch 等 terminal/HF stack 完成整合後再由最新 `main` 建立；
+  React/Vite 或無 build HTML/CSS/JS 尚待團隊確認。
 - [active] consultation session state P0 存 memory；何時切 PostgreSQL？
 - [active] Bedrock provider routing 何時實作、由誰負責？
 - [active] 未來是否需要 `auto` fallback，以及是否必須由使用者確認後切換？
@@ -123,8 +125,9 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 
 - Repo：`https://github.com/spicyhoney/nw_p`
 - `main`：`73a6e45`（PR #5 regular merge）；本機與 `origin/main` 已同步。
-- 當前分支：`feature/huggingface-model-adapter`，stacked on terminal Demo；
-  與 `main` 的 merge-base 為 PR #5 head `55110e3`，尚未建立 PR。
+- terminal Demo：Draft PR #6，head `feature/matching-terminal-demo`。
+- 當前分支：`feature/huggingface-model-adapter`，已同步 PR #6 base；準備建立
+  以 terminal branch 為 base 的 stacked Draft PR。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -133,9 +136,6 @@ stacked branch 已修正 SDK 版本、request timeout、相對日期防猜測與
 
 ## 7. 授權狀態
 
-- 使用者已授權：PR #4 squash merge；實作、測試、審查並以 regular merge
-  合併 PR #5；完成只讀 matching terminal Demo 與 Hugging Face adapter
-  （2026-07-26～27）。
-- 已授權本次：同步／驗證 HF adapter 修正與合併 PR #5；UI 不在本次 scope。
-- 未授權：今天開始 UI、啟用寫入 MCP Tools、部署 AWS 資源或選定特定
-  本機模型。
+- 使用者已授權：PR #4 squash merge；完成 matching service 與只讀 terminal
+  Demo；同步最新文件並建立 terminal／Hugging Face Draft PR（2026-07-26～27）。
+- 未授權：自動合併後續 PR、啟用寫入 MCP Tools、部署 AWS 資源或開始 Web UI。

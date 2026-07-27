@@ -5,9 +5,9 @@
 
 ## 1. 目前狀態（3 行內）
 
-PR #5 仍為 Ready for review、尚未合併。其上已建立 stacked branch
-`feature/matching-terminal-demo`，完成可人工操作的四工具 synthetic 媒合
-Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成。
+PR #5 已於 2026-07-27 以 merge commit `73a6e45` 合併至 `main`。本分支完成
+可人工操作的四工具 synthetic 媒合 Demo，正準備建立後續 Draft PR；其上的
+Hugging Face adapter 仍在獨立 stacked branch，尚未進入 `main`。
 
 ## 2. 本次 session 完成（帶證據）
 
@@ -16,8 +16,8 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
 - Demo 使用記憶體合成資料，不連 AWS/PostgreSQL、不寫資料、不保留時段或建單；
   詳見 `docs/ENGINEER_LOG.md` 與 `src/home_repair_agent/agent/README.md`。
 - 腳本化 smoke：`python -m home_repair_agent.agent.demo --scripted` 成功；
-  目標測試 18 passed，完整 suite `48 passed, 10 skipped, 40 subtests passed`，
-  scoped Ruff、format、`compileall`、`git diff --check` 均通過。
+  2026-07-27 重新驗證完整 suite 為
+  `49 passed, 9 skipped, 40 subtests passed`。9 個 skip 均需測試資料庫。
 - 功能 commit：`4d1a8e1`。無 `TEST_DATABASE_URL`，不可宣稱媒合 SQL 已在真實
   PostgreSQL 複驗。
 - 已在 PR #5 留下下一階段分工：
@@ -25,14 +25,12 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
 
 ## 3. 下一步（具體到第一個動作）
 
-1. 組員先閱讀 PR #5 審查紀錄並決定是否合併；有隔離測試 PostgreSQL 時設定
-   `TEST_DATABASE_URL`，執行 `python -m pytest -q`。
-2. PR #5 squash merge 後同步 `main`，在本分支執行
-   `git rebase --onto origin/main 55110e3 feature/matching-terminal-demo`，
-   重跑完整測試後再建立 Demo PR。
-3. 組員另從最新 `main` 建立 `feature/model-provider-routing`：實作顯式
-   `mock / bedrock / local` mode；Bedrock 缺設定時 fail fast 並提示，不得
-   靜默 fallback。`local` runtime/model 未決定前先定契約與測試，不要硬選。
+1. 建立本分支到 `main` 的 Draft PR；組員審查 terminal flow、synthetic
+   標示、無寫入邊界與腳本化 Demo，不自動合併。
+2. Hugging Face adapter 已在 `feature/huggingface-model-adapter`，先以本分支
+   為 base 建立 stacked Draft PR；本 PR 合併後再將其 base 改為 `main`。
+3. 兩個 PR 通過後再開始 Web Demo vertical slice；不要重做既有
+   `ModelClient`、`AgentRunner` 或 MCP tool loop。
 
 ## 4. 條目（全部為 active）
 
@@ -45,8 +43,9 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已授權審查 PR #5、必要時修正、留下審查紀錄並改為 Ready；
-  尚未授權 merge（原話：「好 請吧」，2026-07-26）。
+- [active] PR #5 已由 `y-row` 合併；本次已授權同步最新交接紀錄並建立
+  terminal／Hugging Face 後續 PR，不自動合併（原話：「好那你幫我弄」，
+  2026-07-27）。
 - [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
   matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 
@@ -93,7 +92,9 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
 ## 6. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 當前分支：`feature/matching-terminal-demo`，stacked on PR #5，尚未建立 PR。
+- `main`：`73a6e45`（PR #5 merge commit）。
+- 當前分支：`feature/matching-terminal-demo`，由 PR #5 head 延伸，正準備
+  建立到 `main` 的 Draft PR。
 - Python：專案要求 `>=3.11`；使用各自工作區的 `.venv` 驗證。
 - 主要證據：`docs/implementation-index.md`、`docs/matching-service.md`、
   程式與測試。
@@ -102,7 +103,6 @@ Demo；真實 Bedrock、local model、寫入流程與瀏覽器 UI 尚未完成�
 
 ## 7. 授權狀態
 
-- 使用者已授權：PR #4 squash merge；實作、測試、提交、審查並將 PR #5
-  改為 Ready；另完成只讀 matching terminal Demo（2026-07-26～27）。
-- 未授權：合併 matching-service PR、啟用寫入 MCP Tools、部署 AWS 資源或
-  選定特定本機模型。
+- 使用者已授權：PR #4 squash merge；完成 matching service 與只讀 terminal
+  Demo；同步最新文件並建立 terminal／Hugging Face Draft PR（2026-07-26～27）。
+- 未授權：自動合併後續 PR、啟用寫入 MCP Tools、部署 AWS 資源或開始 Web UI。

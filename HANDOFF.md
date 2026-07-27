@@ -35,8 +35,8 @@ terminal Demo PR #6 已以 merge commit `ee056e5` 合併至 `main`。HF PR #7
 
 1. 組員 review 已 retarget 到 `main` 的 PR #7，並在 PR #5 討論串確認 Web
    scope／分工；此前不開始 UI 實作。
-2. PR #7 有 review finding 時在原分支修正並複驗；只有核准且使用者再次明確
-   授權後才能合併，再由最新 `main` 建立 Web branch。
+2. PR #7 有 review finding 時在原分支修正並複驗；若組員確認無問題，可由
+   組員直接合併，不必再等使用者／Codex批准，再由最新 `main` 建立 Web branch。
 3. P0 consumer vertical slice TODO（依序）：
    - FastAPI session/message/form-submit API；前端不直接呼叫 HF／Bedrock。
    - 消費者頁：聊天、真正可操作的動態表單、進度 checklist、候選卡與 reset。
@@ -61,8 +61,8 @@ terminal Demo PR #6 已以 merge commit `ee056e5` 合併至 `main`。HF PR #7
   驅動的第二種模式（原話，2026-07-26）。這是「提出討論」，不是已核准實作。
 - [active] 已授權實作唯讀 matching service、建立新分支與 Draft PR
   （原話：「行那你就幫我弄吧」，2026-07-26）。
-- [active] 已授權並完成以一般 merge commit 合併 PR #5 與 PR #6；PR #7
-  尚未授權合併（原話：「gogo」「他說pr6審查過但要你合併」，2026-07-27）。
+- [active] 已完成合併 PR #5／#6；組員確認 PR #7 無問題後，可由組員直接
+  合併，不必再回來等待批准（原話：「他確認沒問題就請他合併」，2026-07-27）。
 - [active] 已授權在通知組員下一步前再完成一段工作；本次選擇只讀 terminal
   matching Demo（原話：「多做一點再跟他說接下來我們要做甚麼」，2026-07-27）。
 - [active] 已授權串接 Hugging Face 模型（原話：「幫我做一件事情，就是串一下
@@ -140,6 +140,7 @@ terminal Demo PR #6 已以 merge commit `ee056e5` 合併至 `main`。HF PR #7
 - 使用者已授權：PR #4 squash merge；實作、測試、審查並以 regular merge
   合併 PR #5；完成只讀 matching terminal Demo 與 Hugging Face adapter
   （2026-07-26～27）。
-- 已授權本次：同步／驗證 HF adapter、合併 PR #5／#6、retarget 並送審 PR #7。
-- 未授權：合併 PR #7、開始 UI、啟用寫入 MCP Tools、部署 AWS 資源或選定
-  特定本機模型。
+- 已授權本次：同步／驗證 HF adapter、合併 PR #5／#6、retarget 並送審 PR #7；
+  組員可在自行確認後直接合併 PR #7。
+- 未授權：Codex 未經新指示自行合併 PR #7、開始 UI、啟用寫入 MCP Tools、
+  部署 AWS 資源或選定特定本機模型。

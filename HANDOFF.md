@@ -5,12 +5,12 @@
 
 ## 1. 目前狀態
 
-PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
-`codex/web-demo-p0`（PR #9），本機唯讀 Web vertical slice 已完成 review 修正；
-尚未公開部署。
+PR #9 已以 merge commit `ec6d741` 合併至 `main`；本機唯讀 Web vertical
+slice 與 review 修正均已進入穩定基線，並在最新 `main` 重跑安裝、測試與啟動
+smoke。尚未公開部署。
 固定模型 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
 
-## 2. 本分支完成
+## 2. 目前完成
 
 - 新增 FastAPI `session / message / form / reset` API。
 - 新增 deterministic `SessionView`，保存 service、location、form answers、
@@ -34,6 +34,10 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 
 - `tests/test_web_app.py`：13 passed；Web + Agent loop focused：27 passed。
 - 完整 suite：77 passed、10 skipped、40 subtests passed。
+- 最新 `main` `ec6d741` 另重跑 `pip install -e ".[app,dev]"` 成功，
+  `tests/test_web_app.py` 為 13 passed。
+- `python -m home_repair_agent.web.app` 啟動後，`/api/health` 與首頁均回 200；
+  smoke 結束後已關閉 process，8080 沒有留下本次背景服務。
 - 10 skipped 是缺少測試 PostgreSQL／選配 live 環境時依設計略過。
 - 受影響檔案 Ruff、format、compileall、JavaScript syntax、diff check 通過。
 - 全 repo Ruff 仍會指出既有 `data_cleaning` 格式／lint debt；本分支未擴改。
@@ -52,12 +56,11 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 
 ## 4. 下一步
 
-1. 組員重新確認 PR #9 的 review 修正，通過後合併至 `main`。
-2. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
-3. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
-4. P1 前先設計 case submission contract：
+1. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
+2. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
+3. P1 前先設計 case submission contract：
    明確確認、idempotency key、授權、交易與 audit event。
-5. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
+4. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
 
 ## 5. 團隊分工
 
@@ -97,8 +100,8 @@ PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
 ## 8. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 穩定 `main`：`afe6dba`，PR #7 regular merge。
-- 工作分支：`codex/web-demo-p0`，對應 PR #9。
+- PR #9 merge baseline：`ec6d741`；目前 `main` 另含本段驗證紀錄。
+- 目前本機分支：`main`。
 - Python：`>=3.11`；本機驗證使用 `.venv`。
 - Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
 - Web session 只在記憶體；process 重啟即消失。

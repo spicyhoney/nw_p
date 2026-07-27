@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17201c" />
+    <meta
+      name="description"
+      content="修繕小隊長居家水電修繕媒合 Demo"
+    />
+    <title>修繕小隊長</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body data-mobile-view="conversation">
+    <a class="skip-link" href="#conversation-pane">跳到對話</a>
+
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="修繕小隊長首頁">
+        <span class="brand-mark" aria-hidden="true">修</span>
+        <span>
+          <strong>修繕小隊長</strong>
+          <small>居家水電修繕</small>
+        </span>
+      </a>
+
+      <div class="header-status">
+        <span class="status-chip status-chip--source">DEMO · SYNTHETIC</span>
+        <span id="provider-chip" class="status-chip">連線中</span>
+        <button
+          id="reset-button"
+          class="icon-button"
+          type="button"
+          title="重新開始"
+          aria-label="重新開始"
+        >
+          ↻
+        </button>
+      </div>
+    </header>
+
+    <nav class="mobile-tabs" aria-label="工作區切換">
+      <button type="button" data-mobile-target="progress">進度</button>
+      <button type="button" data-mobile-target="conversation" aria-current="page">
+        對話
+      </button>
+      <button type="button" data-mobile-target="candidates">
+        候選 <span id="mobile-candidate-count">0</span>
+      </button>
+    </nav>
+
+    <main class="app-layout">
+      <aside id="progress-pane" class="progress-pane" aria-labelledby="progress-title">
+        <div class="pane-heading">
+          <p class="eyebrow">本次諮詢</p>
+          <h1 id="progress-title">處理進度</h1>
+        </div>
+
+        <ol id="progress-list" class="progress-list" aria-label="諮詢進度"></ol>
+
+        <section class="confirmed-summary" aria-labelledby="confirmed-title">
+          <h2 id="confirmed-title">已確認</h2>
+          <dl>
+            <div>
+              <dt>服務</dt>
+              <dd id="service-summary">尚未確認</dd>
+            </div>
+            <div>
+              <dt>地點</dt>
+              <dd id="location-summary">尚未確認</dd>
+            </div>
+            <div>
+              <dt>資料來源</dt>
+              <dd>synthetic</dd>
+            </div>
+          </dl>
+        </section>
+
+        <details class="trace-panel">
+          <summary>查詢紀錄</summary>
+          <ol id="trace-list"></ol>
+        </details>
+
+        <p class="readonly-note">
+          目前只查詢候選，不建立案件、不保留時段。
+        </p>
+      </aside>
+
+      <section
+        id="conversation-pane"
+        class="conversation-pane"
+        aria-labelledby="conversation-title"
+      >
+        <header class="workspace-heading">
+          <div>
+            <p class="eyebrow">AI 生活管家</p>
+            <h2 id="conversation-title">修繕諮詢</h2>
+          </div>
+          <span id="session-state" class="state-label">建立對話中</span>
+        </header>
+
+        <div
+          id="message-list"
+          class="message-list"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        ></div>
+
+        <section id="form-section" class="consultation-form-section" hidden>
+          <div class="form-heading">
+            <div>
+              <p class="eyebrow">諮詢單</p>
+              <h2 id="form-title">補充修繕資訊</h2>
+            </div>
+            <span class="required-note">＊ 必填</span>
+          </div>
+          <p id="form-description" class="form-description"></p>
+          <form id="consultation-form" novalidate>
+            <div id="form-fields" class="form-fields"></div>
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+            <button class="primary-button" type="submit">
+              查看媒合結果 <span aria-hidden="true">→</span>
+            </button>
+          </form>
+        </section>
+
+        <form id="message-form" class="message-composer">
+          <label class="sr-only" for="message-input">修繕需求</label>
+          <textarea
+            id="message-input"
+            name="message"
+            rows="1"
+            maxlength="1000"
+            placeholder="例如：臺北市大安區水龍頭漏水"
+            required
+          ></textarea>
+          <button
+            id="send-button"
+            class="send-button"
+            type="submit"
+            aria-label="送出訊息"
+            title="送出訊息"
+          >
+            →
+          </button>
+        </form>
+      </section>
+
+      <aside
+        id="candidates-pane"
+        class="candidates-pane"
+        aria-labelledby="candidates-title"
+      >
+        <header class="pane-heading candidates-heading">
+          <div>
+            <p class="eyebrow">媒合結果</p>
+            <h2 id="candidates-title">師傅候選</h2>
+          </div>
+          <span id="candidate-count" class="count-badge">0</span>
+        </header>
+
+        <div id="candidate-list" class="candidate-list"></div>
+
+        <div id="candidate-empty" class="candidate-empty">
+          <img
+            src="/static/repair-workbench.webp"
+            alt=""
+            width="260"
+            height="180"
+          />
+          <strong>尚無候選</strong>
+          <p>完成諮詢單後，媒合結果會顯示在這裡。</p>
+        </div>
+      </aside>
+    </main>
+
+    <div id="app-alert" class="app-alert" role="alert" hidden></div>
+
+    <noscript>
+      <p class="noscript-message">此頁面需要 JavaScript 才能操作。</p>
+    </noscript>
+  </body>
+</html>

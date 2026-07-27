@@ -52,6 +52,7 @@ src/home_repair_agent/
   backend/        資料存取與共用商業規則
   mcp_server/     將 Service Layer 暴露成標準 MCP Tools
   agent/          Prompt、工具定義與 Agent 流程
+  web/            FastAPI、結構化 session 與消費者 Demo UI
 sql/              PostgreSQL migration 與資料庫說明
 data/             資料目錄與來源政策
 tests/            自動化測試
@@ -93,7 +94,8 @@ docs/             架構、計畫與競賽文件
 - [x] 完成四個唯讀 MCP Tools 與 protocol tests
 - [x] 完成可替換模型的 Agent 核心迴圈與 Mock 多輪測試
 - [x] 完成 Hugging Face hosted open-model adapter 與顯式 CLI mode
-- [ ] 完成 Bedrock adapter、案件／訂單寫入 Service Layer、Demo UI
+- [x] 完成本機唯讀 Web P0：聊天、動態表單、時段驗證與 synthetic 候選
+- [ ] 完成 Bedrock adapter、案件／訂單寫入 Service Layer
 - [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
 
 ## 執行資料清洗
@@ -169,3 +171,30 @@ python -m home_repair_agent.agent.demo --model-provider huggingface
 `HF_PROVIDER`、`HF_MAX_TOKENS` 與 `HF_TIMEOUT_SECONDS` 覆寫。請求預設 60 秒
 逾時；未設定 `HF_TOKEN` 時會立即提示並停止，不會靜默切回 Mock。呼叫 hosted
 provider 需要網路、會傳送對話與 Tool 資料，並可能受帳號額度限制。
+
+## 執行本機 Web Demo
+
+Web P0 不需要 PostgreSQL 或 AWS，預設使用相同的 Mock Model、記憶體
+synthetic repository 與四個真實 MCP Tools：
+
+```powershell
+home-repair-web
+```
+
+接著開啟 `http://127.0.0.1:8080`。可操作流程為：
+
+```text
+輸入需求
+  -> Agent 查詢服務、行政區與諮詢單
+  -> 手動完成動態表單與 +08:00 希望時段
+  -> MCP 媒合
+  -> 顯示 synthetic 師傅候選
+```
+
+Web session 只存在目前 Python process；重新啟動後會消失。它不建立案件、
+不保留時段、不建立訂單。API、狀態、安全邊界與測試證據請見
+[Web P0 實作說明](src/home_repair_agent/web/README.md)。
+
+要用 Hugging Face hosted model 啟動時，先在目前 shell 設定 `HF_TOKEN`，
+再設定 `$env:WEB_MODEL_PROVIDER = "huggingface"`；未設定 token 會直接停止，
+不會靜默切回 Mock。

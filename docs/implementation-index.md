@@ -16,7 +16,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 未開始 | 尚無 | [系統架構](architecture.md) | 尚無 |
+| FastAPI / Demo UI | 已驗證本機唯讀 P0；尚未公開部署 | `src/home_repair_agent/web/` | [Web P0 README](../src/home_repair_agent/web/README.md) | 11 個 API tests、桌面／手機瀏覽器 E2E |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -33,17 +33,23 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-這個閉環目前只讀。它能多輪保存本機 session、回答「支援什麼服務、地點對應
-哪個代碼、該服務要填哪些諮詢欄位」，並查詢可解釋的 synthetic 師傅候選；
-但還不能永久保存 session、建立案件、保留時段或下單。Rule-based Mock 會在
-表單必填資訊完成後呼叫媒合；尚未把「星期六下午」等自由文字轉成時區化
-`preferred_start` / `preferred_end`，所以 Demo 目前查詢該地點的所有空檔。
-CLI 可顯式切換到 Hugging Face hosted open model 做真實 tool calling；沒有
-`HF_TOKEN` 時會停止並提示，不會靜默切回 Mock。Demo synthetic 時段依啟動
-時間產生在下一個未來星期六；hosted model 不得自行把相對日期換成具體年月日。
+這個閉環目前只讀。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
+代碼、該服務要填哪些諮詢欄位」；Web P0 另提供記憶體 session、結構化
+`SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
+確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool。
+
+目前仍不能永久保存 session、建立案件、保留時段或下單。CLI 與 Web 可顯式
+切換到 Hugging Face hosted open model；沒有 `HF_TOKEN` 時會停止並提示，不會
+靜默切回 Mock。Demo synthetic 時段依啟動時間產生在下一個未來星期六；
+hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-27：新增 FastAPI Web P0：session/message/form/reset API、結構化
+  view model、動態諮詢單、`+08:00` 時段驗證、四個 MCP Tools、進度與
+  synthetic 候選卡。Web focused 11 passed；完整 suite 76 passed、9 skipped、
+  40 subtests passed；Ruff、compileall、JavaScript syntax 通過；實際瀏覽器
+  在 1280x720 與 390x844 完成流程且無 console error。
 - 2026-07-27：修正 HF adapter review findings：將 SDK 下限對齊已驗證的
   `huggingface_hub 1.24`、新增預設 60 秒 request timeout、禁止模型自行換算
   相對日期，並將 Demo 時段改成可注入時鐘的下一個未來星期六。focused

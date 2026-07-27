@@ -108,6 +108,12 @@ class DemoReadRepository:
                     title=f"希望服務時間（Demo 候選日期為 {demo_start:%Y-%m-%d}）",
                     is_required=True,
                     sort_order=2,
+                    config={
+                        "control": "datetime_range",
+                        "timezone": "Asia/Taipei",
+                        "suggested_start": demo_start.isoformat(),
+                        "suggested_end": (demo_start + timedelta(hours=4)).isoformat(),
+                    },
                 ),
                 FormTopic(
                     topic_key="notes",

@@ -66,6 +66,28 @@ class WebAppTests(unittest.TestCase):
             "preferred_end": "2026-08-01T17:00:00+08:00",
         }
 
+    def prepare_match(self) -> dict[str, object]:
+        session = self.prepare_form()
+        response = self.client.post(
+            f"/api/sessions/{session['session_id']}/form",
+            json=self.valid_form_payload(),
+        )
+
+        self.assertEqual(200, response.status_code)
+        return response.json()
+
+    def dispatch_payload(
+        self,
+        *,
+        provider_id: str = "SYN-PROVIDER-001",
+        confirmed: bool = True,
+    ) -> dict[str, object]:
+        return {
+            "provider_id": provider_id,
+            "confirmed": confirmed,
+            "idempotency_key": f"dispatch:test:{provider_id}",
+        }
+
     def test_root_serves_the_operational_demo_and_asset(self) -> None:
         response = self.client.get("/")
         asset = self.client.get("/static/repair-workbench.webp")
@@ -73,6 +95,7 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIn("修繕小隊長", response.text)
         self.assertIn("consultation-form", response.text)
+        self.assertIn("請勿輸入真實姓名", response.text)
         self.assertEqual(200, asset.status_code)
         self.assertEqual("image/webp", asset.headers["content-type"])
         self.assertIn(
@@ -80,7 +103,7 @@ class WebAppTests(unittest.TestCase):
             response.headers["content-security-policy"],
         )
 
-    def test_health_declares_the_read_only_demo_mode(self) -> None:
+    def test_health_declares_the_provider_workflow_demo_mode(self) -> None:
         response = self.client.get("/api/health")
 
         self.assertEqual(200, response.status_code)
@@ -88,7 +111,7 @@ class WebAppTests(unittest.TestCase):
             {
                 "ok": True,
                 "service": "home-repair-web",
-                "mode": "read-only-demo",
+                "mode": "provider-workflow-demo",
             },
             response.json(),
         )
@@ -144,6 +167,8 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("leaking_faucet", result["answers"].values())
         self.assertFalse(result["can_send_message"])
         self.assertFalse(result["can_submit_form"])
+        self.assertTrue(result["can_dispatch"])
+        self.assertIsNone(result["dispatch"])
 
     def test_web_model_cannot_match_before_manual_form_confirmation(self) -> None:
         model = _MatchingAttemptModel()
@@ -277,6 +302,165 @@ class WebAppTests(unittest.TestCase):
         self.assertIsNone(reset["consultation_form"])
         self.assertEqual([], reset["candidates"])
         self.assertEqual(1, len(reset["messages"]))
+
+    def test_provider_page_and_synthetic_identities_are_available(self) -> None:
+        page = self.client.get("/provider")
+        identities = self.client.get("/api/provider/identities")
+
+        self.assertEqual(200, page.status_code)
+        self.assertIn("廠商工作台", page.text)
+        self.assertIn('id="detail-order"', page.text)
+        self.assertEqual(200, identities.status_code)
+        self.assertEqual(
+            ["SYN-PROVIDER-001", "SYN-PROVIDER-002"],
+            [identity["provider_id"] for identity in identities.json()["identities"]],
+        )
+        self.assertTrue(
+            all(
+                identity["source_type"] == "synthetic"
+                for identity in identities.json()["identities"]
+            )
+        )
+
+    def test_dispatch_requires_confirmation_and_is_idempotent(self) -> None:
+        matched = self.prepare_match()
+        endpoint = f"/api/sessions/{matched['session_id']}/dispatch"
+
+        unconfirmed = self.client.post(
+            endpoint,
+            json=self.dispatch_payload(confirmed=False),
+        )
+        first = self.client.post(endpoint, json=self.dispatch_payload())
+        second = self.client.post(endpoint, json=self.dispatch_payload())
+
+        self.assertEqual(422, unconfirmed.status_code)
+        self.assertEqual(
+            "CONFIRMATION_REQUIRED",
+            unconfirmed.json()["error"]["code"],
+        )
+        self.assertEqual(200, first.status_code)
+        self.assertEqual(200, second.status_code)
+        self.assertEqual(
+            first.json()["dispatch"]["case_id"],
+            second.json()["dispatch"]["case_id"],
+        )
+        self.assertEqual("dispatch_pending", first.json()["state"])
+        self.assertFalse(first.json()["can_dispatch"])
+        self.assertEqual(
+            "complete",
+            next(step["state"] for step in first.json()["progress"] if step["key"] == "matching"),
+        )
+
+    def test_assigned_provider_accepts_and_consumer_sees_order_status(self) -> None:
+        matched = self.prepare_match()
+        dispatched = self.client.post(
+            f"/api/sessions/{matched['session_id']}/dispatch",
+            json=self.dispatch_payload(),
+        ).json()
+        case_id = dispatched["dispatch"]["case_id"]
+        provider_headers = {"X-Demo-Provider-Id": "SYN-PROVIDER-001"}
+
+        listing = self.client.get(
+            "/api/provider/cases",
+            headers=provider_headers,
+        )
+        pending = self.client.get(
+            f"/api/provider/cases/{case_id}",
+            headers=provider_headers,
+        )
+        unauthorized = self.client.get(
+            f"/api/provider/cases/{case_id}",
+            headers={"X-Demo-Provider-Id": "SYN-PROVIDER-002"},
+        )
+        accepted = self.client.post(
+            f"/api/provider/cases/{case_id}/decision",
+            headers=provider_headers,
+            json={
+                "decision": "accept",
+                "confirmed": True,
+                "idempotency_key": f"accept:{case_id}",
+            },
+        )
+        consumer = self.client.get(
+            f"/api/sessions/{matched['session_id']}",
+        )
+
+        self.assertEqual(200, listing.status_code)
+        self.assertEqual(1, listing.json()["count"])
+        self.assertEqual("pending_provider", listing.json()["cases"][0]["status"])
+        self.assertEqual("林○安", listing.json()["cases"][0]["contact_name_masked"])
+
+        self.assertEqual(200, pending.status_code)
+        self.assertEqual("masked", pending.json()["contact"]["access"])
+        self.assertEqual("0912***678", pending.json()["contact"]["mobile"])
+        self.assertNotIn("Demo 路", pending.json()["contact"]["address"])
+        self.assertEqual(404, unauthorized.status_code)
+
+        self.assertEqual(200, accepted.status_code)
+        self.assertEqual("accepted", accepted.json()["status"])
+        self.assertEqual("full", accepted.json()["contact"]["access"])
+        self.assertEqual("0912-345-678", accepted.json()["contact"]["mobile"])
+        self.assertTrue(accepted.json()["order_no"].startswith("SYN-ORDER-"))
+
+        self.assertEqual(200, consumer.status_code)
+        self.assertEqual("provider_accepted", consumer.json()["state"])
+        self.assertEqual(
+            accepted.json()["order_no"],
+            consumer.json()["dispatch"]["order_no"],
+        )
+
+    def test_rejected_case_can_be_dispatched_to_the_next_candidate(self) -> None:
+        matched = self.prepare_match()
+        first = self.client.post(
+            f"/api/sessions/{matched['session_id']}/dispatch",
+            json=self.dispatch_payload(),
+        ).json()
+        first_case_id = first["dispatch"]["case_id"]
+        rejection = self.client.post(
+            f"/api/provider/cases/{first_case_id}/decision",
+            headers={"X-Demo-Provider-Id": "SYN-PROVIDER-001"},
+            json={
+                "decision": "reject",
+                "confirmed": True,
+                "idempotency_key": f"reject:{first_case_id}",
+            },
+        )
+        consumer = self.client.get(
+            f"/api/sessions/{matched['session_id']}",
+        ).json()
+        second = self.client.post(
+            f"/api/sessions/{matched['session_id']}/dispatch",
+            json=self.dispatch_payload(provider_id="SYN-PROVIDER-002"),
+        )
+
+        self.assertEqual(200, rejection.status_code)
+        self.assertEqual("unavailable", rejection.json()["contact"]["access"])
+        self.assertEqual("provider_rejected", consumer["state"])
+        self.assertTrue(consumer["can_dispatch"])
+        self.assertEqual(
+            ["SYN-PROVIDER-001"],
+            consumer["dispatch"]["rejected_provider_ids"],
+        )
+        self.assertEqual(200, second.status_code)
+        self.assertEqual(
+            "SYN-PROVIDER-002",
+            second.json()["dispatch"]["provider_id"],
+        )
+        self.assertEqual("dispatch_pending", second.json()["state"])
+
+    def test_reset_rejects_erasing_an_audited_case(self) -> None:
+        matched = self.prepare_match()
+        self.client.post(
+            f"/api/sessions/{matched['session_id']}/dispatch",
+            json=self.dispatch_payload(),
+        )
+
+        response = self.client.post(
+            f"/api/sessions/{matched['session_id']}/reset",
+        )
+
+        self.assertEqual(409, response.status_code)
+        self.assertEqual("CASE_ALREADY_SUBMITTED", response.json()["error"]["code"])
 
     def test_unknown_session_returns_safe_404(self) -> None:
         response = self.client.get("/api/sessions/not-a-session")

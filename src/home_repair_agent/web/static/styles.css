@@ -161,6 +161,25 @@ a:focus-visible {
   color: #f6d47b;
 }
 
+.workspace-link {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid #53605b;
+  border-radius: 4px;
+  color: #dce6e2;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.workspace-link:hover {
+  border-color: #75c9ba;
+  color: white;
+}
+
 .icon-button {
   width: 36px;
   height: 36px;
@@ -664,6 +683,23 @@ a:focus-visible {
   opacity: 0.62;
 }
 
+.secondary-button {
+  min-height: 42px;
+  padding: 10px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.secondary-button:hover {
+  border-color: var(--teal);
+  color: var(--teal-dark);
+}
+
 .message-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 42px;
@@ -671,6 +707,14 @@ a:focus-visible {
   padding: 14px 26px 18px;
   border-top: 1px solid var(--line);
   background: white;
+}
+
+.privacy-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .message-composer textarea {
@@ -730,6 +774,10 @@ a:focus-visible {
 
 .candidate-card:first-child {
   border-color: var(--teal);
+}
+
+.candidate-card--unavailable {
+  opacity: 0.68;
 }
 
 .candidate-card__header {
@@ -850,6 +898,115 @@ a:focus-visible {
   font-size: 9px;
 }
 
+.candidate-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 15px 14px;
+  border-top: 1px solid var(--line);
+  background: #fbfcfb;
+}
+
+.candidate-card__action small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.candidate-card__action .primary-button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 7px 11px;
+  font-size: 11px;
+}
+
+.dispatch-status,
+.dispatch-confirmation {
+  margin-top: 18px;
+  padding: 15px;
+  border-radius: 6px;
+}
+
+.dispatch-status {
+  border: 1px solid #d3a648;
+  background: var(--amber-pale);
+}
+
+.dispatch-status[data-status="accepted"] {
+  border-color: #80bcb1;
+  background: var(--teal-pale);
+}
+
+.dispatch-status[data-status="rejected"] {
+  border-color: #dfa69c;
+  background: var(--coral-pale);
+}
+
+.dispatch-status h3,
+.dispatch-confirmation h3 {
+  margin: 3px 0 0;
+  font-size: 15px;
+}
+
+.dispatch-status > p,
+.dispatch-confirmation > p:not(.eyebrow) {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.dispatch-status dl,
+.dispatch-confirmation dl {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.dispatch-status dl div,
+.dispatch-confirmation dl div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dispatch-status dt,
+.dispatch-confirmation dt {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.dispatch-status dd,
+.dispatch-confirmation dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.dispatch-confirmation {
+  border: 1px solid var(--teal);
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.dispatch-confirmation__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.dispatch-confirmation__actions .primary-button {
+  margin: 0;
+}
+
 .candidate-empty {
   min-height: 360px;
   display: flex;
@@ -961,6 +1118,12 @@ a:focus-visible {
   .brand small,
   .status-chip--source {
     display: none;
+  }
+
+  .workspace-link {
+    min-height: 28px;
+    padding-inline: 7px;
+    font-size: 10px;
   }
 
   .status-chip {
@@ -1089,6 +1252,11 @@ a:focus-visible {
 
   .primary-button {
     width: 100%;
+  }
+
+  .candidate-card__action {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .message-list {

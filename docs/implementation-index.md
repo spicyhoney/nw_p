@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-27
+最後更新：2026-07-28
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -9,14 +9,14 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 |---|---|---|---|---|
 | B+ 資料清洗 | 已驗證 | `src/home_repair_agent/data_cleaning/` | [清洗手冊](data-cleaning-runbook.md) | Python 測試、品質報告 |
 | PostgreSQL schema / loader | 已驗證 | `sql/`、`data_cleaning/postgres.py` | [SQL README](../sql/README.md) | PostgreSQL 16.14 整合測試 |
-| 唯讀 Service Layer | 已驗證；媒合 SQL 待 PostgreSQL 複驗 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md) | 單元測試；既有 PostgreSQL 整合測試 |
+| Service Layer | 唯讀已驗證；派單／接單 P0 已驗證；媒合 SQL 待 PostgreSQL 複驗 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試；既有 PostgreSQL 整合測試 |
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
-| 寫入 Service / MCP Tools | 未開始 | 尚無 | 預計拆成案件、確認媒合、訂單 | 尚無 |
+| 寫入 Service / MCP Tools | Web P0 Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`web/demo_case_repository.py` | [派單／接單](provider-workflow.md) | 8 個 workflow tests；目前 process-local |
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證本機唯讀 P0；尚未公開部署 | `src/home_repair_agent/web/` | [Web P0 README](../src/home_repair_agent/web/README.md) | 13 個 API tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證本機雙端 P1；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | 18 個 API tests、桌面／手機瀏覽器 E2E |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -33,19 +33,40 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-這個閉環目前只讀。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
+Agent／MCP 閉環目前仍只讀。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
 代碼、該服務要填哪些諮詢欄位」；Web P0 另提供記憶體 session、結構化
 `SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
 確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
 只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
 
-目前仍不能永久保存 session、建立案件、保留時段或下單。CLI 與 Web 可顯式
+Web 另有一條不經 LLM 的受控寫入閉環：
+
+```text
+消費者確認派單
+  -> FastAPI
+  -> CaseWorkflowService
+  -> process-local CaseWorkflowRepository
+  -> 指派廠商 pending 案件（遮罩 contact）
+  -> 廠商確認接受／拒絕
+  -> accepted 時建立 synthetic Demo 訂單並揭露 synthetic contact
+  -> 消費者輪詢取得結果
+```
+
+目前仍不能永久保存 session／案件／訂單，也不會真的保留師傅時段。廠商 header
+只是 Demo 身分模擬，不是正式登入；寫入尚未暴露為 MCP Tool。CLI 與 Web 可顯式
 切換到 Hugging Face hosted open model；沒有 `HF_TOKEN` 時會停止並提示，不會
 靜默切回 Mock。Demo synthetic 時段依啟動時間產生在下一個未來星期六；
 hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-28：新增消費者明確派單、process-local `CaseWorkflowService`、
+  idempotency／audit、廠商工作台、指派隔離、pending 遮罩、接單後揭露、
+  拒絕改派與 synthetic Demo 訂單。Workflow + Web focused `26 passed`；完整
+  suite `91 passed, 9 skipped, 40 subtests passed`；Ruff／format、compileall、
+  JavaScript syntax 與 SVG XML 驗證通過。
+  實際瀏覽器在 `1280x720` 與 `390x844` 跑通雙端流程，無 console error
+  或水平 overflow；未指派廠商列表為空。
 - 2026-07-27：完成 Web P0 review：限制模型 Tool 白名單、拒絕重複媒合表單、
   reset 保留 session lock，並補前端必填驗證。Web focused 13 passed；完整
   suite 77 passed、10 skipped、40 subtests passed；受影響檔案 Ruff／format、

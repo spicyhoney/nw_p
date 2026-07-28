@@ -20,4 +20,9 @@
   過期。
 - FastAPI Web session、三個初始查詢 Tool、動態表單、`+08:00` 時段驗證、
   第四個媒合 Tool、synthetic 候選、reset、安全 header 與未知欄位拒絕。
-- 建立案件與訂單前必須取得使用者確認。
+- 建立案件與訂單前必須取得明確確認，且相同 idempotency key 不得搭配不同
+  payload。
+- 只有指派廠商可讀案件；pending 聯絡資料遮罩、accepted 才揭露 synthetic
+  contact、rejected 永不揭露。
+- 廠商接受／拒絕為原子狀態轉換，並行決策只有一個成功；所有結果保留 audit。
+- 拒絕後可改派其他未拒絕候選，已建立 audit 的 session 不得以 reset 擦除。

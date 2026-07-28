@@ -1,111 +1,106 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-07-27　更新者：Codex
-> 規則：全文 ≤150 行；只描述現在；接手者先以本檔為準，再按連結讀細節。
+> 更新：2026-07-28　更新者：Codex
+> 規則：全文 ≤150 行；只描述現在；接手者先讀本檔，再按連結讀細節。
 
 ## 1. 目前狀態
 
-PR #7 已以 merge commit `afe6dba` 合併至 `main`。目前分支為
-`codex/web-demo-p0`（PR #9），本機唯讀 Web vertical slice 已完成 review 修正；
-尚未公開部署。
-固定模型 eval、Bedrock/AWS、案件寫入與服務廠商後台尚未完成。
+- 穩定 `main`：`ec6d741`，PR #9 已合併。
+- 工作分支：`codex/provider-dashboard-p0`，目前尚未 commit／push／建立 PR。
+- 本機消費者與廠商雙端 P0 已完成實作、文件、自動測試與瀏覽器驗收。
+- 尚未公開部署，也未連 PostgreSQL 寫入、正式登入、Bedrock 或 AWS。
 
 ## 2. 本分支完成
 
-- 新增 FastAPI `session / message / form / reset` API。
-- 新增 deterministic `SessionView`，保存 service、location、form answers、
-  preferred window、candidates；LLM reply 不作 business state。
-- 需求文字仍由 `AgentRunner` 呼叫前三個 MCP Tools；表單通過伺服器驗證後，
-  `WebSessionService` 才呼叫第四個 `match_service_providers` Tool。
-- 動態表單支援 `single_select` radio、文字欄位與 `datetime_range`。
-- 希望時段由 UI 送出 `Asia/Taipei +08:00` ISO 8601；後端重驗時區、順序與
-  12 小時上限，模型不得自行換算相對日期。
-- 消費者頁含進度、聊天、表單、候選卡、Tool 查詢紀錄與 reset。
-- 桌面三欄、手機三分頁；候選與素材皆明確標示 synthetic。
-- 前端不直接呼叫 HF／Bedrock、MCP、Service Layer、SQL 或資料庫。
-- CSP、no-store、禁止 iframe、`textContent` rendering 與安全 API errors 已加入。
-- 專案專用修繕 workbench 圖由 built-in ImageGen 產生並壓成 30 KB WebP。
-- Review 修正：Web 對話只向模型公開前三個 Tool；模型即使自行要求媒合也會被
-  Runner 白名單與 session workflow 雙層拒絕。
-- 媒合完成後拒絕重送表單；reset 原地清空 record，保留同一把 session lock。
-- 前端送出前檢查必填 radio／multi-select／文字與時段，伺服器仍會再次驗證。
+- 新增 `CaseWorkflowService` 與嚴格案件／命令／view models。
+- 新增 process-local `DemoCaseWorkflowRepository`。
+- 消費者完成媒合後，可選擇廠商並明確確認派單。
+- 新增 `/provider` 廠商工作台：案件列表、狀態篩選、詳情、audit、接單／拒絕。
+- 只有 assigned provider 能看案件；其他 Demo provider 列表為空、詳情回 404。
+- pending 只回遮罩 contact；accepted 才回完整 synthetic contact；rejected 不揭露。
+- accepted 建立 `SYN-ORDER-*`；rejected 後可改派其他未拒絕候選。
+- 寫入有 confirmation、idempotency、payload fingerprint、audit 與原子狀態轉換。
+- 已有 audit 的 session 不能用 reset 擦除。
+- 消費者頁每 3 秒輪詢 pending 案件，取得 accepted／rejected 結果。
+- 修正候選與確認派單按鈕在非同步更新後仍停用的前端問題。
+- 靜態 CSS／JS 加版本 query，避免瀏覽器沿用舊快取。
+- 更新架構 SVG、Web README、實作索引、測試說明與本交接文件。
 
-## 3. 驗證證據
+## 3. 五項不可破壞規則
 
-- `tests/test_web_app.py`：13 passed；Web + Agent loop focused：27 passed。
-- 完整 suite：77 passed、10 skipped、40 subtests passed。
-- 10 skipped 是缺少測試 PostgreSQL／選配 live 環境時依設計略過。
-- 受影響檔案 Ruff、format、compileall、JavaScript syntax、diff check 通過。
-- 全 repo Ruff 仍會指出既有 `data_cleaning` 格式／lint debt；本分支未擴改。
-- 真實瀏覽器桌面與 `390x844` 均完成：
-  需求 → 三個 Tool → 動態表單 → `+08:00` 時段 → 媒合 Tool → 兩位候選。
-- 手機無水平 overflow，三分頁與 reset 正常；全流程無 console error。
-- FastAPI TestClient 有第三方 `httpx2` 遷移 deprecation warning；不影響結果。
-- 本次未使用 `HF_TOKEN`，沒有對外傳送對話。
+1. 消費者明確確認後才建立案件。
+2. 只有指派廠商可讀案件。
+3. pending 廠商只能看到遮罩聯絡資料。
+4. accepted 才揭露完整 synthetic contact；rejected 永不揭露。
+5. 所有寫入必須有確認、冪等、稽核與合法原子狀態轉換。
+
+完整契約：[docs/provider-workflow.md](docs/provider-workflow.md)。
+
+## 4. 驗證證據
+
+- Workflow + Web focused：`26 passed`。
+- 完整 suite：`91 passed, 9 skipped, 40 subtests passed`。
+- 9 skipped 是缺測試 PostgreSQL／選配 live 環境時依設計略過。
+- 受影響 Python：Ruff、format、compileall 通過。
+- `app.js`、`provider.js`：Node syntax check 通過。
+- 架構 SVG：XML parse 通過。
+- 桌機 `1280x720`、手機 `390x844` 均跑通雙端流程。
+- 無水平 overflow、console error 或控制項重疊。
+- 未指派廠商切換後案件數為 0。
+- FastAPI TestClient 有第三方 `httpx2` deprecation warning；目前不影響結果。
+- 本次使用 Mock Model，沒有送出 HF token 或對外傳送對話。
 
 主要文件：
 
-- `src/home_repair_agent/web/README.md`
-- `docs/implementation-index.md`
-- `docs/architecture.md`
-- `tests/test_web_app.py`
+- [Web P1 README](src/home_repair_agent/web/README.md)
+- [派單／接單 P0](docs/provider-workflow.md)
+- [實作索引](docs/implementation-index.md)
+- [系統與 AWS 架構](docs/architecture.md)
+- [架構 SVG](docs/project-architecture-current.svg)
 
-## 4. 下一步
+## 5. 現有邊界
 
-1. 組員重新確認 PR #9 的 review 修正，通過後合併至 `main`。
-2. 使用有效且不提交的 `HF_TOKEN` 跑固定 Web eval，比較 Mock/HF 相同案例。
-3. 決定決賽 Demo hosting，提供可公開存取的 HTTPS 網址。
-4. P1 前先設計 case submission contract：
-   明確確認、idempotency key、授權、交易與 audit event。
-5. contract 完成後才做最小服務廠商後台：案件列表、摘要與狀態。
+- Web session、案件、訂單、idempotency 與 audit 都只在目前 Python process。
+- 重啟後資料消失；沒有真的保留師傅時段。
+- 廠商下拉選單與 `X-Demo-Provider-Id` 是身分模擬，不是 authentication。
+- 聯絡人、手機、地址、廠商、案件與訂單全部是 synthetic。
+- 自由文字仍可能被使用者輸入真實個資；UI 已警告，但 P0 沒有萬用個資偵測器。
+- 四個 MCP Tools 仍全部唯讀；本分支沒有寫入 MCP Tool。
+- 派單／接單按鈕由 FastAPI 直接呼叫 `CaseWorkflowService`，不經 LLM。
+- `CaseWorkflowService` 沒有 SQL；正式寫入 SQL 必須放 PostgreSQL repository。
+- 原始資料不可覆寫；不明代碼不可猜；Agent 不得執行任意 SQL。
+- token、密碼、AWS 金鑰、`.env` 與含 token transcript 不得提交。
 
-## 5. 團隊分工
+## 6. 下一步
 
-- 使用者／Codex：Web P0、FastAPI session/view model、資料與 Service/MCP 邊界。
-- 組員：模型固定 eval、語音、Bedrock/AWS 部署準備。
-- 共同：驗收 Web 對話與 Agent/MCP 串接、決定 Demo 文案與部署方案。
-- 不要讓兩邊同時修改 `src/home_repair_agent/web/`；需調整先在 PR 討論。
+1. 組員 review 本分支的五項規則、API contract 與 Demo 文案。
+2. 修正 review findings 後 commit、push 並建立 PR。
+3. 建立 PostgreSQL case／order／idempotency／audit migrations 與 constraints。
+4. 實作 transaction-based `CaseWorkflowRepository` 和真實 PostgreSQL 整合測試。
+5. 將 Demo provider header 換成正式登入與 RBAC。
+6. 加入時段保留及同一師傅排程衝突控制。
+7. 用固定案例做 Hugging Face／Bedrock tool-selection eval。
+8. 拿到 AWS 環境後替換 model、tool transport、repository adapters 並部署。
+9. 外部 Agent 確實需要寫入時，才設計少量受限 MCP Tools。
 
-## 6. 現有架構
+## 7. 團隊分工
 
-已完成：
-
-- B+ 資料清洗、PostgreSQL schema/loader 與資料來源政策。
-- 四個唯讀 Service／MCP Tools 與 `matching_v1` synthetic 媒合。
-- Mock Agent loop、terminal Demo、Hugging Face hosted adapter。
-- 本機唯讀 FastAPI/Web P0。
-
-尚未完成：
-
-- PostgreSQL session persistence。
-- 案件、時段保留、確認媒合與訂單寫入。
-- 最小服務廠商後台。
-- Bedrock adapter、AgentCore、RDS、S3 與 CloudWatch。
-- 語音與公開部署。
-
-## 7. 不可破壞邊界
-
-- 原始資料不可覆寫；不明代碼與斷裂關聯不可猜測。
-- synthetic 資料必須保留來源標籤，不得宣稱是真實合作廠商。
-- Agent 不得執行任意 SQL，只能呼叫白名單 Service／MCP Tool。
-- FastAPI 與 MCP 是 adapter；商業規則放 Service，SQL 放 repository。
-- token、密碼、AWS 金鑰、`.env` 與含 token 的 transcript 不得提交。
-- 目前四個 MCP Tools 全部唯讀；沒有確認、冪等、授權與 audit 前不得加寫入。
-- Hugging Face 是外部 hosted API，不是本機模型；不得靜默 fallback。
-- 不要 force-push 或刪除隊友分支。
+- 使用者／Codex：消費者與廠商 Web、FastAPI、Case Service、資料／權限邊界。
+- 組員：模型固定 eval、語音、Bedrock／AWS 部署準備。
+- 共同：review 五項規則、驗收 Demo、決定正式 authentication 與部署方案。
+- 避免兩邊同時修改 `src/home_repair_agent/web/`；先在 PR 留言協調。
 
 ## 8. 環境快照
 
 - Repo：`https://github.com/spicyhoney/nw_p`
-- 穩定 `main`：`afe6dba`，PR #7 regular merge。
-- 工作分支：`codex/web-demo-p0`，對應 PR #9。
 - Python：`>=3.11`；本機驗證使用 `.venv`。
-- Web：`http://127.0.0.1:8080`，預設 `WEB_MODEL_PROVIDER=mock`。
-- Web session 只在記憶體；process 重啟即消失。
-- 本機 Demo repository 不連 PostgreSQL、AWS，也不寫資料。
+- 預設 Model：`mock`。
+- 啟動：`home-repair-web`
+- 消費者：`http://127.0.0.1:8080/`
+- 廠商：`http://127.0.0.1:8080/provider`
 
 ## 9. 授權狀態
 
-- 使用者與組員已確認 Web P0 分工並授權開始實作。
-- 已授權本分支完成實作、測試、文件與 PR。
-- 未授權啟用寫入 MCP Tool、建立正式案件、部署 AWS 資源或提交任何金鑰。
+- 使用者與組員已同意五項規則並授權本分支開始實作。
+- 已授權本地實作、測試與文件更新。
+- 尚未在本次請求中授權 commit、push、PR、AWS 部署或任何金鑰操作。

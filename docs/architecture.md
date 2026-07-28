@@ -22,15 +22,16 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 |---|---|---|
 | 資料清洗 | 已完成 B+ pipeline 與品質報告 | 持續補測試資料 |
 | PostgreSQL | 已在真實 PostgreSQL 16.14 通過 migration、loader、view、constraint 測試 | 實作最小權限與正式 RDS 連線 |
-| Service Layer | 已完成服務、行政區、諮詢表單與 synthetic 師傅媒合 | 複驗媒合 PostgreSQL 查詢，再做需確認的寫入 |
-| MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests | 以真實模型做 tool-selection 評估 |
+| Service Layer | 已完成唯讀查詢／媒合，以及 process-local 派單／接單 P0 | 將案件 workflow 接到 PostgreSQL transaction repository |
+| MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests；寫入仍未公開 | 先做真實模型 eval；外部 Agent 確有需求時才加受限寫入 Tool |
 | Agent | 已完成核心迴圈、MCP Client 與 Mock 多輪測試 | 實作 BedrockModelClient 與 tool-selection eval |
 | AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
-| Web / FastAPI | 已完成本機唯讀 P0：聊天、動態表單、結構化 session、候選卡 | 固定模型 eval、公開部署，再設計有確認的案件寫入 |
+| Web / FastAPI | 已完成本機雙端 P1：聊天、表單、候選、明確派單、廠商接單／拒絕與狀態回寫 | PostgreSQL 持久化、正式登入、固定模型 eval、公開部署 |
 
-目前無測試資料庫的工作區為 76 passed、9 skipped、40 subtests passed。
-這些測試已驗證資料清洗、Service Layer、MCP 協定、Mock/HF adapter contract、
-FastAPI 與本機 Web P0；仍不代表 Bedrock、語音、案件寫入或 AWS 部署已經
+目前派單 workflow 與 Web 聚焦測試為 `26 passed`；完整測試結果以
+[實作索引](implementation-index.md)的最近驗證為準。這些測試已驗證資料清洗、
+Service Layer、MCP 協定、Mock/HF adapter contract，以及本機雙端 Web 流程；
+仍不代表 PostgreSQL 案件持久化、正式身分驗證、Bedrock、語音或 AWS 部署已
 端到端完成。
 
 ## 一句話如何變成資料庫查詢
@@ -94,6 +95,19 @@ Tool、Service Layer 與 SQL。
 
 兩條路共用同一套 Service Layer，所以相同輸入必須得到相同的商業結果。FastAPI
 是網頁後端，不是前端；MCP 是 Agent 的工具協定，也不是資料庫驅動程式。
+
+目前本機派單 P0 採用按鈕入口：
+
+```text
+消費者／廠商按鈕
+  -> FastAPI
+  -> CaseWorkflowService
+  -> DemoCaseWorkflowRepository（process-local）
+```
+
+這條路已驗證確認、冪等、指派廠商隔離、audit 與原子狀態轉換，但尚未持久化，
+也沒有寫入 MCP Tool。正式版會替換 repository 與身分 adapter，不把規則搬進
+route、LLM 或前端。完整契約見[派單／接單 P0](provider-workflow.md)。
 
 ## AWS 服務各自用在哪裡
 
@@ -202,10 +216,11 @@ role。AWS SDK 會從標準 credential provider chain 取得身分，不需要�
 2. 已把同一批函式包成 FastMCP Tools，並通過本機 MCP client protocol tests。
 3. 已用 Mock Model 跑完「輸入 -> tool call -> tool result -> 回覆」迴圈。
 4. 拿到 AWS 憑證後實作 `BedrockModelClient`，不改迴圈、工具與資料庫邏輯。
-5. 設計確認與冪等契約後，加入 `create_consultation_case` 與 `confirm_booking`。
-6. 部署 Agent / MCP Server 到 AgentCore Runtime，接上 Gateway。
-7. 有照片需求再接 S3；有餘裕才把一支工具改成 Lambda target。
-8. 最後才評估是否真的需要 API Gateway。
+5. 已完成 process-local 派單／接單 P0：確認、冪等、授權、audit 與狀態轉換。
+6. 將 `CaseWorkflowRepository` 換成 PostgreSQL transaction repository，並加入正式登入。
+7. 部署 Agent / MCP Server 到 AgentCore Runtime，接上 Gateway。
+8. 有照片需求再接 S3；有餘裕才把一支工具改成 Lambda target。
+9. 最後才評估是否真的需要 API Gateway。
 
 ## 安全與資料邊界
 

@@ -9,8 +9,8 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-    <script src="/static/app.js" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.2.2" />
+    <script src="/static/app.js?v=0.2.2" defer></script>
   </head>
   <body data-mobile-view="conversation">
     <a class="skip-link" href="#conversation-pane">跳到對話</a>
@@ -27,6 +27,7 @@
       <div class="header-status">
         <span class="status-chip status-chip--source">DEMO · SYNTHETIC</span>
         <span id="provider-chip" class="status-chip">連線中</span>
+        <a class="workspace-link" href="/provider">廠商端</a>
         <button
           id="reset-button"
           class="icon-button"
@@ -81,8 +82,8 @@
           <ol id="trace-list"></ol>
         </details>
 
-        <p class="readonly-note">
-          目前只查詢候選，不建立案件、不保留時段。
+        <p id="workflow-note" class="readonly-note">
+          尚未建立案件；確認候選後才會送出派單。
         </p>
       </aside>
 
@@ -127,6 +128,9 @@
 
         <form id="message-form" class="message-composer">
           <label class="sr-only" for="message-input">修繕需求</label>
+          <p class="privacy-note">
+            Demo 請勿輸入真實姓名、電話、門牌或其他個人資料。
+          </p>
           <textarea
             id="message-input"
             name="message"
@@ -160,7 +164,45 @@
           <span id="candidate-count" class="count-badge">0</span>
         </header>
 
+        <section id="dispatch-status" class="dispatch-status" hidden>
+          <div>
+            <p class="eyebrow">案件狀態</p>
+            <h3 id="dispatch-status-title"></h3>
+          </div>
+          <p id="dispatch-status-copy"></p>
+          <dl id="dispatch-status-details"></dl>
+        </section>
+
         <div id="candidate-list" class="candidate-list"></div>
+
+        <section
+          id="dispatch-confirmation"
+          class="dispatch-confirmation"
+          aria-labelledby="dispatch-confirmation-title"
+          hidden
+        >
+          <p class="eyebrow">確認派單</p>
+          <h3 id="dispatch-confirmation-title">確認選擇</h3>
+          <p id="dispatch-confirmation-copy"></p>
+          <dl>
+            <div>
+              <dt>Demo 聯絡人</dt>
+              <dd>林小安 · 0912-345-678</dd>
+            </div>
+            <div>
+              <dt>資料來源</dt>
+              <dd>synthetic</dd>
+            </div>
+          </dl>
+          <div class="dispatch-confirmation__actions">
+            <button id="cancel-dispatch" class="secondary-button" type="button">
+              返回
+            </button>
+            <button id="confirm-dispatch" class="primary-button" type="button">
+              確認派單
+            </button>
+          </div>
+        </section>
 
         <div id="candidate-empty" class="candidate-empty">
           <img

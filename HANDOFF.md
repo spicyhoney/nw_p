@@ -5,11 +5,13 @@
 
 ## 1. 目前狀態（active）
 
-- 穩定 `main`：`479e48f`；HF AI mode 與 Web P0 已完成。
-- PR #10 `codex/provider-dashboard-p0`：Draft，reviewed head `547a3e2`。
-- 正式 review 結論：**Changes requested**；目前有 3 個技術 finding 與
-  3 個 merge conflicts，尚不可合併。
-- PR #10 的派單／廠商工作台方向正確；不需要重做。
+- PR #10 `codex/provider-dashboard-p0`：Ready for review；reviewed head
+  `7ed7667a7512f800d1e746c789ccb32bad964dce`。
+- 正式 review 結論：**Approve**；先前 3 個 finding 與 3 個 merge conflicts
+  均已修正，沒有新的 actionable finding。
+- GitHub 顯示 Open、Ready to merge、無 base conflict；0 checks、0 reviews／留言，
+  目前等待 `y-row` 的 requested review。
+- Agent 不得自行 merge；下一步只剩人類決定是否接受並合併 PR #10。
 
 ## 2. PR #10 已完成內容（active）
 
@@ -31,76 +33,58 @@
 - `tests/test_case_workflow.py`
 - `tests/test_web_app.py`
 
-## 3. Review findings（active open issues）
+## 3. Review findings（resolved）
 
-### P1：派單時沒有重新驗證時段
+### P1：派單時重新驗證時段
 
-- `FormSubmitRequest`／`WebSessionService.submit_form()` 只在表單送出時驗證未來時間；
-  使用者若稍後才確認派單，`dispatch_case()` 與 `CaseWorkflowService.submit_case()`
-  不會再次檢查。
-- 實測 `CaseWorkflowService` 接受「已在昨天開始、長達 24 小時」的時段並建立
-  `pending_provider` 案件。
-- 修正：在案件建立當下驗證 `preferred_start > now`、結束晚於開始、
-  最長 12 小時與 `Asia/Taipei +08:00`；補「表單完成後時間已過期」測試。
-- 檔案：`backend/case_models.py`、`backend/case_services.py`、`web/service.py`。
+- `CaseSubmissionCommand` 與 `CaseWorkflowService.submit_case()` 均檢查
+  `Asia/Taipei +08:00`、結束晚於開始、最長 12 小時。
+- 真正建案時再次要求 `preferred_start > now`；已成功建立的冪等重試仍回原結果。
+- `WebSessionService.dispatch_case()` 也會提早拒絕媒合後才過期的時段。
 
-### P2：狀態 filter 可能保留不相符的案件詳情
+### P2：狀態 filter 與案件詳情一致
 
-- `provider.js` 切換 filter 時只重畫左側列表；右側仍可能顯示被篩掉的 pending
-  案件與接受／拒絕按鈕。
-- 修正：filter 改變後，若目前案件不在結果內，清空詳情或改選第一筆可見案件；
-  補前端狀態／瀏覽器驗收。
-- 檔案：`src/home_repair_agent/web/static/provider.js`。
+- `provider.js` 用同一份 visible cases 同步列表與 selection。
+- 目前案件被 filter 排除時，改選第一筆可見案件；沒有結果時清空詳情與操作按鈕。
+- polling 與案件狀態轉換後也會重新套用相同規則。
 
-### P2：App factory 可注入兩個不同 workflow
+### P2：App factory workflow 一致
 
-- 同時傳入 `session_service=A`、`case_workflow=B` 時，消費者派單寫入 A，
-  provider API 卻讀 B；實測兩端不共享 workflow。
-- 修正：禁止不一致組合，或在有 `session_service` 時一律使用
-  `session_service.case_workflow`；補 factory 測試。
-- 檔案：`src/home_repair_agent/web/app.py`、`tests/test_web_app.py`。
+- 同時注入 `session_service` 與不同 `case_workflow` 時立即丟出 `ValueError`。
+- 合法注入一律由消費者與 provider API 共用 `session_service.case_workflow`。
+- 已補 factory regression test。
 
 ### Merge conflicts
 
-- PR #10 從 `ec6d741` 開出，尚未包含 `e486499`、`479e48f`。
-- 衝突：`HANDOFF.md`、`docs/implementation-index.md`、
+- 已整合 `HANDOFF.md`、`docs/implementation-index.md`、
   `src/home_repair_agent/web/README.md`。
-- 解衝突時必須保留本檔的 reviewed SHA／findings、HF live eval、AI mode 與
-  HF token 安全設定；不可退回「正式 Demo 使用 mock」。
+- HF live eval、AI mode、HF token 安全設定與 provider workflow 均保留。
 
-## 4. 驗證證據（reviewed SHA `547a3e2`）
+## 4. 驗證證據（reviewed SHA `7ed7667`）
 
-- Focused：`26 passed`。
-- 完整 suite：`90 passed, 10 skipped, 40 subtests passed`。
-- Ruff、format、`node --check`（`app.js`、`provider.js`）與
-  `git diff --check` 通過。
-- 10 skipped 是缺 PostgreSQL／選配 live 環境；不是本 PR regression。
-- PR 文件的 `91 passed, 9 skipped` 是另一個 optional 環境結果。
-- 測試全綠不解除第 3 節 findings；P1 已用額外 probe 重現。
+- Focused：`30 passed, 3 subtests passed`。
+- 完整 suite：`94 passed, 10 skipped, 43 subtests passed`。
+- 10 skipped：1 個缺本機 organizer/NLSC dataset，9 個缺
+  `TEST_DATABASE_URL`／`psycopg`；不是本 PR regression。
+- 受影響 Python 的 Ruff／format、compileall、`app.js`／`provider.js`
+  Node syntax、`git diff --check` 均通過。
+- 全 repo Ruff 仍會指出未受本 PR 影響的既有 `data_cleaning` lint debt。
+- PR 作者環境為 `95 passed, 9 skipped`，差異是 optional dataset 是否存在。
+- GitHub 沒有 CI checks；上述結果是本機對 PR merge-ready head 的實測。
 
-## 5. 組員下一步（第一個 command 可直接執行）
+## 5. 下一步
 
-1. 執行 `git switch codex/provider-dashboard-p0`。
-2. 執行 `git pull --ff-only origin codex/provider-dashboard-p0`。
-3. 執行 `git fetch origin`，再執行 `git merge origin/main`。
-4. 依第 3 節修正三項 finding 與三個文件衝突，不要另開 PR。
-5. 驗證：
-
-   ```powershell
-   .\.venv\Scripts\python.exe -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
-   .\.venv\Scripts\python.exe -m pytest -q
-   node --check src/home_repair_agent/web/static/app.js
-   node --check src/home_repair_agent/web/static/provider.js
-   git diff --check
-   ```
-
-6. 更新 HANDOFF 的 PR head SHA／測試結果，push 同一分支，將 PR #10 改成
-   Ready for review，再通知我們複審；**不要自行 merge**。
+1. 人類／組員查看 PR #10 reviewed head `7ed7667` 與本檔結論。
+2. 若接受此 review，**由人類合併 PR #10**；Agent 不得代為 merge。
+3. 合併後雙方執行 `git switch main`、`git pull --ff-only origin main`。
+4. 在最新 `main` 重跑 focused tests，確認派單與 provider workflow。
+5. 下一個工程 P1：PostgreSQL case／order／idempotency／audit migrations 與
+   repository；開始前先確認正式 authentication／RBAC 與 AWS 權限。
 
 ## 6. 人類決策門檻（active）
 
-- 上述三項都是技術修正，現在不需要人類產品決策。
-- 若修正會改變個資揭露、正式 authentication、AWS 權限、產品 scope、
+- 當前唯一待決策事項：是否合併 PR #10。
+- 後續若會改變個資揭露、正式 authentication、AWS 權限、產品 scope、
   寫入型 MCP 或是否接受風險，立即停止，只提出一個決策問題等待使用者。
 - 是否合併 PR 永遠由人類決定；Agent 不得自行 merge。
 

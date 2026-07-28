@@ -1,7 +1,9 @@
 const store = {
   session: null,
   busy: false,
+  selectedProviderId: "",
   alertTimer: null,
+  pollTimer: null,
 };
 
 const elements = {};
@@ -19,6 +21,7 @@ function bindElements() {
   elements.serviceSummary = document.querySelector("#service-summary");
   elements.locationSummary = document.querySelector("#location-summary");
   elements.traceList = document.querySelector("#trace-list");
+  elements.workflowNote = document.querySelector("#workflow-note");
   elements.sessionState = document.querySelector("#session-state");
   elements.messageList = document.querySelector("#message-list");
   elements.messageForm = document.querySelector("#message-form");
@@ -31,6 +34,27 @@ function bindElements() {
   elements.formFields = document.querySelector("#form-fields");
   elements.formError = document.querySelector("#form-error");
   elements.candidateList = document.querySelector("#candidate-list");
+  elements.dispatchStatus = document.querySelector("#dispatch-status");
+  elements.dispatchStatusTitle = document.querySelector(
+    "#dispatch-status-title",
+  );
+  elements.dispatchStatusCopy = document.querySelector(
+    "#dispatch-status-copy",
+  );
+  elements.dispatchStatusDetails = document.querySelector(
+    "#dispatch-status-details",
+  );
+  elements.dispatchConfirmation = document.querySelector(
+    "#dispatch-confirmation",
+  );
+  elements.dispatchConfirmationTitle = document.querySelector(
+    "#dispatch-confirmation-title",
+  );
+  elements.dispatchConfirmationCopy = document.querySelector(
+    "#dispatch-confirmation-copy",
+  );
+  elements.cancelDispatch = document.querySelector("#cancel-dispatch");
+  elements.confirmDispatch = document.querySelector("#confirm-dispatch");
   elements.candidateEmpty = document.querySelector("#candidate-empty");
   elements.candidateCount = document.querySelector("#candidate-count");
   elements.mobileCandidateCount = document.querySelector(
@@ -44,6 +68,8 @@ function bindEvents() {
   elements.messageForm.addEventListener("submit", handleMessageSubmit);
   elements.consultationForm.addEventListener("submit", handleFormSubmit);
   elements.resetButton.addEventListener("click", resetSession);
+  elements.cancelDispatch.addEventListener("click", cancelDispatch);
+  elements.confirmDispatch.addEventListener("click", confirmDispatch);
   elements.messageInput.addEventListener("input", resizeMessageInput);
   elements.messageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -56,11 +82,14 @@ function bindEvents() {
       setMobileView(button.dataset.mobileTarget);
     });
   });
+  window.addEventListener("beforeunload", stopSessionPolling);
 }
 
 async function createSession() {
   setBusy(true);
   try {
+    stopSessionPolling();
+    store.selectedProviderId = "";
     store.session = await api("/api/sessions", { method: "POST" });
     renderSession();
   } catch (error) {
@@ -138,6 +167,12 @@ async function resetSession() {
   }
   setBusy(true);
   try {
+    if (store.session.dispatch) {
+      await createSession();
+      setMobileView("conversation");
+      elements.messageInput.focus();
+      return;
+    }
     store.session = await api(
       `/api/sessions/${store.session.session_id}/reset`,
       { method: "POST" },
@@ -149,6 +184,99 @@ async function resetSession() {
     showAlert(error.message);
   } finally {
     setBusy(false);
+  }
+}
+
+function selectCandidate(providerId) {
+  if (!store.session?.can_dispatch || store.busy) {
+    return;
+  }
+  const rejected = new Set(
+    store.session.dispatch?.rejected_provider_ids || [],
+  );
+  if (rejected.has(providerId)) {
+    return;
+  }
+  store.selectedProviderId = providerId;
+  renderCandidates();
+  updateControls();
+  elements.dispatchConfirmation.scrollIntoView({ block: "nearest" });
+}
+
+function cancelDispatch() {
+  store.selectedProviderId = "";
+  renderCandidates();
+  updateControls();
+}
+
+async function confirmDispatch() {
+  if (
+    !store.session ||
+    !store.selectedProviderId ||
+    !store.session.can_dispatch ||
+    store.busy
+  ) {
+    return;
+  }
+
+  setBusy(true);
+  try {
+    store.session = await api(
+      `/api/sessions/${store.session.session_id}/dispatch`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          provider_id: store.selectedProviderId,
+          confirmed: true,
+          idempotency_key:
+            `dispatch:${store.session.session_id}:${store.selectedProviderId}`,
+        }),
+      },
+    );
+    store.selectedProviderId = "";
+    renderSession();
+    startSessionPolling();
+  } catch (error) {
+    showAlert(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function startSessionPolling() {
+  stopSessionPolling();
+  if (store.session?.dispatch?.status !== "pending_provider") {
+    return;
+  }
+  store.pollTimer = window.setInterval(refreshSession, 3000);
+}
+
+function stopSessionPolling() {
+  if (store.pollTimer) {
+    window.clearInterval(store.pollTimer);
+    store.pollTimer = null;
+  }
+}
+
+async function refreshSession() {
+  if (
+    !store.session ||
+    store.busy ||
+    store.session.dispatch?.status !== "pending_provider"
+  ) {
+    return;
+  }
+  try {
+    store.session = await api(
+      `/api/sessions/${store.session.session_id}`,
+    );
+    renderSession();
+    if (store.session.dispatch?.status !== "pending_provider") {
+      stopSessionPolling();
+    }
+  } catch (error) {
+    stopSessionPolling();
+    showAlert(error.message);
   }
 }
 
@@ -197,6 +325,7 @@ function renderSession() {
   renderProgress();
   renderMessages();
   renderForm();
+  renderDispatch();
   renderCandidates();
   updateControls();
 }
@@ -213,6 +342,9 @@ function renderHeader() {
     awaiting_form: "填寫諮詢單",
     matched: "媒合完成",
     no_candidates: "暫無候選",
+    dispatch_pending: "等待廠商",
+    provider_accepted: "廠商已接單",
+    provider_rejected: "請改選廠商",
     error: "需要重試",
   };
   elements.sessionState.textContent = labels[session.state] || "處理中";
@@ -493,21 +625,75 @@ function collectFormPayload(form) {
   };
 }
 
+function renderDispatch() {
+  const dispatch = store.session.dispatch;
+  elements.dispatchStatus.hidden = !dispatch;
+  if (!dispatch) {
+    elements.workflowNote.textContent =
+      "尚未建立案件；確認候選後才會送出派單。";
+    return;
+  }
+
+  elements.dispatchStatus.dataset.status = dispatch.status;
+  const copy = {
+    pending_provider: {
+      title: "等待廠商回覆",
+      text: `案件已指定給 ${dispatch.provider_name}，廠商接單前只會看到遮罩聯絡資料。`,
+      note: "案件已建立；重新開始會建立另一個新諮詢。",
+    },
+    accepted: {
+      title: "廠商已接單",
+      text: `${dispatch.provider_name} 已接受案件，synthetic Demo 訂單已建立。`,
+      note: "接單完成；原案件與稽核紀錄會保留。",
+    },
+    rejected: {
+      title: "廠商未接案",
+      text: `${dispatch.provider_name} 已拒絕，本次沒有揭露完整聯絡資料。`,
+      note: "可改選尚未拒絕的其他候選廠商。",
+    },
+  }[dispatch.status];
+  elements.dispatchStatusTitle.textContent = copy.title;
+  elements.dispatchStatusCopy.textContent = copy.text;
+  elements.workflowNote.textContent = copy.note;
+  elements.dispatchStatusDetails.replaceChildren(
+    definitionItem("案件編號", dispatch.case_id),
+    definitionItem("廠商", dispatch.provider_name),
+    definitionItem("訂單編號", dispatch.order_no || "尚未建立"),
+  );
+}
+
 function renderCandidates() {
   const candidates = store.session.candidates || [];
+  const dispatch = store.session.dispatch;
+  const rejected = new Set(dispatch?.rejected_provider_ids || []);
   elements.candidateCount.textContent = String(candidates.length);
   elements.mobileCandidateCount.textContent = String(candidates.length);
   elements.candidateEmpty.hidden = candidates.length > 0;
   elements.candidateList.replaceChildren(
     ...candidates.map((candidate, index) =>
-      renderCandidate(candidate, index),
+      renderCandidate(candidate, index, rejected),
     ),
   );
+
+  const selected = candidates.find(
+    (candidate) => candidate.provider_id === store.selectedProviderId,
+  );
+  elements.dispatchConfirmation.hidden = !selected;
+  if (selected) {
+    elements.dispatchConfirmationTitle.textContent =
+      `派給 ${selected.display_name}`;
+    elements.dispatchConfirmationCopy.textContent =
+      "送出後會建立 synthetic 案件並等待此廠商回覆；接單前只提供遮罩聯絡資料。";
+  }
 }
 
-function renderCandidate(candidate, index) {
+function renderCandidate(candidate, index, rejected) {
   const card = document.createElement("article");
   card.className = "candidate-card";
+  const hasRejected = rejected.has(candidate.provider_id);
+  if (hasRejected) {
+    card.classList.add("candidate-card--unavailable");
+  }
 
   const header = document.createElement("header");
   header.className = "candidate-card__header";
@@ -560,8 +746,52 @@ function renderCandidate(candidate, index) {
     reasons.append(item);
   });
 
-  card.append(header, score, metrics, time, reasons);
+  const action = document.createElement("footer");
+  action.className = "candidate-card__action";
+  const actionStatus = document.createElement("small");
+  const dispatch = store.session.dispatch;
+  const isCurrent = dispatch?.provider_id === candidate.provider_id;
+  if (hasRejected) {
+    actionStatus.textContent = "此廠商已拒絕本案件";
+  } else if (isCurrent && dispatch.status === "pending_provider") {
+    actionStatus.textContent = "等待此廠商回覆";
+  } else if (isCurrent && dispatch.status === "accepted") {
+    actionStatus.textContent = "此廠商已接單";
+  } else if (!store.session.can_dispatch) {
+    actionStatus.textContent = "目前不可再次派單";
+  } else {
+    actionStatus.textContent = "確認後才會建立案件";
+  }
+  action.append(actionStatus);
+
+  if (store.session.can_dispatch && !hasRejected) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "primary-button";
+    button.dataset.providerSelect = candidate.provider_id;
+    button.textContent =
+      store.selectedProviderId === candidate.provider_id
+        ? "已選擇"
+        : "選擇此廠商";
+    button.disabled = store.busy;
+    button.addEventListener("click", () => {
+      selectCandidate(candidate.provider_id);
+    });
+    action.append(button);
+  }
+
+  card.append(header, score, metrics, time, reasons, action);
   return card;
+}
+
+function definitionItem(labelText, valueText) {
+  const wrapper = document.createElement("div");
+  const label = document.createElement("dt");
+  label.textContent = labelText;
+  const value = document.createElement("dd");
+  value.textContent = valueText;
+  wrapper.append(label, value);
+  return wrapper;
 }
 
 function metric(labelText, valueText) {
@@ -580,6 +810,21 @@ function updateControls() {
   elements.messageInput.disabled = store.busy || !canSend;
   elements.sendButton.disabled = store.busy || !canSend;
   elements.resetButton.disabled = store.busy;
+  elements.resetButton.title = store.session?.dispatch
+    ? "建立新諮詢"
+    : "重新開始";
+  elements.resetButton.setAttribute(
+    "aria-label",
+    elements.resetButton.title,
+  );
+  elements.confirmDispatch.disabled =
+    store.busy ||
+    !Boolean(store.selectedProviderId) ||
+    !Boolean(store.session?.can_dispatch);
+  elements.cancelDispatch.disabled = store.busy;
+  document.querySelectorAll("[data-provider-select]").forEach((button) => {
+    button.disabled = store.busy;
+  });
 
   const submitButton =
     elements.consultationForm.querySelector('button[type="submit"]');

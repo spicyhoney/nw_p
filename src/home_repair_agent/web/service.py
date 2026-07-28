@@ -10,6 +10,12 @@ from uuid import uuid4
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.models import ConversationSession, ToolTraceEntry
 from home_repair_agent.agent.ports import ToolClient
+from home_repair_agent.backend.case_models import (
+    CaseSubmissionCommand,
+    ConsumerCaseView,
+    SyntheticContact,
+)
+from home_repair_agent.backend.case_services import CaseWorkflowService
 from home_repair_agent.backend.models import (
     ConsultationForm,
     FormTopic,
@@ -22,6 +28,7 @@ from home_repair_agent.backend.models import (
 from home_repair_agent.web.models import (
     AnswerValue,
     ChatMessageView,
+    DispatchRequest,
     FormSubmitRequest,
     ProgressStepView,
     ProviderView,
@@ -100,25 +107,31 @@ class _SessionRecord:
 
 
 class WebSessionService:
-    """Application service for the read-only consumer web workflow."""
+    """Application service for consumer consultation, matching and dispatch."""
 
     def __init__(
         self,
         *,
         runner: AgentRunner,
         tool_client: ToolClient,
+        case_workflow: CaseWorkflowService,
         provider: ProviderView,
         now: Callable[[], datetime],
         max_sessions: int = 200,
     ) -> None:
         self._runner = runner
         self._tool_client = tool_client
+        self._case_workflow = case_workflow
         self._provider = provider
         self._now = now
         self._max_sessions = max_sessions
         self._sessions: dict[str, _SessionRecord] = {}
         self._sessions_lock = asyncio.Lock()
         self._tool_client_lock = asyncio.Lock()
+
+    @property
+    def case_workflow(self) -> CaseWorkflowService:
+        return self._case_workflow
 
     async def create_session(self) -> SessionView:
         async with self._sessions_lock:
@@ -130,12 +143,12 @@ class WebSessionService:
             session_id = str(uuid4())
             record = self._new_record(session_id)
             self._sessions[session_id] = record
-        return self._to_view(record)
+        return await self._to_view(record)
 
     async def get_session(self, session_id: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
-            return self._to_view(record)
+            return await self._to_view(record)
 
     async def send_message(self, session_id: str, user_text: str) -> SessionView:
         record = await self._get_record(session_id)
@@ -163,7 +176,7 @@ class WebSessionService:
                 record.state = "error"
             else:
                 record.state = self._derive_state(record)
-            return self._to_view(record)
+            return await self._to_view(record)
 
     async def submit_form(
         self,
@@ -264,11 +277,79 @@ class WebSessionService:
                     )
                 )
                 record.state = "no_candidates"
-            return self._to_view(record)
+            return await self._to_view(record)
+
+    async def dispatch_case(
+        self,
+        session_id: str,
+        submission: DispatchRequest,
+    ) -> SessionView:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            if (
+                record.service is None
+                or record.location is None
+                or record.consultation_form is None
+                or record.preferred_start is None
+                or record.preferred_end is None
+                or not record.candidates
+            ):
+                raise WebSessionConflictError(
+                    code="MATCHING_NOT_READY",
+                    message="尚未完成媒合，不能建立派單案件。",
+                )
+            if record.preferred_start <= self._now():
+                raise WebSessionInputError(
+                    code="INVALID_TIME_WINDOW",
+                    message="原先確認的希望服務時間已過期，請重新選擇未來時段。",
+                    fields={"preferred_time": "請重新開始諮詢並選擇未來的服務時段。"},
+                )
+
+            candidate = next(
+                (item for item in record.candidates if item.provider_id == submission.provider_id),
+                None,
+            )
+            if candidate is None:
+                raise WebSessionInputError(
+                    code="INVALID_PROVIDER_SELECTION",
+                    message="選擇的廠商不在本次媒合候選中。",
+                    fields={"provider_id": "請選擇目前畫面提供的候選廠商。"},
+                )
+
+            await self._case_workflow.submit_case(
+                CaseSubmissionCommand(
+                    session_id=record.session_id,
+                    service_id=record.service.service_id,
+                    service_name=record.service.name,
+                    form_key=record.consultation_form.form_key,
+                    location_id=record.location.location_id,
+                    location_name=record.location.full_name,
+                    problem_summary=_problem_summary(record),
+                    answers=dict(record.answers),
+                    preferred_start=record.preferred_start,
+                    preferred_end=record.preferred_end,
+                    provider_id=candidate.provider_id,
+                    provider_name=candidate.display_name,
+                    availability_id=candidate.availability_id,
+                    contact=SyntheticContact(
+                        name="林小安",
+                        mobile="0912-345-678",
+                        address=f"{record.location.full_name} Demo 路 1 號",
+                    ),
+                    confirmed=submission.confirmed,
+                    idempotency_key=submission.idempotency_key,
+                )
+            )
+            return await self._to_view(record)
 
     async def reset_session(self, session_id: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            if await self._case_workflow.has_session_cases(session_id):
+                raise WebSessionConflictError(
+                    code="CASE_ALREADY_SUBMITTED",
+                    message="這次諮詢已有派單紀錄；請建立新諮詢，保留原案件稽核資料。",
+                )
             replacement = self._new_record(session_id)
             record.conversation = replacement.conversation
             record.messages = replacement.messages
@@ -281,7 +362,7 @@ class WebSessionService:
             record.preferred_end = None
             record.candidates.clear()
             record.tool_trace.clear()
-            return self._to_view(record)
+            return await self._to_view(record)
 
     async def _get_record(self, session_id: str) -> _SessionRecord:
         async with self._sessions_lock:
@@ -353,8 +434,37 @@ class WebSessionService:
             return "clarifying"
         return "collecting_need"
 
-    def _to_view(self, record: _SessionRecord) -> SessionView:
-        progress = _build_progress(record)
+    async def _to_view(self, record: _SessionRecord) -> SessionView:
+        dispatch = await self._case_workflow.get_consumer_case(record.session_id)
+        if dispatch is not None:
+            next_state: SessionState = {
+                "pending_provider": "dispatch_pending",
+                "accepted": "provider_accepted",
+                "rejected": "provider_rejected",
+            }[dispatch.status]
+            if record.state != next_state:
+                record.state = next_state
+                record.messages.append(
+                    self._message(
+                        "assistant",
+                        _dispatch_status_message(dispatch),
+                    )
+                )
+
+        rejected_provider_ids = (
+            set(dispatch.rejected_provider_ids) if dispatch is not None else set()
+        )
+        can_dispatch = bool(record.candidates) and (
+            dispatch is None
+            or (
+                dispatch.can_dispatch_again
+                and any(
+                    candidate.provider_id not in rejected_provider_ids
+                    for candidate in record.candidates
+                )
+            )
+        )
+        progress = _build_progress(record, dispatch=dispatch)
         return SessionView(
             session_id=record.session_id,
             state=record.state,
@@ -367,6 +477,7 @@ class WebSessionService:
             preferred_start=record.preferred_start,
             preferred_end=record.preferred_end,
             candidates=list(record.candidates),
+            dispatch=dispatch,
             progress=progress,
             tool_trace=list(record.tool_trace),
             can_send_message=record.consultation_form is None
@@ -375,6 +486,7 @@ class WebSessionService:
             and record.consultation_form is not None
             and record.service is not None
             and record.location is not None,
+            can_dispatch=can_dispatch,
         )
 
 
@@ -451,9 +563,13 @@ def _is_missing(value: AnswerValue | None) -> bool:
     return not value
 
 
-def _build_progress(record: _SessionRecord) -> list[ProgressStepView]:
+def _build_progress(
+    record: _SessionRecord,
+    *,
+    dispatch: ConsumerCaseView | None,
+) -> list[ProgressStepView]:
     form_complete = bool(record.answers)
-    matching_complete = record.state in {"matched", "no_candidates"}
+    matching_complete = bool(record.candidates) or record.state == "no_candidates"
     states = {
         "service": "complete" if record.service is not None else "active",
         "location": (
@@ -471,10 +587,58 @@ def _build_progress(record: _SessionRecord) -> list[ProgressStepView]:
             else "pending"
         ),
         "matching": "complete" if matching_complete else "pending",
+        "dispatch": (
+            "complete"
+            if dispatch is not None and dispatch.status == "accepted"
+            else "active"
+            if dispatch is not None
+            else "pending"
+        ),
     }
     return [
         ProgressStepView(key="service", label="服務項目", state=states["service"]),
         ProgressStepView(key="location", label="服務地點", state=states["location"]),
         ProgressStepView(key="form", label="諮詢內容", state=states["form"]),
         ProgressStepView(key="matching", label="師傅候選", state=states["matching"]),
+        ProgressStepView(key="dispatch", label="派單狀態", state=states["dispatch"]),
     ]
+
+
+def _problem_summary(record: _SessionRecord) -> str:
+    category_value = record.answers.get("issue_category")
+    category_label = ""
+    if isinstance(category_value, str) and record.consultation_form is not None:
+        topic = next(
+            (
+                item
+                for item in record.consultation_form.topics
+                if item.topic_key == "issue_category"
+            ),
+            None,
+        )
+        if topic is not None:
+            option = next(
+                (item for item in topic.options if item.value == category_value),
+                None,
+            )
+            category_label = option.label if option is not None else ""
+
+    notes = record.answers.get("notes")
+    notes_text = notes.strip() if isinstance(notes, str) else ""
+    parts = [
+        part
+        for part in (
+            category_label or record.service.name if record.service is not None else "",
+            notes_text,
+        )
+        if part
+    ]
+    return "｜".join(parts)[:1000] or "已完成結構化修繕諮詢"
+
+
+def _dispatch_status_message(dispatch: ConsumerCaseView) -> str:
+    if dispatch.status == "pending_provider":
+        return f"案件 {dispatch.case_id} 已派給 {dispatch.provider_name}，目前等待廠商回覆。"
+    if dispatch.status == "accepted":
+        return f"{dispatch.provider_name} 已接單，Demo 訂單編號為 {dispatch.order_no}。"
+    return f"{dispatch.provider_name} 已拒絕本次案件，你可以改選其他尚未拒絕的候選廠商。"

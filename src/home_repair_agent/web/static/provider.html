@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17201c" />
+    <meta
+      name="description"
+      content="修繕小隊長 synthetic 服務廠商工作台"
+    />
+    <title>廠商工作台｜修繕小隊長</title>
+    <link rel="stylesheet" href="/static/provider.css?v=0.2.2" />
+    <script src="/static/provider.js?v=0.2.2" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#case-detail">跳到案件詳情</a>
+
+    <header class="provider-header">
+      <a class="brand" href="/" aria-label="返回消費者端">
+        <span class="brand-mark" aria-hidden="true">修</span>
+        <span>
+          <strong>修繕小隊長</strong>
+          <small>廠商工作台</small>
+        </span>
+      </a>
+
+      <div class="identity-control">
+        <span class="source-badge">DEMO · SYNTHETIC</span>
+        <label for="provider-identity">廠商身分</label>
+        <select id="provider-identity" aria-label="選擇 Demo 廠商身分"></select>
+        <button
+          id="refresh-button"
+          class="icon-button"
+          type="button"
+          title="重新整理案件"
+          aria-label="重新整理案件"
+        >
+          ↻
+        </button>
+      </div>
+    </header>
+
+    <section class="queue-toolbar" aria-label="案件篩選">
+      <div>
+        <p class="eyebrow">案件佇列</p>
+        <h1>服務需求</h1>
+      </div>
+      <div class="status-tabs" role="group" aria-label="案件狀態">
+        <button type="button" data-status="" aria-pressed="true">
+          全部 <span id="count-all">0</span>
+        </button>
+        <button type="button" data-status="pending_provider" aria-pressed="false">
+          待回覆 <span id="count-pending">0</span>
+        </button>
+        <button type="button" data-status="accepted" aria-pressed="false">
+          已接單 <span id="count-accepted">0</span>
+        </button>
+        <button type="button" data-status="rejected" aria-pressed="false">
+          已拒絕 <span id="count-rejected">0</span>
+        </button>
+      </div>
+    </section>
+
+    <main class="provider-layout">
+      <aside class="case-queue" aria-labelledby="queue-title">
+        <header class="panel-heading">
+          <h2 id="queue-title">我的案件</h2>
+          <span id="last-updated">尚未更新</span>
+        </header>
+        <div id="case-list" class="case-list"></div>
+        <div id="case-empty" class="empty-state">
+          <strong>目前沒有案件</strong>
+          <p>消費者確認派單後，指定案件會出現在這裡。</p>
+          <a href="/">前往消費者端</a>
+        </div>
+      </aside>
+
+      <section
+        id="case-detail"
+        class="case-detail"
+        aria-labelledby="detail-title"
+      >
+        <div id="detail-empty" class="detail-empty">
+          <span aria-hidden="true">案</span>
+          <strong>選擇案件查看詳情</strong>
+          <p>案件內容與聯絡資料權限會依目前狀態顯示。</p>
+        </div>
+
+        <article id="detail-content" hidden>
+          <header class="detail-header">
+            <div>
+              <p id="detail-case-id" class="eyebrow"></p>
+              <h2 id="detail-title">案件詳情</h2>
+              <p id="detail-order" class="order-reference" hidden></p>
+            </div>
+            <span id="detail-status" class="status-label"></span>
+          </header>
+
+          <dl class="case-facts">
+            <div>
+              <dt>服務項目</dt>
+              <dd id="detail-service"></dd>
+            </div>
+            <div>
+              <dt>行政區</dt>
+              <dd id="detail-location"></dd>
+            </div>
+            <div>
+              <dt>希望時段</dt>
+              <dd id="detail-window"></dd>
+            </div>
+            <div>
+              <dt>資料來源</dt>
+              <dd>synthetic</dd>
+            </div>
+          </dl>
+
+          <section class="detail-section" aria-labelledby="summary-title">
+            <h3 id="summary-title">需求摘要</h3>
+            <p id="detail-summary" class="problem-summary"></p>
+            <dl id="answer-list" class="answer-list"></dl>
+          </section>
+
+          <section
+            id="contact-section"
+            class="contact-section"
+            aria-labelledby="contact-title"
+          >
+            <div>
+              <p class="eyebrow">權限控管</p>
+              <h3 id="contact-title">聯絡資料</h3>
+            </div>
+            <span id="contact-access" class="access-badge"></span>
+            <dl id="contact-list" class="contact-list"></dl>
+          </section>
+
+          <section class="detail-section" aria-labelledby="timeline-title">
+            <h3 id="timeline-title">案件紀錄</h3>
+            <ol id="audit-list" class="audit-list"></ol>
+          </section>
+
+          <footer id="decision-actions" class="decision-actions" hidden>
+            <button
+              class="secondary-button secondary-button--danger"
+              type="button"
+              data-decision="reject"
+            >
+              拒絕案件
+            </button>
+            <button
+              class="primary-button"
+              type="button"
+              data-decision="accept"
+            >
+              接受案件
+            </button>
+          </footer>
+        </article>
+      </section>
+    </main>
+
+    <dialog id="decision-dialog" class="decision-dialog">
+      <form method="dialog">
+        <p class="eyebrow">確認狀態變更</p>
+        <h2 id="decision-title">確認接單</h2>
+        <p id="decision-message"></p>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel" type="submit">
+            返回
+          </button>
+          <button id="confirm-decision" class="primary-button" type="button">
+            確認
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="app-alert" class="app-alert" role="alert" hidden></div>
+
+    <noscript>
+      <p class="noscript-message">此頁面需要 JavaScript 才能操作。</p>
+    </noscript>
+  </body>
+</html>

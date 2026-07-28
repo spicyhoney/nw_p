@@ -5,6 +5,13 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from home_repair_agent.backend.case_models import (
+    CaseStatus,
+    ConsumerCaseView,
+    DemoProviderIdentity,
+    ProviderCaseSummary,
+    ProviderDecision,
+)
 from home_repair_agent.backend.models import (
     ConsultationForm,
     ProviderMatchCandidate,
@@ -19,6 +26,9 @@ SessionState = Literal[
     "awaiting_form",
     "matched",
     "no_candidates",
+    "dispatch_pending",
+    "provider_accepted",
+    "provider_rejected",
     "error",
 ]
 ProgressState = Literal["pending", "active", "complete"]
@@ -80,6 +90,18 @@ class FormSubmitRequest(WebModel):
         return self
 
 
+class DispatchRequest(WebModel):
+    provider_id: str = Field(min_length=1, max_length=120)
+    confirmed: bool
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
+class ProviderDecisionRequest(WebModel):
+    decision: ProviderDecision
+    confirmed: bool
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
 class ChatMessageView(WebModel):
     message_id: str
     role: Literal["user", "assistant"]
@@ -100,7 +122,7 @@ class ToolTraceView(WebModel):
 
 
 class ProgressStepView(WebModel):
-    key: Literal["service", "location", "form", "matching"]
+    key: Literal["service", "location", "form", "matching", "dispatch"]
     label: str
     state: ProgressState
 
@@ -117,17 +139,30 @@ class SessionView(WebModel):
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
     candidates: list[ProviderMatchCandidate] = Field(default_factory=list)
+    dispatch: ConsumerCaseView | None = None
     progress: list[ProgressStepView] = Field(default_factory=list)
     tool_trace: list[ToolTraceView] = Field(default_factory=list)
     data_source: Literal["synthetic"] = "synthetic"
     can_send_message: bool
     can_submit_form: bool
+    can_dispatch: bool
 
 
 class HealthView(WebModel):
     ok: Literal[True] = True
     service: Literal["home-repair-web"] = "home-repair-web"
-    mode: Literal["read-only-demo"] = "read-only-demo"
+    mode: Literal["provider-workflow-demo"] = "provider-workflow-demo"
+
+
+class DemoProviderIdentityListView(WebModel):
+    identities: list[DemoProviderIdentity] = Field(default_factory=list)
+
+
+class ProviderCaseListView(WebModel):
+    provider_id: str
+    status: CaseStatus | None = None
+    count: int = Field(ge=0)
+    cases: list[ProviderCaseSummary] = Field(default_factory=list)
 
 
 class ApiErrorBody(WebModel):

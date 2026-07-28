@@ -1,22 +1,20 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-## 最新自動複審（2026-07-29）
+## 最新狀態（2026-07-29）
 
-- PR #10 reviewed head：`7ed7667a7512f800d1e746c789ccb32bad964dce`。
-- 結論：**Approve**；先前三項 finding 已修正，沒有新 finding。
-- GitHub：Ready for review、可自動合併、無衝突、0 checks／reviews／留言。
-- 本機：focused `30 passed, 3 subtests`；完整 `94 passed, 10 skipped, 43 subtests`。
-- 下一步：由人類決定是否合併 PR #10；Agent 不得自行 merge。
+- PR #10 reviewed head `7ed7667` 已通過複審並合併至 `main`。
+- merge commit：`7bca6565aaa8d27f72a0fc1bdde9045d753d0a44`。
+- 派單／廠商工作台 P0 現已是 `main` 的有效基線。
+- 本機：focused `30 passed, 3 subtests`；完整 `95 passed, 9 skipped, 43 subtests`。
 
 > 更新：2026-07-29　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先讀本檔，再按連結讀細節。
 
 ## 1. 目前狀態（active）
 
-- `main` review handoff：`2de2fcb`。
-- PR #10：`codex/provider-dashboard-p0`；reviewed baseline `547a3e2`。
-- 三項 review finding 與三份文件衝突均已在同一分支修正。
-- 派單／廠商工作台方向與五項規則未改；等待隊友複審，不可自行 merge。
+- `main` 已包含 PR #10 merge commit `7bca656`。
+- 三項 review finding 與三份文件衝突均已修正並通過複審。
+- 派單／廠商工作台方向與五項規則未改。
 - 尚未公開部署，也未連 PostgreSQL 寫入、正式登入、Bedrock 或 AWS。
 
 ## 2. PR #10 完成內容
@@ -115,18 +113,30 @@
 - 消費者：`http://127.0.0.1:8080/`；廠商：`http://127.0.0.1:8080/provider`。
 - 沒有自己的 token 時，不得宣稱正在跑 AI mode。
 
-## 8. 下一步
+## 8. AWS 持久化決策（不可遺漏）
 
-1. 推送同一分支並將 PR #10 改為 Ready for review，通知隊友複審。
-2. 複審通過後由人類決定是否 merge。
-3. 建立 PostgreSQL case／order／idempotency／audit migrations 與 repository。
-4. 將 Demo provider header 換成正式登入與 RBAC。
-5. 加入時段保留及同一師傅排程衝突控制。
-6. 把單一 HF live case 擴成固定案例矩陣；live 測試不進預設 CI。
-7. 取得 AWS 環境後再替換 adapters 並部署。
+- 目前 process-local repository 只供本機 Demo；暫時保留是團隊接受的取捨。
+- **不要**新增 JSON 檔案作為派工單持久化或開機載入方案。
+- 只把現有程式部署到 AWS 不會自動持久化；Lambda、ECS 或容器重啟仍會遺失 RAM 資料。
+- 未來 AWS 實作分支必須新增 PostgreSQL transaction repository，保存 case、order、
+  idempotency 與 audit，並建立 migrations、constraints 及整合測試。
+- 正式環境以連線設定切換到 RDS PostgreSQL／相容 Aurora PostgreSQL；FastAPI 與
+  `CaseWorkflowService` 契約維持不變，以 dependency injection 替換 repository。
+- SQL 只能放 repository；密碼、RDS URL、AWS 金鑰與 `.env` 不得提交。
 
-## 9. User decisions
+## 9. 下一步
+
+1. 先持續完成本機 Demo、消費者介面與高齡／無障礙體驗。
+2. 取得 AWS 環境後，部署前依第 8 節完成 PostgreSQL／RDS 持久化。
+3. 將 Demo provider header 換成正式登入與 RBAC。
+4. 加入時段保留及同一師傅排程衝突控制。
+5. 把單一 HF live case 擴成固定案例矩陣；live 測試不進預設 CI。
+6. 最後替換 Bedrock／AgentCore adapters 並公開部署。
+
+## 10. User decisions
 
 - **2026-07-28**：人工 HF Demo 良好；整合／Demo 以 HF AI mode 為基線。
 - **2026-07-29**：每 3 小時檢查 PR；技術 finding 可直接修正，以本檔交接。
+- **2026-07-29**：本機 Demo 可暫用 RAM；不做 JSON 持久化。AWS 分支部署前必須
+  實作 PostgreSQL repository 並接 RDS／相容 Aurora。
 - 是否合併 PR 永遠由人類決定；Agent 不得自行 merge。

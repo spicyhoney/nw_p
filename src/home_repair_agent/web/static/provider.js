@@ -74,15 +74,8 @@ function bindProviderEvents() {
   });
   providerElements.refresh.addEventListener("click", loadProviderCases);
   providerElements.statusTabs.forEach((button) => {
-    button.addEventListener("click", () => {
-      providerStore.filter = button.dataset.status;
-      providerElements.statusTabs.forEach((item) => {
-        item.setAttribute(
-          "aria-pressed",
-          String(item === button),
-        );
-      });
-      renderProviderCaseList();
+    button.addEventListener("click", async () => {
+      await updateProviderFilter(button);
     });
   });
   providerElements.decisionButtons.forEach((button) => {
@@ -146,18 +139,7 @@ async function loadProviderCases() {
       provider: true,
     });
     providerStore.cases = response.cases || [];
-    if (
-      providerStore.selectedCaseId &&
-      !providerStore.cases.some(
-        (item) => item.case_id === providerStore.selectedCaseId,
-      )
-    ) {
-      providerStore.selectedCaseId = "";
-      providerStore.detail = null;
-    }
-    if (!providerStore.selectedCaseId && providerStore.cases.length) {
-      providerStore.selectedCaseId = providerStore.cases[0].case_id;
-    }
+    reconcileProviderSelection();
     renderProviderCounts();
     renderProviderCaseList();
     providerElements.lastUpdated.textContent =
@@ -177,6 +159,58 @@ async function loadProviderCases() {
   } finally {
     setProviderBusy(false);
   }
+}
+
+async function updateProviderFilter(button) {
+  if (providerStore.busy) {
+    return;
+  }
+  providerStore.filter = button.dataset.status;
+  providerElements.statusTabs.forEach((item) => {
+    item.setAttribute(
+      "aria-pressed",
+      String(item === button),
+    );
+  });
+  const selectionChanged = reconcileProviderSelection();
+  renderProviderCaseList();
+  if (!selectionChanged) {
+    return;
+  }
+
+  renderProviderDetail();
+  if (!providerStore.selectedCaseId) {
+    return;
+  }
+  setProviderBusy(true);
+  try {
+    await loadProviderDetail(providerStore.selectedCaseId);
+  } catch (error) {
+    showProviderAlert(error.message);
+  } finally {
+    setProviderBusy(false);
+  }
+}
+
+function visibleProviderCases() {
+  return providerStore.filter
+    ? providerStore.cases.filter(
+        (item) => item.status === providerStore.filter,
+      )
+    : providerStore.cases;
+}
+
+function reconcileProviderSelection() {
+  const visible = visibleProviderCases();
+  const selectedIsVisible = visible.some(
+    (item) => item.case_id === providerStore.selectedCaseId,
+  );
+  if (selectedIsVisible) {
+    return false;
+  }
+  providerStore.selectedCaseId = visible[0]?.case_id || "";
+  providerStore.detail = null;
+  return true;
 }
 
 async function selectProviderCase(caseId) {
@@ -227,11 +261,7 @@ function renderProviderCounts() {
 }
 
 function renderProviderCaseList() {
-  const visible = providerStore.filter
-    ? providerStore.cases.filter(
-        (item) => item.status === providerStore.filter,
-      )
-    : providerStore.cases;
+  const visible = visibleProviderCases();
   providerElements.caseEmpty.hidden = visible.length > 0;
   providerElements.caseList.replaceChildren(
     ...visible.map((item) => {
@@ -444,6 +474,9 @@ function setProviderBusy(value) {
   providerElements.identity.disabled = value;
   providerElements.refresh.disabled = value;
   providerElements.confirmDecision.disabled = value;
+  providerElements.statusTabs.forEach((button) => {
+    button.disabled = value;
+  });
   providerElements.decisionButtons.forEach((button) => {
     button.disabled = value;
   });

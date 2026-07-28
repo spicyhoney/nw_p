@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-28
+最後更新：2026-07-29
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -11,12 +11,12 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | PostgreSQL schema / loader | 已驗證 | `sql/`、`data_cleaning/postgres.py` | [SQL README](../sql/README.md) | PostgreSQL 16.14 整合測試 |
 | Service Layer | 唯讀已驗證；派單／接單 P0 已驗證；媒合 SQL 待 PostgreSQL 複驗 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試；既有 PostgreSQL 整合測試 |
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
-| 寫入 Service / MCP Tools | Web P0 Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`web/demo_case_repository.py` | [派單／接單](provider-workflow.md) | 8 個 workflow tests；目前 process-local |
+| 寫入 Service / MCP Tools | Web P0 Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`web/demo_case_repository.py` | [派單／接單](provider-workflow.md) | 10 個 workflow tests；目前 process-local |
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
-| Hugging Face Model adapter | contract 已驗證；一次 synthetic live smoke 已記錄，固定 eval 待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩測試 |
+| Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證本機雙端 P1；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | 18 個 API tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證本機雙端 P1；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | 20 個 API tests、桌面／手機瀏覽器 E2E |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -60,13 +60,20 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-29：完成 PR #10 review 修正：建案時重驗 `+08:00`、未來時間、
+  先後順序與 12 小時上限；provider filter 與詳情同步；App factory 拒絕不同
+  workflow。Workflow + Web focused `30 passed, 3 subtests passed`；完整 suite
+  `95 passed, 9 skipped, 43 subtests passed`；Ruff／format 與 JavaScript syntax
+  通過。三份文件衝突已整合並保留 HF AI mode、live eval 與 token 安全設定。
 - 2026-07-28：新增消費者明確派單、process-local `CaseWorkflowService`、
   idempotency／audit、廠商工作台、指派隔離、pending 遮罩、接單後揭露、
-  拒絕改派與 synthetic Demo 訂單。Workflow + Web focused `26 passed`；完整
-  suite `91 passed, 9 skipped, 40 subtests passed`；Ruff／format、compileall、
-  JavaScript syntax 與 SVG XML 驗證通過。
-  實際瀏覽器在 `1280x720` 與 `390x844` 跑通雙端流程，無 console error
-  或水平 overflow；未指派廠商列表為空。
+  拒絕改派與 synthetic Demo 訂單。原始瀏覽器驗收在 `1280x720` 與
+  `390x844` 跑通雙端流程，無 console error 或水平 overflow。
+- 2026-07-27：真實 HF Web fixed case 使用
+  `Qwen/Qwen3-4B-Instruct-2507`、`provider=auto`；synthetic「台北市大安區
+  水龍頭漏水」於 7.41 秒依序完成三個查詢 Tool，取得水電修繕、臺北市大安區與
+  `demo_repair_form_v1`，並停在 `awaiting_form`。Windows PowerShell 臨時 harness
+  必須以 Unicode-safe 方式傳入中文；先前 `?` 輸入的結果不算模型 eval。
 - 2026-07-27：完成 Web P0 review：限制模型 Tool 白名單、拒絕重複媒合表單、
   reset 保留 session lock，並補前端必填驗證。Web focused 13 passed；完整
   suite 77 passed、10 skipped、40 subtests passed；受影響檔案 Ruff／format、

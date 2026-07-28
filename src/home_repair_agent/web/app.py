@@ -82,6 +82,15 @@ def create_app(
     case_workflow: CaseWorkflowService | None = None,
     reference_time: datetime | None = None,
 ) -> FastAPI:
+    if (
+        session_service is not None
+        and case_workflow is not None
+        and case_workflow is not session_service.case_workflow
+    ):
+        raise ValueError(
+            "session_service and case_workflow must share the same CaseWorkflowService"
+        )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         now = (
@@ -91,9 +100,7 @@ def create_app(
         )
         if session_service is not None:
             app.state.web_sessions = session_service
-            app.state.case_workflow = (
-                case_workflow if case_workflow is not None else session_service.case_workflow
-            )
+            app.state.case_workflow = session_service.case_workflow
             yield
             return
 

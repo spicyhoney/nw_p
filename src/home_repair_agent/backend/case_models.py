@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -15,6 +15,26 @@ AuditEventType = Literal[
     "provider_rejected",
     "contact_revealed",
 ]
+TAIPEI_UTC_OFFSET = timedelta(hours=8)
+MAX_CASE_TIME_WINDOW = timedelta(hours=12)
+
+
+def validate_case_time_window(
+    *,
+    preferred_start: datetime,
+    preferred_end: datetime,
+) -> None:
+    if (
+        preferred_start.tzinfo is None
+        or preferred_start.utcoffset() != TAIPEI_UTC_OFFSET
+        or preferred_end.tzinfo is None
+        or preferred_end.utcoffset() != TAIPEI_UTC_OFFSET
+    ):
+        raise ValueError("case time window must use Asia/Taipei +08:00")
+    if preferred_end <= preferred_start:
+        raise ValueError("case time window must end after it starts")
+    if preferred_end - preferred_start > MAX_CASE_TIME_WINDOW:
+        raise ValueError("case time window must not exceed 12 hours")
 
 
 class CaseModel(BaseModel):
@@ -49,15 +69,10 @@ class CaseSubmissionCommand(CaseModel):
 
     @model_validator(mode="after")
     def validate_window(self) -> Self:
-        if (
-            self.preferred_start.tzinfo is None
-            or self.preferred_start.utcoffset() is None
-            or self.preferred_end.tzinfo is None
-            or self.preferred_end.utcoffset() is None
-        ):
-            raise ValueError("case time window must include a timezone")
-        if self.preferred_end <= self.preferred_start:
-            raise ValueError("case time window must end after it starts")
+        validate_case_time_window(
+            preferred_start=self.preferred_start,
+            preferred_end=self.preferred_end,
+        )
         return self
 
 

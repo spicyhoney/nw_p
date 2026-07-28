@@ -1,6 +1,6 @@
 # 服務廠商派單／接單 P0
 
-最後更新：2026-07-28
+最後更新：2026-07-29
 
 ## 1. 做了什麼
 
@@ -145,11 +145,16 @@ python -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
 - 拒絕後只能改派其他候選。
 - 並行接受／拒絕只有一個成功。
 - 已有 audit 的 session 不能以 reset 擦除。
+- 表單完成後時段才過期時，派單仍會被拒絕。
+- Service Layer 會重驗 `+08:00`、時間順序與 12 小時上限。
+- App factory 不允許消費者與 provider API 使用不同 workflow。
+- filter 排除目前案件時，右側詳情與決策按鈕同步清除或切換。
 
-2026-07-28 實際聚焦結果：`26 passed`；完整 suite
-`91 passed, 9 skipped, 40 subtests passed`。瀏覽器另外完成消費者派單、廠商
+2026-07-29 實際聚焦結果：`30 passed, 3 subtests passed`；完整 suite
+`95 passed, 9 skipped, 43 subtests passed`。瀏覽器另外完成消費者派單、廠商
 接單、聯絡資料解鎖、消費者狀態回寫與未指派廠商隔離；桌機 `1280x720`、
-手機 `390x844` 無水平 overflow 或 console error。
+手機 `390x844` 無水平 overflow 或 console error。本輪另驗證 filter 切換不會
+保留被排除案件的詳情與操作按鈕。
 
 ## 8. 下一階段
 

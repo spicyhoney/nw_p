@@ -171,12 +171,13 @@ python -m uvicorn home_repair_agent.web.app:app --host 127.0.0.1 --port 8080
 python -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
 ```
 
-2026-07-28 聚焦結果：`26 passed`。除了原有 Web session、三個初始 Tools、動態
+2026-07-29 聚焦結果：`30 passed, 3 subtests passed`。除了原有 Web session、
+三個初始 Tools、動態
 表單、時區驗證、媒合與安全 headers，亦涵蓋確認、冪等、授權、遮罩、接單、
-拒絕、改派、audit 與並行狀態競爭。
+拒絕、改派、audit、並行狀態競爭、派單時段重新驗證與 workflow 注入一致性。
 
-完整 suite：`91 passed, 9 skipped, 40 subtests passed`。受影響 Python 檔案
-Ruff／format、compileall、兩支 JavaScript syntax check 與 SVG XML 驗證通過。
+完整 suite：`95 passed, 9 skipped, 43 subtests passed`。受影響 Python 檔案
+Ruff／format、兩支 JavaScript syntax check 與 diff check 通過。
 
 瀏覽器已在桌機 `1280x720` 與手機 `390x844` 驗證：
 
@@ -185,7 +186,15 @@ Ruff／format、compileall、兩支 JavaScript syntax check 與 SVG XML 驗證�
 - 廠商二次確認接單後才見完整 synthetic contact。
 - 消費者自動取得接單狀態與 `SYN-ORDER-*`。
 - 未指派廠商列表為空。
+- filter 排除目前案件時，右側詳情與決策按鈕不會殘留。
 - 無水平 overflow 或 console error。
+
+真實 HF Web fixed case 使用 `Qwen/Qwen3-4B-Instruct-2507`、
+`provider=auto`：synthetic「台北市大安區水龍頭漏水」於 7.41 秒依序完成
+`search_services`、`resolve_location`、`get_consultation_form`，正確停在
+`awaiting_form`，媒合 Tool 未提前暴露或執行。從 Windows PowerShell 以 pipe
+執行臨時 Python live harness 時，中文必須使用 UTF-8 檔案或 Unicode escape
+並驗證 code points，避免測試輸入被轉成 `?`。
 
 測試環境有 FastAPI `TestClient` 對未來 `httpx2` 遷移的第三方 deprecation
 warning；目前不影響功能或結果。
@@ -195,6 +204,8 @@ warning；目前不影響功能或結果。
 1. 實作 PostgreSQL `CaseWorkflowRepository`、migration、transaction 與整合測試。
 2. 加入正式 authentication／authorization 與廠商帳號。
 3. 實作時段保留與排程衝突控制。
-4. 用固定資料集做 Hugging Face／Bedrock tool-selection eval。
-5. 取得 AWS 環境後替換 model、tool transport 與 repository adapters。
-6. 只有外部 Agent 確實需要時，才設計受限寫入 MCP Tools。
+4. 將單一 HF live case 擴成正常、模糊服務、缺地點、多地點與 provider error
+   的固定矩陣；live 測試不放進預設 CI。
+5. 決定 Demo 部署環境並提供公開 HTTPS 網址。
+6. 取得 AWS 環境後替換 model、tool transport 與 repository adapters。
+7. 只有外部 Agent 確實需要時，才設計受限寫入 MCP Tools。

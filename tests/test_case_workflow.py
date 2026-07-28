@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import unittest
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
 from home_repair_agent.backend.case_models import (
@@ -33,6 +33,8 @@ class CaseWorkflowTests(unittest.IsolatedAsyncioTestCase):
         provider_id: str = "SYN-PROVIDER-001",
         confirmed: bool = True,
         idempotency_key: str = "submit:session-001:provider-001",
+        preferred_start: str = "2026-08-01T13:00:00+08:00",
+        preferred_end: str = "2026-08-01T17:00:00+08:00",
     ) -> CaseSubmissionCommand:
         return CaseSubmissionCommand(
             session_id="session-001",
@@ -46,8 +48,8 @@ class CaseWorkflowTests(unittest.IsolatedAsyncioTestCase):
                 "issue_category": "leaking_faucet",
                 "notes": "大約每分鐘滴水。",
             },
-            preferred_start="2026-08-01T13:00:00+08:00",
-            preferred_end="2026-08-01T17:00:00+08:00",
+            preferred_start=preferred_start,
+            preferred_end=preferred_end,
             provider_id=provider_id,
             provider_name=(
                 "安心修繕 A 組" if provider_id == "SYN-PROVIDER-001" else "城市水電 B 組"
@@ -69,6 +71,37 @@ class CaseWorkflowTests(unittest.IsolatedAsyncioTestCase):
             await self.service.submit_case(self.submission(confirmed=False))
 
         self.assertEqual("CONFIRMATION_REQUIRED", context.exception.code)
+
+    async def test_submission_rejects_window_expired_after_matching(self) -> None:
+        command = self.submission()
+        self.now = datetime(2026, 8, 1, 13, 30, tzinfo=TAIPEI_TIMEZONE)
+
+        with self.assertRaises(CaseWorkflowInputError) as context:
+            await self.service.submit_case(command)
+
+        self.assertEqual("INVALID_TIME_WINDOW", context.exception.code)
+        self.assertIsNone(await self.service.get_consumer_case("session-001"))
+
+    async def test_submission_rechecks_the_complete_time_window_policy(self) -> None:
+        valid = self.submission()
+        invalid_commands = {
+            "timezone": valid.model_copy(
+                update={
+                    "preferred_start": valid.preferred_start.astimezone(UTC),
+                    "preferred_end": valid.preferred_end.astimezone(UTC),
+                }
+            ),
+            "ordering": valid.model_copy(update={"preferred_end": valid.preferred_start}),
+            "duration": valid.model_copy(
+                update={"preferred_end": valid.preferred_start + timedelta(hours=13)}
+            ),
+        }
+
+        for label, command in invalid_commands.items():
+            with self.subTest(label=label):
+                with self.assertRaises(CaseWorkflowInputError) as context:
+                    await self.service.submit_case(command)
+                self.assertEqual("INVALID_TIME_WINDOW", context.exception.code)
 
     async def test_submission_is_idempotent_for_the_same_payload(self) -> None:
         first = await self.service.submit_case(self.submission())

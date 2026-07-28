@@ -298,6 +298,12 @@ class WebSessionService:
                     code="MATCHING_NOT_READY",
                     message="尚未完成媒合，不能建立派單案件。",
                 )
+            if record.preferred_start <= self._now():
+                raise WebSessionInputError(
+                    code="INVALID_TIME_WINDOW",
+                    message="原先確認的希望服務時間已過期，請重新選擇未來時段。",
+                    fields={"preferred_time": "請重新開始諮詢並選擇未來的服務時段。"},
+                )
 
             candidate = next(
                 (item for item in record.candidates if item.provider_id == submission.provider_id),

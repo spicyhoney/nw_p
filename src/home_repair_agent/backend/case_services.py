@@ -20,6 +20,7 @@ from home_repair_agent.backend.case_models import (
     ProviderContactView,
     ProviderDecisionCommand,
     WorkflowCase,
+    validate_case_time_window,
 )
 from home_repair_agent.backend.case_ports import CaseWorkflowRepository
 
@@ -96,6 +97,8 @@ class CaseWorkflowService:
             if existing is not None:
                 return self._consumer_view(existing)
 
+            created_at = self._now()
+            _validate_submission_window(command, now=created_at)
             previous_cases = self._repository.list_cases_for_session(command.session_id)
             active = next(
                 (case for case in previous_cases if case.status in ACTIVE_CASE_STATUSES),
@@ -115,7 +118,6 @@ class CaseWorkflowService:
                     message="這位廠商已拒絕此案件，不能再次派送同一份需求。",
                 )
 
-            created_at = self._now()
             case_id = f"SYN-CASE-{uuid4().hex[:12].upper()}"
             case = WorkflowCase(
                 case_id=case_id,
@@ -374,6 +376,32 @@ def _require_confirmation(value: bool, *, operation: str) -> None:
             code="CONFIRMATION_REQUIRED",
             message=f"{operation}需要使用者明確確認。",
             fields={"confirmed": "請先確認本次操作。"},
+        )
+
+
+def _validate_submission_window(
+    command: CaseSubmissionCommand,
+    *,
+    now: datetime,
+) -> None:
+    try:
+        validate_case_time_window(
+            preferred_start=command.preferred_start,
+            preferred_end=command.preferred_end,
+        )
+    except ValueError as error:
+        raise CaseWorkflowInputError(
+            code="INVALID_TIME_WINDOW",
+            message=str(error),
+            fields={"preferred_time": "請重新選擇有效的服務時段。"},
+        ) from error
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise RuntimeError("CaseWorkflowService now() must return an aware datetime")
+    if command.preferred_start <= now:
+        raise CaseWorkflowInputError(
+            code="INVALID_TIME_WINDOW",
+            message="希望服務時間已過期，請重新選擇未來的服務時段。",
+            fields={"preferred_time": "請重新選擇未來的服務時段。"},
         )
 
 

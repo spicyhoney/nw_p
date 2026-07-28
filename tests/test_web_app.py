@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -350,6 +350,40 @@ class WebAppTests(unittest.TestCase):
             "complete",
             next(step["state"] for step in first.json()["progress"] if step["key"] == "matching"),
         )
+
+    def test_dispatch_rejects_a_window_that_expired_after_matching(self) -> None:
+        matched = self.prepare_match()
+        self.client.app.state.web_sessions._now = lambda: datetime(
+            2026,
+            8,
+            1,
+            13,
+            30,
+            tzinfo=TAIPEI_TIMEZONE,
+        )
+
+        response = self.client.post(
+            f"/api/sessions/{matched['session_id']}/dispatch",
+            json=self.dispatch_payload(),
+        )
+        session = self.client.get(
+            f"/api/sessions/{matched['session_id']}",
+        ).json()
+
+        self.assertEqual(422, response.status_code)
+        self.assertEqual("INVALID_TIME_WINDOW", response.json()["error"]["code"])
+        self.assertEqual("matched", session["state"])
+        self.assertIsNone(session["dispatch"])
+
+    def test_factory_rejects_mismatched_case_workflow_injection(self) -> None:
+        session_service = Mock()
+        session_service.case_workflow = object()
+
+        with self.assertRaisesRegex(ValueError, "same CaseWorkflowService"):
+            create_app(
+                session_service=session_service,
+                case_workflow=object(),
+            )
 
     def test_assigned_provider_accepts_and_consumer_sees_order_status(self) -> None:
         matched = self.prepare_match()

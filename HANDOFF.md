@@ -118,7 +118,7 @@
 - 目前 process-local repository 只供本機 Demo；暫時保留是團隊接受的取捨。
 - **不要**新增 JSON 檔案作為派工單持久化或開機載入方案。
 - 只把現有程式部署到 AWS 不會自動持久化；Lambda、ECS 或容器重啟仍會遺失 RAM 資料。
-- 未來 AWS 實作分支必須新增 PostgreSQL transaction repository，保存 case、order、
+- 下一階段先在本機實作 PostgreSQL transaction repository，保存 case、order、
   idempotency 與 audit，並建立 migrations、constraints 及整合測試。
 - 正式環境以連線設定切換到 RDS PostgreSQL／相容 Aurora PostgreSQL；FastAPI 與
   `CaseWorkflowService` 契約維持不變，以 dependency injection 替換 repository。
@@ -126,17 +126,19 @@
 
 ## 9. 下一步
 
-1. 先持續完成本機 Demo、消費者介面與高齡／無障礙體驗。
-2. 取得 AWS 環境後，部署前依第 8 節完成 PostgreSQL／RDS 持久化。
-3. 將 Demo provider header 換成正式登入與 RBAC。
-4. 加入時段保留及同一師傅排程衝突控制。
-5. 把單一 HF live case 擴成固定案例矩陣；live 測試不進預設 CI。
-6. 最後替換 Bedrock／AgentCore adapters 並公開部署。
+1. 現在先完成 PostgreSQL case workflow repository、migration 與整合測試。
+2. 保留 process-local repository 作為本機快速 Demo 的顯式選項。
+3. 再完成消費者介面與高齡／無障礙體驗。
+4. 取得 AWS 環境後建立 RDS，套用相同 migration 並切換連線設定。
+5. 將 Demo provider header 換成正式登入與 RBAC。
+6. 加入時段保留及同一師傅排程衝突控制。
+7. 把單一 HF live case 擴成固定案例矩陣；live 測試不進預設 CI。
+8. 最後替換 Bedrock／AgentCore adapters 並公開部署。
 
 ## 10. User decisions
 
 - **2026-07-28**：人工 HF Demo 良好；整合／Demo 以 HF AI mode 為基線。
 - **2026-07-29**：每 3 小時檢查 PR；技術 finding 可直接修正，以本檔交接。
-- **2026-07-29**：本機 Demo 可暫用 RAM；不做 JSON 持久化。AWS 分支部署前必須
-  實作 PostgreSQL repository 並接 RDS／相容 Aurora。
+- **2026-07-29**：本機 Demo 可暫用 RAM；不做 JSON 持久化。PostgreSQL
+  repository 現在先實作，RDS／相容 Aurora 等取得 AWS 環境後再連接。
 - 是否合併 PR 永遠由人類決定；Agent 不得自行 merge。

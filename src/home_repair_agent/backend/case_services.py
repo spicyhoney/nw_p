@@ -4,7 +4,8 @@ import asyncio
 import hashlib
 import json
 import re
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import uuid4
 
@@ -22,7 +23,10 @@ from home_repair_agent.backend.case_models import (
     WorkflowCase,
     validate_case_time_window,
 )
-from home_repair_agent.backend.case_ports import CaseWorkflowRepository
+from home_repair_agent.backend.case_ports import (
+    CaseRepositoryConflictError,
+    CaseWorkflowRepository,
+)
 
 IDEMPOTENCY_KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$")
 ACTIVE_CASE_STATUSES = frozenset({"pending_provider", "accepted"})
@@ -88,7 +92,8 @@ class CaseWorkflowService:
             ),
         )
 
-        async with self._lock:
+        async with self._lock, self._transaction():
+            self._repository.lock_idempotency_key(key)
             existing = self._idempotent_case(
                 key=key,
                 operation="submit_case",
@@ -99,6 +104,7 @@ class CaseWorkflowService:
 
             created_at = self._now()
             _validate_submission_window(command, now=created_at)
+            self._repository.lock_session(command.session_id)
             previous_cases = self._repository.list_cases_for_session(command.session_id)
             active = next(
                 (case for case in previous_cases if case.status in ACTIVE_CASE_STATUSES),
@@ -160,14 +166,14 @@ class CaseWorkflowService:
             return self._consumer_view(case)
 
     async def get_consumer_case(self, session_id: str) -> ConsumerCaseView | None:
-        async with self._lock:
+        async with self._lock, self._transaction():
             cases = self._repository.list_cases_for_session(session_id)
             if not cases:
                 return None
             return self._consumer_view(_latest_case(cases), all_cases=cases)
 
     async def has_session_cases(self, session_id: str) -> bool:
-        async with self._lock:
+        async with self._lock, self._transaction():
             return bool(self._repository.list_cases_for_session(session_id))
 
     async def list_provider_cases(
@@ -176,7 +182,7 @@ class CaseWorkflowService:
         provider_id: str,
         status: CaseStatus | None = None,
     ) -> list[ProviderCaseSummary]:
-        async with self._lock:
+        async with self._lock, self._transaction():
             cases = self._repository.list_cases_for_provider(provider_id)
             if status is not None:
                 cases = [case for case in cases if case.status == status]
@@ -189,7 +195,7 @@ class CaseWorkflowService:
         provider_id: str,
         case_id: str,
     ) -> ProviderCaseDetail:
-        async with self._lock:
+        async with self._lock, self._transaction():
             case = self._authorized_case(provider_id=provider_id, case_id=case_id)
             return self._provider_detail(case)
 
@@ -208,7 +214,8 @@ class CaseWorkflowService:
             ),
         )
 
-        async with self._lock:
+        async with self._lock, self._transaction():
+            self._repository.lock_idempotency_key(key)
             existing = self._idempotent_case(
                 key=key,
                 operation=operation,
@@ -222,6 +229,7 @@ class CaseWorkflowService:
             case = self._authorized_case(
                 provider_id=command.provider_id,
                 case_id=command.case_id,
+                for_update=True,
             )
             if case.status != "pending_provider":
                 raise CaseWorkflowConflictError(
@@ -275,8 +283,25 @@ class CaseWorkflowService:
             )
             return self._provider_detail(case)
 
-    def _authorized_case(self, *, provider_id: str, case_id: str) -> WorkflowCase:
-        case = self._repository.get_case(case_id)
+    @asynccontextmanager
+    async def _transaction(self) -> AsyncIterator[None]:
+        try:
+            async with self._repository.transaction():
+                yield
+        except CaseRepositoryConflictError as error:
+            raise CaseWorkflowConflictError(
+                code=error.code,
+                message=error.message,
+            ) from error
+
+    def _authorized_case(
+        self,
+        *,
+        provider_id: str,
+        case_id: str,
+        for_update: bool = False,
+    ) -> WorkflowCase:
+        case = self._repository.get_case(case_id, for_update=for_update)
         if case is None or case.provider_id != provider_id:
             raise CaseWorkflowNotFoundError()
         return case

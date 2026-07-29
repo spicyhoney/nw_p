@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from home_repair_agent.backend.case_models import (
     IdempotencyRecord,
     WorkflowCase,
@@ -13,7 +16,23 @@ class DemoCaseWorkflowRepository:
         self._cases: dict[str, WorkflowCase] = {}
         self._idempotency: dict[str, IdempotencyRecord] = {}
 
-    def get_case(self, case_id: str) -> WorkflowCase | None:
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator[None]:
+        yield
+
+    def lock_idempotency_key(self, key: str) -> None:
+        del key
+
+    def lock_session(self, session_id: str) -> None:
+        del session_id
+
+    def get_case(
+        self,
+        case_id: str,
+        *,
+        for_update: bool = False,
+    ) -> WorkflowCase | None:
+        del for_update
         case = self._cases.get(case_id)
         return case.model_copy(deep=True) if case is not None else None
 

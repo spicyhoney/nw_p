@@ -27,6 +27,7 @@ from home_repair_agent.backend.case_models import (
     ProviderCaseDetail,
     ProviderDecisionCommand,
 )
+from home_repair_agent.backend.case_ports import CaseWorkflowRepository
 from home_repair_agent.backend.case_services import (
     CaseWorkflowConflictError,
     CaseWorkflowError,
@@ -76,6 +77,22 @@ DEMO_PROVIDER_IDS = frozenset(identity.provider_id for identity in DEMO_PROVIDER
 DemoProviderHeader = Annotated[str, Header(alias="X-Demo-Provider-Id")]
 
 
+def _resolve_case_repository() -> CaseWorkflowRepository:
+    repository_key = os.getenv("WEB_CASE_REPOSITORY", "memory").strip().lower()
+    if repository_key == "memory":
+        return DemoCaseWorkflowRepository()
+    if repository_key == "postgres":
+        database_url = os.getenv("DATABASE_URL", "").strip()
+        if not database_url:
+            raise RuntimeError("WEB_CASE_REPOSITORY=postgres requires a non-empty DATABASE_URL")
+        from home_repair_agent.backend.postgres_case_repository import (
+            PostgresCaseWorkflowRepository,
+        )
+
+        return PostgresCaseWorkflowRepository(database_url)
+    raise RuntimeError("WEB_CASE_REPOSITORY must be one of: memory, postgres")
+
+
 def create_app(
     *,
     session_service: WebSessionService | None = None,
@@ -114,7 +131,7 @@ def create_app(
             case_workflow
             if case_workflow is not None
             else CaseWorkflowService(
-                DemoCaseWorkflowRepository(),
+                _resolve_case_repository(),
                 now=now,
             )
         )

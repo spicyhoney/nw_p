@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
+import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 try:
     import psycopg
@@ -47,6 +50,65 @@ EXPECTED_AGENT_VIEW_COUNTS = {
     "agent.service_order": 1,
 }
 
+# The unusable consultation snapshot is quarantined as a unit, including these
+# seven rows that do not have their own error entry in the quality summary.
+PORTABLE_QUARANTINE_RECORDS = (
+    ("pms_topic_county_district_relation", "9:103:01:002"),
+    ("pms_topic_option", "128"),
+    ("pms_topic_option", "129"),
+    ("pms_topic_option", "130"),
+    ("pms_topic_option", "87"),
+    ("pms_topic_option", "88"),
+    ("pms_topic_option", "92"),
+)
+
+
+def _portable_quarantine_index(quality_summary: dict[str, Any]) -> dict[str, Any]:
+    issues = quality_summary["issues"]
+    error_keys = {
+        (str(issue["source_table"]), str(issue["source_record_id"]))
+        for issue in issues
+        if issue["severity"] == "error"
+    }
+    issue_codes_by_key = {
+        key: sorted(
+            {
+                str(issue["issue_code"])
+                for issue in issues
+                if (
+                    str(issue["source_table"]),
+                    str(issue["source_record_id"]),
+                )
+                == key
+            }
+        )
+        for key in error_keys
+    }
+    for key in PORTABLE_QUARANTINE_RECORDS:
+        issue_codes_by_key[key] = ["UNUSABLE_TEST_CONSULTATION_SNAPSHOT"]
+
+    records = [
+        {
+            "source_table": source_table,
+            "source_record_id": source_record_id,
+            "issue_codes": issue_codes,
+            "raw_preserved_in": (
+                "order_record範例資料.json"
+                if source_table == "mms_order_record"
+                else "諮詢單相關範例資料.json"
+            ),
+            "raw_payload_included": False,
+        }
+        for (source_table, source_record_id), issue_codes in sorted(issue_codes_by_key.items())
+    ]
+    expected_count = int(quality_summary["quarantine_records"])
+    if len(records) != expected_count:
+        raise AssertionError(
+            f"Portable quarantine fixture has {len(records)} records; "
+            f"quality summary expects {expected_count}."
+        )
+    return {"records": records}
+
 
 @unittest.skipUnless(
     DATABASE_URL and psycopg,
@@ -55,41 +117,29 @@ EXPECTED_AGENT_VIEW_COUNTS = {
 class PostgreSQLIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        cls._temporary_outputs = tempfile.TemporaryDirectory(
+            prefix="nw_p_postgres_test_",
+        )
+        cls.addClassCleanup(cls._temporary_outputs.cleanup)
+        quality_summary_path = PROJECT_ROOT / "data" / "processed" / "data_quality_summary.json"
+        quality_summary = json.loads(quality_summary_path.read_text(encoding="utf-8"))
+        quarantine_path = Path(cls._temporary_outputs.name) / "quarantine_index.json"
+        quarantine_path.write_text(
+            json.dumps(
+                _portable_quarantine_index(quality_summary),
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         cls.output_paths = {
-            "service_catalog": (
-                PROJECT_ROOT / "data" / "processed" / "core_service_catalog.json"
-            ),
-            "locations": (
-                PROJECT_ROOT / "data" / "processed" / "core_locations.json"
-            ),
-            "repair_form": (
-                PROJECT_ROOT / "data" / "processed" / "curated_repair_form.json"
-            ),
-            "demo_seed": (
-                PROJECT_ROOT / "data" / "processed" / "demo_seed.json"
-            ),
-            "source_mappings": (
-                PROJECT_ROOT / "data" / "processed" / "source_mappings.json"
-            ),
-            "quality_summary": (
-                PROJECT_ROOT
-                / "data"
-                / "processed"
-                / "data_quality_summary.json"
-            ),
-            "historical_orders": (
-                PROJECT_ROOT
-                / "data"
-                / "processed"
-                / "_local_historical_orders_redacted.json"
-            ),
-            "quarantine": (
-                PROJECT_ROOT
-                / "data"
-                / "quarantine"
-                / "_local_quarantine_index.json"
-            ),
-            "report": PROJECT_ROOT / "reports" / "data_quality.md",
+            "service_catalog": (PROJECT_ROOT / "data" / "processed" / "core_service_catalog.json"),
+            "locations": (PROJECT_ROOT / "data" / "processed" / "core_locations.json"),
+            "repair_form": (PROJECT_ROOT / "data" / "processed" / "curated_repair_form.json"),
+            "demo_seed": (PROJECT_ROOT / "data" / "processed" / "demo_seed.json"),
+            "source_mappings": (PROJECT_ROOT / "data" / "processed" / "source_mappings.json"),
+            "quality_summary": quality_summary_path,
+            "quarantine": quarantine_path,
         }
         cls.loaded_counts = load_pipeline_outputs(
             database_url=DATABASE_URL,
@@ -151,9 +201,7 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
 
     def test_database_comments_are_queryable(self) -> None:
         self.assertTrue(
-            self._scalar(
-                "SELECT obj_description('core.service'::regclass, 'pg_class')"
-            )
+            self._scalar("SELECT obj_description('core.service'::regclass, 'pg_class')")
         )
         self.assertTrue(
             self._scalar(
@@ -310,10 +358,7 @@ class PostgreSQLIntegrationTests(unittest.TestCase):
             [candidate.provider_id for candidate in daan_matches.candidates],
         )
         self.assertTrue(
-            all(
-                candidate.source_type == "synthetic"
-                for candidate in daan_matches.candidates
-            )
+            all(candidate.source_type == "synthetic" for candidate in daan_matches.candidates)
         )
         self.assertEqual(0, banqiao_matches.count)
         self.assertEqual([], banqiao_matches.candidates)

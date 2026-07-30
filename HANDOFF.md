@@ -68,6 +68,8 @@
 - PR、`main` push 會自動跑；`workflow_dispatch` 可由 Actions 頁面手動重跑。
 - CI 啟動固定 PostgreSQL `16.14-alpine` service，執行 Ruff、format、
   compileall 與含真實 PostgreSQL 的完整 pytest。
+- Loader test 由已提交的品質摘要建立暫時 metadata-only quarantine fixture；
+  不依賴本機 `_local_*` 檔案，也不提交 raw payload。
 - CI 只使用暫時測試資料庫，沒有正式憑證或 RDS 連線。
 
 ## 5. 驗證證據

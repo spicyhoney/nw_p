@@ -30,3 +30,5 @@
   完成 PostgreSQL 建案與讀回。
 - `.github/workflows/postgresql-ci.yml` 會以乾淨 PostgreSQL 16.14 service
   跑完整 suite，並支援 Actions 手動重跑。
+- PostgreSQL loader integration 會從已提交的品質摘要產生暫時、metadata-only
+  quarantine fixture；CI 不依賴被忽略的 `_local_*` 輸出，也不提交 raw payload。

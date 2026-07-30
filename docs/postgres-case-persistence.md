@@ -140,6 +140,9 @@ python -m pytest -q `
 GitHub Actions 的 `PostgreSQL CI` 在 PR、`main` push 時自動執行，也可在
 Actions 頁面用 `Run workflow` 手動重跑。每次 job 都建立新的
 `postgres:16.14-alpine` service，不依賴開發者電腦、Docker Desktop 或正式 RDS。
+Loader integration 會由已提交的品質摘要建立暫時、metadata-only quarantine
+fixture，因此乾淨 checkout 不需要被忽略的 `_local_*` 檔案，也不會把 raw
+主辦方資料加入 Git。
 
 ## 8. 下一階段
 

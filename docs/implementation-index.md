@@ -19,6 +19,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
+| 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環

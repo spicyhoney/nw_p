@@ -18,7 +18,6 @@
 
 | ID | 狀態 | 工作 | 負責人 | 依賴 | 完成條件 |
 |---|---|---|---|---|---|
-| DOC-001 | In progress | 建立專案地圖、文件分工與真實 backlog | Codex | 無 | 專案指南、架構圖、HANDOFF、索引及歷史文件標記經 review 後合併 |
 | DATA-001 | Todo | 讓 Web 讀取路徑可選 Demo 或 PostgreSQL repository | 未分配 | 已載入 clean schema 的測試 PostgreSQL | `WEB_READ_REPOSITORY=demo|postgres` 有明確 fail-fast 設定；Web 的服務、地點、表單與媒合能以相同契約查 PostgreSQL |
 | AI-001 | Todo | 建立固定 Hugging Face 評估矩陣 | 未分配 | 可用的 `HF_TOKEN`，live 測試不進預設 CI | 正常需求、模糊服務、缺地點、多地點及 provider error 都有可重跑結果與報告 |
 | MCP-001 | Todo | 驗證 Streamable HTTP MCP 的外部 Client 流程 | 未分配 | 本機 PostgreSQL 測試資料庫或受控測試 repository | 外部 Client 完成 `tools/list` 與四個唯讀 `tools/call`，留下命令、結果與錯誤案例 |

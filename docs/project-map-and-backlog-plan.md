@@ -1,8 +1,7 @@
 # 專案地圖與任務管理文件整理計畫
 
-> 狀態：已實作，待 Draft PR 與團隊 review
-> 基線：`main@82c910ae1d766399f499ddd8c8f5de7a42d456e6`  
-> 工作分支：`codex/project-map-and-backlog`  
+> 狀態：已實作並完成本機驗證；交付由 PR #14 管理。
+> 基線：`main@82c910ae1d766399f499ddd8c8f5de7a42d456e6`
 > 範圍：只整理文件與流程圖，不修改產品功能、不重跑完整 Demo、不自行合併。
 
 ## 目標
@@ -109,6 +108,5 @@ PostgreSQL repository、消費者／廠商雙端 UI 與無障礙基線不重做�
 
 ## 完成與交付
 
-- 所有改動留在 `codex/project-map-and-backlog`。
-- 建立 Draft PR，列出文件差異與實際驗證結果。
+- 文件差異、實際驗證結果與 review 修正由 PR #14 交付。
 - 由隊友檢查並決定是否合併；不由 Agent 自行 merge。

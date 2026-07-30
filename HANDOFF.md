@@ -5,9 +5,10 @@
 - PR #13 已由隊友合併，`main@82c910ae1d766399f499ddd8c8f5de7a42d456e6`。
 - 消費者人工 Checklist、高齡／無障礙 UI、雙端派單／接單與 async PostgreSQL
   repository 均已合併。
-- 目前分支為 `codex/project-map-and-backlog`，只整理專案地圖、文件分工與真實
-  backlog，不修改產品程式。
-- 本分支完成後建立 Draft PR，由人類決定是否合併；Agent 不得自行 merge。
+- PR #14 只整理專案地圖、文件分工與真實 backlog，不修改產品程式；DOC-001
+  已完成驗證並從待辦移除。
+- PR #14 的來源分支為 `codex/project-map-and-backlog`，由人類決定是否合併；
+  Agent 不得自行 merge。
 
 > 更新者：Codex
 > 規則：全文維持 150 行內；只描述現在。接手者先讀本檔，再按下列順序閱讀。
@@ -84,21 +85,16 @@ Web confirmed buttons -> CaseWorkflowService
 
 ## 6. 最近驗證基線
 
-PR #13 最終 head `bf80e58b705d51460ed58c6f578bd40d73f58b11`：
+PR #14 原 review head `ca9ff3c2387873c214e391561fbb90756b32190c`：
 
-- focused：`40 passed, 6 skipped, 3 subtests passed`。
-- 本機完整：`105 passed, 15 skipped, 43 subtests passed`。
-- PostgreSQL CI：完整 PostgreSQL 16.14 integration 通過。
-- Ruff／format、compileall、JavaScript syntax、Node checklist race regression 與
-  `git diff --check` 通過。
-- 桌機 `1280x720`、手機 `390x844` 通過雙端流程、鍵盤、44px 觸控目標、
-  reduced motion、AA 對比與無水平 overflow 驗收。
-- 反序 checklist PUT、Reset／新 session stale response 與 500 復原均已驗證。
+- review 後直接修正 `git diff --check` 尾端空白及 DOC-001 合併後狀態。
+- 本機完整：`104 passed, 16 skipped, 43 subtests passed`。
+- 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML 與 `1600x1080` 視覺
+  檢查、secret pattern scan 及 `git diff --check` 通過。
+- PR 原 head 的 GitHub PostgreSQL CI 為 1/1 通過；推送修正後須以最新 head
+  checks 為準。
 
-本文件整理分支不修改產品程式，因此不重跑完整 Demo／pytest；只驗證 Markdown
-連結、Mermaid、SVG、XML、過時宣稱與 `git diff --check`。
-
-## 7. 本分支工作
+## 7. PR #14 文件成果
 
 - 新增 `TASKS.md`，把未完成工作集中成可驗收 backlog。
 - 新增 `docs/project-guide.md`，用白話與 Mermaid 說明三條主要資料流。
@@ -110,10 +106,9 @@ PR #13 最終 head `bf80e58b705d51460ed58c6f578bd40d73f58b11`：
 
 ## 8. 下一步
 
-1. 完成 DOC-001 的文件一致性與視覺驗證。
-2. 建立 Draft PR，交由隊友檢查，不自行合併。
-3. 合併後從 `TASKS.md` 移除 DOC-001，將結果記入實作索引。
-4. 下一個產品工作從 `TASKS.md` 的 P0 任務中選取，不從歷史規劃文件猜測。
+1. 確認 PR #14 最新 head checks，再由人類決定是否合併。
+2. 合併後同步最新 `main`，從 `TASKS.md` 的 P0 任務中選下一項，不從歷史規劃
+   文件猜測。
 
 ## 9. 團隊決策
 

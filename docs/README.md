@@ -1,38 +1,58 @@
-# 賽前作戰文件包 — 2026 雲湧智生黑客松（統一資訊：AI 生活管家）
+# 專案文件入口
 
-產出日期：2026-07-08｜團隊：2 人（電機＋統計）｜決賽：8/1–8/2（30h）
+最後更新：2026-07-30
 
-## 閱讀順序
+本目錄同時保留「目前可執行系統」與「早期發想」。兩者不能混用：要回答現在
+做了什麼，請讀目前事實；歷史規劃只能用來理解決策背景。
 
-| 檔案 | 內容 | 先讀 |
+## 目前事實
+
+| 文件 | 用途 | 何時讀 |
 |---|---|---|
-| [implementation-index.md](implementation-index.md) | **目前真正完成的程式、位置、驗證與下一步** | ⭐ 兩人與 AI 先讀 |
-| [implementation-template.md](implementation-template.md) | 每次功能實作必填的說明模板 | 開發時 |
-| [final_recommendation.md](final_recommendation.md) | 總結：Top 3 題目、唯一技術棧、3 天行動清單 | ⭐ 兩人都先讀 |
-| [brainstorm.md](brainstorm.md) | 10 個候選方向＋SWOT＋評分＋排名 | ⭐ 拍板題目前必讀 |
-| [gantt_plan.md](gantt_plan.md) | 7/8→8/2 甘特圖＋30 小時決賽衝刺表 | ⭐ |
-| [technical_strategy.md](technical_strategy.md) | 3 套架構方案＋推薦（方案二混合雲） | 資工先讀 |
-| [architecture.md](architecture.md) | **目前實際架構、AWS 各服務角色、無憑證開發與完整呼叫流程** | 兩人都讀 |
-| [service-layer.md](service-layer.md) | 第一批三個只讀 Service、錯誤契約、真實查詢結果與下一步 | 兩人與 AI |
-| [data_plan.md](data_plan.md) | **官方資料集實際分析結果**＋資料表設計＋合成資料策略 | 統計先讀 |
-| [data-policy.md](data-policy.md) | B+ 正式、隔離、人工設定與模擬資料政策 | 兩人 |
-| [data-cleaning-runbook.md](data-cleaning-runbook.md) | 清洗規則、產出、重跑與 PostgreSQL 載入方式 | 統計主、資工跟 |
-| [data-dictionary.md](data-dictionary.md) | Schema、欄位、關聯圖與 Agent 查詢邊界 | 兩人與 AI |
-| [ai-data-review-checklist.md](ai-data-review-checklist.md) | 給隊友 AI 的檢查順序、風險清單與提示詞 | Review 時 |
-| [mcp_agent_plan.md](mcp_agent_plan.md) | 8 個 tool schema＋Agent 流程＋10 條 eval | 資工 |
-| [aws_learning_plan.md](aws_learning_plan.md) | AWS P0–P3 學習計畫＋7 天速成路線 | 資工主、統計跟 |
-| [tools_description.md](tools_description.md) | 54 個工具「學到什麼程度才夠」＋Top 10 優先序 | 查閱用 |
-| [prototype_test_plan.md](prototype_test_plan.md) | 20 個賽前 PoC 測試（含必做 Top 5） | 開工前 |
-| [presentation_strategy.md](presentation_strategy.md) | 10 頁簡報大綱＋demo 劇本＋18 題 Q&A | 7/28 起 |
+| [專案白話指南](project-guide.md) | 系統怎麼運作、三條主要流程、重要模組 | 第一次加入時先讀 |
+| [HANDOFF](../HANDOFF.md) | 目前 branch、最近驗證與不可破壞契約 | 每次接手先讀 |
+| [TASKS](../TASKS.md) | 尚未完成工作、優先級、依賴與驗收 | 選下一項工作 |
+| [實作索引](implementation-index.md) | 已完成程式、位置與驗證證據 | 確認是否真的做過 |
+| [系統與 AWS 架構](architecture.md) | 本機元件、AWS 角色與未來 adapter | 理解部署邊界 |
+| [派單／接單](provider-workflow.md) | 確認、遮罩、授權、冪等、audit 與狀態機 | 修改案件流程前 |
+| [資料政策](data-policy.md) | official、curated、synthetic 與 quarantine 規則 | 修改資料前 |
+| [資料字典](data-dictionary.md) | PostgreSQL schema、欄位與關聯 | 修改 repository 前 |
+| [資料清洗手冊](data-cleaning-runbook.md) | B+ pipeline、重跑與載入 | 修改清洗流程前 |
+| [AI 資料 Review 清單](ai-data-review-checklist.md) | 給隊友 AI 的資料檢查方式 | Review 資料改動 |
 
-## 三個關鍵事實（讀什麼都別忘）
+程式模組的詳細介面、執行與測試方式放在各自 README：
 
-1. **MCP Server 是命題必做項**（不是加分）：需自行設計 API 並包成標準 MCP Server 供 Lumine one 等外部 Agent 調用。
-2. **官方 schema 是 PostgreSQL**，PII 欄位內建 AES-256-GCM 密文＋hash 設計——照做就是切合度證據。
-3. **技術可行 25%＋商業 25%＋切合 20%＝70%**：穩、切題、講得出商業故事 > 炫技；創意只佔 15%，用場景與敘事補。
+- [Web](../src/home_repair_agent/web/README.md)
+- [Agent](../src/home_repair_agent/agent/README.md)
+- [MCP Server](../src/home_repair_agent/mcp_server/README.md)
+- [SQL](../sql/README.md)
+- [Tests](../tests/README.md)
 
-## 近期節點
+## 歷史規劃
 
-- **7/18 上午**：工作坊（EDIMUS/Ademus 規格公布）——帶 gantt_plan 第 2 節的問題清單去
-- **7/22**：疑似入選/重要節點——前一天要有可跑閉環＋粗 demo 影片
-- **8/1–8/2**：決賽 30 小時——最終交付以現場公告為準
+下列文件是 2026-07-08 起的探索、學習與提案草稿。它們可能包含已放棄方案、
+估算數字或尚未實作功能，不能作為目前程式契約或簡報成果宣稱。
+
+| 文件 | 歷史用途 |
+|---|---|
+| [最初建議](final_recommendation.md) | 題目、技術棧與早期三天行動清單 |
+| [Brainstorm](brainstorm.md) | 十個候選方向、SWOT 與排名 |
+| [早期資料策略](data_plan.md) | 初步資料檢查與後續 synthetic／分析構想；事實以品質報告為準 |
+| [Gantt](gantt_plan.md) | 早期日期與決賽時間分配 |
+| [技術策略](technical_strategy.md) | 三套候選架構方案 |
+| [MCP／Agent 規劃](mcp_agent_plan.md) | 早期八個候選 Tool 與 eval 構想 |
+| [AWS 學習計畫](aws_learning_plan.md) | 賽前學習順序 |
+| [工具說明](tools_description.md) | 工具盤點與早期優先級 |
+| [Prototype 測試計畫](prototype_test_plan.md) | 早期 PoC 風險清單 |
+| [簡報策略](presentation_strategy.md) | 簡報骨架與 Demo 構想，不等於已完成成果 |
+
+規劃文件若與程式、測試、HANDOFF 或實作索引衝突，以後四者為準。
+
+## 文件維護規則
+
+- 現在能執行的行為改變：更新 HANDOFF、實作索引與相關模組 README。
+- 未來任務的狀態、優先級或範圍改變：更新 `TASKS.md`。
+- 新功能必須說明做了什麼、刻意沒做什麼、資料流、安全邊界、測試與風險。
+- 不得把 planned、synthetic 或只在簡報構想中的項目寫成 verified。
+- 數字必須能指向品質報告、測試結果或明確資料來源。
+- 文件結構與完成標準見 [AGENTS.md](../AGENTS.md)。

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="diagram-title diagram-desc">
-  <title id="diagram-title">修繕小隊長目前架構與下一階段</title>
-  <desc id="diagram-desc">顯示已完成的消費者與廠商雙端 Demo，以及 LumineOne、FastAPI、Agent、MCP、Service Layer、Repository、PostgreSQL 與 AWS 的關係。</desc>
+  <title id="diagram-title">修繕小隊長目前架構與未完成邊界</title>
+  <desc id="diagram-desc">顯示已驗證的人工 Checklist、無障礙消費者與廠商雙端流程，以及 FastAPI、Agent、MCP、Service Layer、async Repository、PostgreSQL 和未完成 AWS 元件的關係。</desc>
   <defs>
     <marker id="arrow-current" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#007c6c"/>
@@ -24,6 +24,7 @@
       .box-small { fill: #52615b; font-size: 12px; font-weight: 600; }
       .badge-text { font-size: 11px; font-weight: 800; }
       .tool-text { fill: #17201c; font-size: 12px; font-weight: 700; }
+      .tool-text-small { fill: #17201c; font-size: 10px; font-weight: 700; }
       .flow-title { fill: #17201c; font-size: 15px; font-weight: 800; }
       .flow-text { fill: #34413c; font-size: 13px; font-weight: 600; }
       .current-line { fill: none; stroke: #007c6c; stroke-width: 3; marker-end: url(#arrow-current); }
@@ -37,7 +38,7 @@
   <rect x="0" y="0" width="1600" height="112" fill="#ffffff"/>
   <rect x="0" y="108" width="1600" height="4" fill="#c94f3b"/>
 
-  <text class="title" x="56" y="55">修繕小隊長｜目前架構與下一階段</text>
+  <text class="title" x="56" y="55">修繕小隊長｜目前架構與未完成邊界</text>
   <text class="subtitle" x="56" y="84">2026 雲湧智生黑客松 · AI 生活管家 · 居家水電修繕 MVP</text>
 
   <g id="legend" transform="translate(1118 28)">
@@ -46,7 +47,7 @@
     <text class="badge-text" x="31" y="21" fill="#00584d">目前已完成</text>
     <rect x="130" y="0" width="118" height="34" rx="6" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
     <circle cx="148" cy="17" r="5" fill="#b87900"/>
-    <text class="badge-text" x="161" y="21" fill="#714b00">下一階段</text>
+    <text class="badge-text" x="161" y="21" fill="#714b00">未完成／待辦</text>
     <rect x="260" y="0" width="150" height="34" rx="6" fill="#e9f2fa" stroke="#27669a" stroke-dasharray="5 4"/>
     <circle cx="278" cy="17" r="5" fill="#27669a"/>
     <text class="badge-text" x="291" y="21" fill="#1f527d">AWS／外部整合</text>
@@ -58,17 +59,17 @@
     <rect x="56" y="168" width="390" height="136" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <rect x="56" y="168" width="9" height="136" fill="#007c6c"/>
     <rect x="82" y="188" width="76" height="24" rx="4" fill="#e3f3ef"/>
-    <text class="badge-text" x="96" y="204" fill="#00584d">已完成 P1</text>
+    <text class="badge-text" x="96" y="204" fill="#00584d">已驗證</text>
     <text class="box-title" x="82" y="240">消費者 Web UI</text>
-    <text class="box-body" x="82" y="265">對話、表單、候選、確認派單、案件狀態</text>
-    <text class="box-small" x="82" y="288">查詢走 MCP · 寫入走受控 Service</text>
+    <text class="box-body" x="82" y="265">對話、人工 Checklist、表單、媒合與派單</text>
+    <text class="box-small" x="82" y="288">響應式／無障礙基線 · 查詢走 MCP</text>
   </g>
 
   <g id="provider-ui">
     <rect x="476" y="168" width="390" height="136" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <rect x="476" y="168" width="9" height="136" fill="#007c6c"/>
     <rect x="502" y="188" width="76" height="24" rx="4" fill="#e3f3ef"/>
-    <text class="badge-text" x="516" y="204" fill="#00584d">已完成 P0</text>
+    <text class="badge-text" x="516" y="204" fill="#00584d">已驗證</text>
     <text class="box-title" x="502" y="240">廠商後台 `/provider`</text>
     <text class="box-body" x="502" y="265">案件列表、需求摘要、接單／拒絕、服務狀態</text>
     <text class="box-small" x="502" y="288">pending 遮罩 · accepted 才揭露 synthetic 聯絡資料</text>
@@ -78,18 +79,18 @@
     <rect x="896" y="168" width="390" height="136" rx="6" fill="#f4f8fc" stroke="#27669a" stroke-width="2" stroke-dasharray="8 6"/>
     <rect x="896" y="168" width="9" height="136" fill="#27669a"/>
     <rect x="922" y="188" width="118" height="24" rx="4" fill="#e9f2fa"/>
-    <text class="badge-text" x="935" y="204" fill="#1f527d">取得環境後串接</text>
+    <text class="badge-text" x="935" y="204" fill="#1f527d">外部驗證待辦</text>
     <text class="box-title" x="922" y="240">LumineOne／外部 Agent</text>
-    <text class="box-body" x="922" y="265">透過標準 MCP endpoint 發現並呼叫工具</text>
-    <text class="box-small" x="922" y="288">不直接存取網頁或資料庫</text>
+    <text class="box-body" x="922" y="265">本機 `/mcp` 可啟動；Gateway 尚未串接</text>
+    <text class="box-small" x="922" y="288">需補外部 HTTP Client 證據</text>
   </g>
 
   <g id="scope-note">
     <rect x="1316" y="168" width="228" height="136" rx="6" fill="#17201c"/>
     <text x="1340" y="201" fill="#f6d47b" font-size="13" font-weight="800">CURRENT SCOPE</text>
-    <text x="1340" y="231" fill="#ffffff" font-size="16" font-weight="800">雙端閉環已完成</text>
+    <text x="1340" y="231" fill="#ffffff" font-size="16" font-weight="800">雙端閉環已驗證</text>
     <text x="1340" y="258" fill="#cbd6d2" font-size="13" font-weight="600">案件／訂單可選 PostgreSQL</text>
-    <text x="1340" y="279" fill="#cbd6d2" font-size="13" font-weight="600">Session／正式登入未完成</text>
+    <text x="1340" y="279" fill="#cbd6d2" font-size="13" font-weight="600">Session／登入／AWS 未完成</text>
   </g>
 
   <text class="section-label" x="56" y="354">應用與 Agent 協調層</text>
@@ -97,7 +98,7 @@
   <g id="fastapi">
     <rect x="56" y="374" width="330" height="144" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <rect x="78" y="394" width="76" height="24" rx="4" fill="#e3f3ef"/>
-    <text class="badge-text" x="92" y="410" fill="#00584d">已完成 P1</text>
+    <text class="badge-text" x="92" y="410" fill="#00584d">已驗證</text>
     <text class="box-title" x="78" y="449">FastAPI Web Adapter</text>
     <text class="box-body" x="78" y="475">Session、Form、Dispatch、Provider API</text>
     <text class="box-small" x="78" y="498">不放商業規則 · 不讓瀏覽器直接碰 MCP／DB</text>
@@ -152,15 +153,10 @@
     <rect x="406" y="712" width="166" height="38" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
     <text class="tool-text" x="421" y="736">get_consultation_form</text>
     <rect x="586" y="712" width="153" height="38" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
-    <text class="tool-text" x="601" y="736">match_providers</text>
+    <text class="tool-text-small" x="593" y="736">match_service_providers</text>
 
-    <rect x="78" y="770" width="150" height="38" rx="5" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
-    <text class="tool-text" x="93" y="794">create_case</text>
-    <rect x="242" y="770" width="150" height="38" rx="5" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
-    <text class="tool-text" x="257" y="794">confirm_dispatch</text>
-    <rect x="406" y="770" width="166" height="38" rx="5" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
-    <text class="tool-text" x="421" y="794">get_case_status</text>
-    <text class="box-small" x="595" y="795">規劃中的受限寫入／狀態工具</text>
+    <rect x="78" y="770" width="661" height="38" rx="5" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
+    <text class="tool-text" x="98" y="794">受限寫入 MCP Tool 尚未決定；只有外部 Agent 確有建案需求時才設計</text>
   </g>
 
   <g id="service-layer">
@@ -182,15 +178,15 @@
     <rect x="1208" y="590" width="336" height="242" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <text class="box-title" x="1231" y="627">Repository 與資料</text>
     <rect x="1231" y="651" width="290" height="50" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
-    <text class="tool-text" x="1248" y="674">PostgresReadRepository</text>
-    <text class="box-small" x="1248" y="692">SQL 僅存在 Repository</text>
+    <text class="tool-text-small" x="1248" y="674">DemoReadRepo（Web／CLI） · PG Repo（獨立 MCP）</text>
+    <text class="box-small" x="1248" y="692">Web 讀取切換待辦 · SQL 僅存在 Repository</text>
     <rect x="1231" y="715" width="290" height="50" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
     <text class="tool-text" x="1248" y="738">PostgreSQL 16 schema／loader</text>
     <text class="box-small" x="1248" y="756">B+ 清洗與 synthetic 來源標籤</text>
     <rect x="1231" y="779" width="156" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
     <text class="tool-text" x="1248" y="801">DemoCaseRepo</text>
-    <rect x="1401" y="779" width="120" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
-    <text class="tool-text" x="1418" y="801">Async PG Repo</text>
+    <rect x="1396" y="779" width="125" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
+    <text class="tool-text-small" x="1407" y="800">Async PG Case Repo</text>
   </g>
 
   <path class="current-line" d="M 973 518 L 973 550 L 408 550 L 408 590"/>
@@ -204,15 +200,15 @@
   <g id="current-flow">
     <rect x="56" y="902" width="720" height="124" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <text class="flow-title" x="80" y="932">目前：消費者與廠商雙端 Demo</text>
-    <text class="flow-text" x="80" y="962">需求 → 表單 → 候選 → 確認派單 → 廠商接單／拒絕 → Demo 訂單／狀態回寫</text>
+    <text class="flow-text" x="80" y="962">需求 → 人工核對 → 表單 → 媒合 → 確認派單 → 廠商決策 → 狀態回寫</text>
     <text class="box-small" x="80" y="990">案件／訂單／audit 可持久化；聊天 Session 仍在記憶體，模型不能直接寫入。</text>
   </g>
 
   <g id="next-flow">
     <rect x="808" y="902" width="736" height="124" rx="6" fill="#fffaf0" stroke="#b87900" stroke-width="2" stroke-dasharray="8 6"/>
-    <text class="flow-title" x="832" y="932">下一階段：正式身分與 AWS</text>
-    <text class="flow-text" x="832" y="962">RDS 連線 → 登入／RBAC → 時段保留 → Bedrock／AgentCore → AWS 部署</text>
-    <text class="box-small" x="832" y="990">外部 Agent 確有需求時才新增受限寫入 MCP Tools；不公開通用 SQL。</text>
+    <text class="flow-title" x="832" y="932">目前待辦：驗證與正式環境</text>
+    <text class="flow-text" x="832" y="962">固定 HF eval → HTTP MCP 驗證 → 部署手冊 → 登入／時段／個資政策</text>
+    <text class="box-small" x="832" y="990">Bedrock／AgentCore／RDS／IAM／CloudWatch 等待 AWS 環境；詳見 TASKS.md。</text>
   </g>
 
   <text x="56" y="1060" fill="#71807a" font-size="12" font-weight="600">資料邊界：官方資料／curated_config／synthetic 必須保留來源標籤；不明代碼不可猜測。</text>

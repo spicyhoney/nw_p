@@ -11,13 +11,15 @@ Agent：理解需求、確認行政區、取得諮詢表單、追問缺漏資訊
 
 ## 建議閱讀順序
 
-1. [README.md](README.md)：MVP、技術棧與目前狀態。
-2. [docs/implementation-index.md](docs/implementation-index.md)：哪些功能已完成、
+1. [docs/project-guide.md](docs/project-guide.md)：白話架構、三條流程與重要模組。
+2. [HANDOFF.md](HANDOFF.md)：目前 branch、最近驗證與不可破壞契約。
+3. [TASKS.md](TASKS.md)：尚未完成工作、優先級、依賴與驗收。
+4. [docs/implementation-index.md](docs/implementation-index.md)：哪些功能已完成、
    程式與驗證放在哪裡。
-3. [docs/architecture.md](docs/architecture.md)：本機、MCP、FastAPI 與 AWS 的關係。
-4. [docs/data-policy.md](docs/data-policy.md)：正式、隔離、人工設定與模擬資料規則。
-5. [docs/data-dictionary.md](docs/data-dictionary.md)：PostgreSQL schema 與欄位。
-6. 正在修改之模組內的 `README.md`。
+5. [docs/architecture.md](docs/architecture.md)：本機、MCP、FastAPI 與 AWS 的關係。
+6. [docs/data-policy.md](docs/data-policy.md)：正式、隔離、人工設定與模擬資料規則。
+7. [docs/data-dictionary.md](docs/data-dictionary.md)：PostgreSQL schema 與欄位。
+8. 正在修改之模組內的 `README.md`。
 
 ## 不可破壞的邊界
 
@@ -26,7 +28,7 @@ Agent：理解需求、確認行政區、取得諮詢表單、追問缺漏資訊
 - Agent 不得執行任意 SQL，只能呼叫範圍明確的 Service / MCP Tool。
 - MCP 與 FastAPI 只做 adapter；商業規則放在 Service Layer，SQL 放在 repository。
 - 個資、密碼、AWS 金鑰、資料庫密碼與 `.env` 不得提交。
-- 寫入操作必須有確認、冪等與稽核設計；目前三個 MCP Tools 全部唯讀。
+- 寫入操作必須有確認、冪等與稽核設計；目前四個 MCP Tools 全部唯讀。
 
 ## 每次實作的文件規則
 
@@ -42,6 +44,17 @@ Agent：理解需求、確認行政區、取得諮詢表單、追問缺漏資訊
 
 新文件可從 [實作文件模板](docs/implementation-template.md) 開始。若程式契約、
 環境變數或執行方式改變，要在同一個 commit 更新文件，不能只寫 PR 說明。
+
+文件各自有固定責任：
+
+- `HANDOFF.md` 只描述目前可接手狀態，維持 150 行內，不累積完整歷史。
+- `TASKS.md` 只保留未完成工作；任務狀態、優先級或範圍改變時同步更新。
+- `docs/implementation-index.md` 保存已完成且有驗證證據的實作紀錄。
+- 模組 README 保存詳細介面、資料流、安全邊界、執行與測試方式。
+
+功能完成並合併時，從 `TASKS.md` 移除該項，將結果寫入實作索引及相關 README。
+純歷史構想不得被當成目前程式契約；規劃與實作衝突時，以程式、測試、
+HANDOFF 與實作索引為準。
 
 ## 驗證原則
 

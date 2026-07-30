@@ -11,5 +11,7 @@ Explain which MVP workflow or data-quality problem this addresses.
 - [ ] Relevant tests pass
 - [ ] No secrets or personal data are included
 - [ ] Data-source labels are preserved
-- [ ] Documentation is updated when contracts change
-
+- [ ] `HANDOFF.md` reflects the current handoff state
+- [ ] `TASKS.md` status, priority, or scope is updated, or this PR has no task change
+- [ ] `docs/implementation-index.md` and the module README are updated when behavior or contracts change
+- [ ] Planned, synthetic, and verified behavior are clearly distinguished

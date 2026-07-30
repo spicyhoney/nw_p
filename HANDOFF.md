@@ -2,124 +2,118 @@
 
 ## 最新狀態（2026-07-30）
 
-- PR #11、#12 已合併；本階段從 `main@9177a880cad503bcf71e515c90a4f3672e46fc5a`
-  建立 `codex/consumer-accessibility-ui`。
-- 已完成消費者人工 Checklist、高齡／無障礙 UI 與桌機／手機驗收。
-- PR #13 checklist 反序競態修正已推送；implementation commit
-  `70b3c91ae823529cc5f670b4d0556dad7282b090` 的 PostgreSQL CI 已通過（56 秒）。
-  等待對方重新 review；人類決定是否合併，Agent 不得自行 merge。
+- PR #13 已由隊友合併，`main@82c910ae1d766399f499ddd8c8f5de7a42d456e6`。
+- 消費者人工 Checklist、高齡／無障礙 UI、雙端派單／接單與 async PostgreSQL
+  repository 均已合併。
+- PR #14 只整理專案地圖、文件分工與真實 backlog，不修改產品程式；DOC-001
+  已完成驗證並從待辦移除。
+- PR #14 的來源分支為 `codex/project-map-and-backlog`，由人類決定是否合併；
+  Agent 不得自行 merge。
 
-> 更新：2026-07-30　更新者：Codex
-> 規則：全文 ≤150 行；只描述現在；接手者先讀本檔，再按連結讀細節。
+> 更新者：Codex
+> 規則：全文維持 150 行內；只描述現在。接手者先讀本檔，再按下列順序閱讀。
 
-## 1. 本階段完成內容
+## 1. 接手閱讀順序
 
-- 三項人工 Checklist：服務需求、地點、諮詢內容與希望時段。
-- `suggested` 只表示系統已有資料可核對；`checked` 只能由使用者修改。
-- 新增 `PUT /api/sessions/{id}/checklist/{service|location|consultation}`。
-- checked 保存在 process-local Web session；rerender／GET polling 不會消失。
-- response sequence／session generation 阻擋 stale SessionView；最後 GET 對齊伺服器。
-- checklist 寫入／同步期間鎖住 Reset 與其他 session mutation。
-- 失敗會恢復 checkbox、解除 disabled，並把焦點放回原項目。
-- 未建案 Reset 清空同一 session；已有案件時前端建立全新 session。
-- 原生 checkbox 支援 click／Space，另補 Enter、label、checked 與 live feedback。
-- 放大文字／表單，互動有效目標約 `44x44px` 以上，高對比 focus、合理 Tab 順序。
-- error、loading、派單與廠商狀態使用 `alert/status` live region。
-- 狀態不只用顏色；支援 `prefers-reduced-motion`，色彩以 WCAG AA 為目標。
-- `1280x720` 與 `390x844` 不會水平捲動或遮住派單／返回按鈕。
+1. [專案白話指南](docs/project-guide.md)：系統流程、重要模組與常見邊界。
+2. [待辦清單](TASKS.md)：尚未完成的工作、優先級、依賴與驗收。
+3. [實作索引](docs/implementation-index.md)：已完成程式、位置與驗證。
+4. [系統與 AWS 架構](docs/architecture.md)：本機與未來雲端元件。
+5. 正在修改之模組 README 與 [資料政策](docs/data-policy.md)。
 
-詳細文件：
+## 2. 目前可執行流程
 
-- [消費者 Checklist 與無障礙 UI](docs/consumer-accessibility.md)
-- [Web README](src/home_repair_agent/web/README.md)
-- [派單／接單契約](docs/provider-workflow.md)
-- [實作索引](docs/implementation-index.md)
-- [系統與 AWS 架構](docs/architecture.md)
+消費者端 `/`：
 
-## 2. Checklist 邊界
+- 自然語言需求經 Agent 查詢服務、行政區與彈性諮詢單。
+- 人工 Checklist 只能由使用者 click／Space／Enter 修改；模型只能提出提示。
+- 使用者填表後執行 synthetic 媒合，選擇候選並明確確認才建立案件。
+- 消費者輪詢廠商狀態，accepted 後看到 `SYN-ORDER-*` Demo 訂單。
+
+廠商端 `/provider`：
+
+- 切換 synthetic Demo 廠商身分，只能查看指派給目前身分的案件。
+- pending 只見遮罩 contact；接受後才見完整 synthetic contact。
+- 廠商可接受或拒絕；拒絕後消費者可改派下一位候選。
+
+資料與 Agent：
 
 ```text
-User click / Space / Enter
-  -> idempotent PUT
-  -> WebSessionService session lock
-  -> process-local checked state
-  -> reject stale response -> final GET sync
-  -> SessionView -> rerender / polling
+Web／Terminal message -> AgentRunner -> Mock／Hugging Face ModelClient
+                     -> MCPToolClient -> 四個唯讀 MCP Tools
+                     -> ReadServiceLayer -> DemoReadRepository
 
-Agent / Tool structured result -> suggested=true
-Agent / Model / MCP -X-> checked
+Standalone MCP server -> ReadServiceLayer -> PostgresReadRepository
+                      -> PostgreSQL agent.* views
+
+Web confirmed buttons -> CaseWorkflowService
+                      -> memory／async PostgreSQL CaseWorkflowRepository
 ```
 
-- Checklist 是 UI 核對紀錄，不是案件事實，也不取代派單 `confirmed=true`。
-- Checklist 不進 memory／PostgreSQL CaseWorkflowRepository，程式重啟仍會消失。
-- Checklist API 沒有暴露為 MCP Tool；四個 MCP Tools 仍全部唯讀。
-
-## 3. 五項不可破壞規則
+## 3. 不可破壞契約
 
 1. 消費者明確確認後才建立案件。
-2. 只有指派廠商可讀案件。
-3. pending 廠商只能看到遮罩聯絡資料。
+2. 只有指派廠商可讀案件；未指派身分回 404。
+3. pending 只能看到遮罩 contact。
 4. accepted 才揭露完整 synthetic contact；rejected 永不揭露。
-5. 案件寫入具確認、冪等、稽核與合法原子狀態轉換。
+5. 寫入具確認、冪等、audit 與合法原子狀態轉換。
+6. Agent 不得執行任意 SQL；SQL 只在 repository。
+7. 四個 MCP Tools 維持唯讀，不得由模型修改 Checklist 或建立案件。
+8. 原始資料不可覆寫；不明代碼不可猜測；synthetic 必須保留來源標籤。
 
-本階段沒有修改 `CaseWorkflowService`、案件 repository、migration 或四個 MCP Tools。
+## 4. 目前持久化邊界
 
-## 4. 驗證證據
+- `WEB_CASE_REPOSITORY=memory|postgres`。
+- PostgreSQL 保存案件、訂單、idempotency 與 audit，使用 async I/O。
+- Web 與 Terminal Demo 的服務、地區、表單與媒合固定使用
+  `DemoReadRepository`；獨立 MCP Server 與 PostgreSQL 整合測試使用
+  `PostgresReadRepository`。Web 讀取 adapter 切換列為 P0，不要誤認
+  `WEB_CASE_REPOSITORY` 會切換這些唯讀資料。
+- Web 對話 session 與人工 Checklist 仍在 process memory，重啟後不會恢復。
+- PostgreSQL 模式不是 AWS RDS；目前只驗證相同 PostgreSQL 16.14 契約。
+- 廠商 header 是 Demo 身分模擬，不是 authentication 或 RBAC。
+- Demo contact 為 synthetic；正式個資加密、同意、期限及刪除政策尚未完成。
 
-- focused：`40 passed, 6 skipped, 3 subtests passed`。
-- 本機完整：`105 passed, 15 skipped, 43 subtests passed`。
-- 15 skipped 是本機未提供 `TEST_DATABASE_URL`；PR #13 implementation commit 的
-  `PostgreSQL CI / PostgreSQL 16 integration` 已通過（56 秒）。
-- 受影響檔案 Ruff／format、compileall、JavaScript syntax、diff check 通過。
-- 全 repo Ruff 仍有既有 data-cleaning 規則債；本 PR 沒有修改那些檔案。
+## 5. AI 與 MCP 狀態
 
-瀏覽器 Mock mode（無 HF token）：
+- 團隊 Demo 基線可選 Hugging Face；Mock 供離線開發與 CI。
+- 模型：`Qwen/Qwen3-4B-Instruct-2507`，`HF_PROVIDER=auto`。
+- 沒有 `HF_TOKEN` 時不得宣稱執行 AI mode，也不會靜默切回 Mock。
+- 真實 HF 目前只有單一固定 Web case；完整 eval 矩陣仍是 P0 待辦。
+- FastMCP 支援 stdio 與 Streamable HTTP `/mcp`，但外部 HTTP Client 驗證仍待做。
+- Bedrock、AgentCore Gateway／Runtime、RDS、IAM 與 CloudWatch 均未實作。
 
-- 桌機 `1280x720`、手機 `390x844` 均完成需求、Checklist、表單、媒合與派單。
-- pending 實測 `masked / 0912***678`；accepted 才為 `full / 0912-345-678`。
-- 兩尺寸均無水平 overflow；可見控制有效目標無小於 `44x44px`。
-- 手機確認區返回與派單按鈕皆完整可見；返回會關閉確認區。
-- focus 為 3px 高對比藍框；初始／媒合／確認畫面 AA 掃描零 finding。
-- reduced-motion 實測生效；桌機／手機 console 與 page error 均為 0。
-- 反序 PUT 最終 UI／API 一致；寫入時 Reset 鎖定；人為 500 後狀態與焦點復原。
+## 6. 最近驗證基線
 
-## 5. 現有雙端與持久化
+PR #14 原 review head `ca9ff3c2387873c214e391561fbb90756b32190c`：
 
-- 消費者完成 structured consultation、synthetic 媒合、選擇與明確確認派單。
-- `/provider` 可依 synthetic Demo 身分看指派案件並接受／拒絕。
-- pending 遮罩 contact；accepted 建立 `SYN-ORDER-*` 並揭露 synthetic contact。
-- `WEB_CASE_REPOSITORY=memory|postgres`；PostgreSQL repository 全程 async。
-- PostgreSQL 保存 case、order、idempotency 與 audit，不保存聊天／Checklist。
-- SQL 只在 repository；FastAPI 與 MCP 是 adapter，商業規則在 Service Layer。
+- review 後直接修正 `git diff --check` 尾端空白及 DOC-001 合併後狀態。
+- 本機完整：`104 passed, 16 skipped, 43 subtests passed`。
+- 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML 與 `1600x1080` 視覺
+  檢查、secret pattern scan 及 `git diff --check` 通過。
+- PR 原 head 的 GitHub PostgreSQL CI 為 1/1 通過；推送修正後須以最新 head
+  checks 為準。
 
-## 6. AI mode 與環境
+## 7. PR #14 文件成果
 
-- 團隊 Demo 基線仍為 Hugging Face；mock 供離線開發與 CI。
-- 模型：`Qwen/Qwen3-4B-Instruct-2507`；`HF_PROVIDER=auto`。
-- 沒有 `HF_TOKEN` 時不得宣稱正在跑 AI mode；本階段未跑 HF live。
-- 本機：消費者 `http://127.0.0.1:8080/`；廠商 `http://127.0.0.1:8080/provider`。
-- token、`DATABASE_URL`、AWS 金鑰、`.env` 與真實個資不得提交。
+- 新增 `TASKS.md`，把未完成工作集中成可驗收 backlog。
+- 新增 `docs/project-guide.md`，用白話與 Mermaid 說明三條主要資料流。
+- 更新目前架構 SVG、文件索引與 AI 閱讀順序。
+- 將舊構想文件標示為歷史規劃，不再冒充目前成果。
+- 修正簡報策略中的錯誤筆數及尚未實作宣稱。
 
-## 7. 尚未完成
-
-- Web session／Checklist 持久化、保存同意、保存期限與刪除機制。
-- 正式 authentication／authorization、廠商帳號、RBAC 與多租戶隔離。
-- 時段保留、排程衝突、付款、通知、照片、語音與正式個資處理。
-- RDS／AWS／Bedrock／AgentCore、公網 HTTPS 與正式監控。
-- 正式螢幕閱讀器人工測試；目前是語意、鍵盤、對比與瀏覽器驗收基線。
-- 固定 HF live eval 矩陣；live 測試不進預設 CI。
+詳細範圍見[文件整理計畫](docs/project-map-and-backlog-plan.md)。
 
 ## 8. 下一步
 
-1. 等待對方重新 review PR #13；目前分支不得自行 merge。
-2. 合併前確認 PR 最新 head 的 PostgreSQL CI 維持綠燈。
-3. 決定下一個本機功能：正式身分 adapter 或時段保留／衝突控制。
-4. 取得 AWS 環境後建立 RDS，套用現有 migration，切換 repository 連線。
-5. 最後替換 Bedrock／AgentCore adapters 並公開部署。
+1. 確認 PR #14 最新 head checks，再由人類決定是否合併。
+2. 合併後同步最新 `main`，從 `TASKS.md` 的 P0 任務中選下一項，不從歷史規劃
+   文件猜測。
 
-## 9. User decisions
+## 9. 團隊決策
 
-- 2026-07-28：整合／Demo 以 HF AI mode 為基線；mock 只供離線測試。
-- 2026-07-29：本機 Demo 可暫用 RAM；不做 JSON 持久化。
-- 2026-07-30：PR #11、#12 已合併；下一階段先完成消費者 Checklist 與無障礙 UI。
-- 是否合併 PR 永遠由人類決定；Agent 不得自行 merge。
+- 本機 Demo 可暫用 RAM；不做 JSON 案件持久化。
+- Hugging Face 是目前 hosted model 基線；Mock 只供離線測試。
+- Kiro 加分目前不投入，不建立回溯性紀錄。
+- 寫入 MCP Tool 只有在外部 Agent 確有完整建案需求時才設計。
+- 是否合併 PR 永遠由人類決定。

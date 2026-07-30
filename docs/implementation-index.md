@@ -16,8 +16,10 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async repository 切換；尚未公開部署 | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
+| Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
+| 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -34,8 +36,12 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-Agent／MCP 閉環目前仍只讀。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
-代碼、該服務要填哪些諮詢欄位」；Web P0 另提供記憶體 session、結構化
+Agent／MCP 閉環目前仍只讀。上圖是獨立 MCP Server 的預設組裝，以及
+`PostgresReadRepository` 整合測試所對應的路徑；外部 HTTP Client 尚未端到端
+驗證。Web app 與 Terminal Demo 的 in-process MCP Server 建立
+`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查
+PostgreSQL。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
+代碼、該服務要填哪些諮詢欄位」；Web P2 另提供記憶體 session、結構化
 `SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
 確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
 只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
@@ -135,5 +141,7 @@ hosted model 不得自行把相對日期換成具體年月日。
 ## 文件維護
 
 實作文件的必要段落與完成標準請見 [AGENTS.md](../AGENTS.md)；新增文件時可複製
-[實作文件模板](implementation-template.md)。規劃文件若與實作衝突，以程式測試、
-本索引及模組 README 記錄的目前契約為準。
+[實作文件模板](implementation-template.md)。第一次接手先讀
+[專案白話指南](project-guide.md)、[HANDOFF](../HANDOFF.md) 與
+[TASKS](../TASKS.md)。規劃文件若與實作衝突，以程式測試、HANDOFF、本索引及
+模組 README 記錄的目前契約為準。

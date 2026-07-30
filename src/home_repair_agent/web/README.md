@@ -33,6 +33,8 @@ Checklist 狀態、無障礙契約與桌機／手機證據請見
 
 - Web 對話 session 尚未寫進 PostgreSQL；程式重啟後聊天畫面不能直接恢復。
 - 人工 Checklist 與對話共用 process-local session，不是案件持久化資料。
+- Web 的服務、地區、表單與媒合目前固定使用 `DemoReadRepository`；
+  `WEB_CASE_REPOSITORY` 只切換案件 repository，不會切換這些唯讀資料。
 - PostgreSQL 模式尚未連接 RDS；目前只驗證相同的 PostgreSQL 16.14 契約。
 - 廠商下拉選單是身分模擬，不是登入或正式授權。
 - 尚未保留時段、付款、通知、照片、語音或使用真實個資。

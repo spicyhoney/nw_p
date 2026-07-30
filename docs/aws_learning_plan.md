@@ -1,5 +1,9 @@
 # aws_learning_plan.md — AWS 學習計畫（零經驗、只學必要的）
 
+> **歷史學習文件**：本頁保存早期學習路線，不表示 AWS 服務已部署。
+> 目前 AWS 邊界以 [architecture.md](architecture.md) 與 [TASKS](../TASKS.md)
+> 為準。
+
 > 原則：每學一個服務，都必須同時回答「Demo 用在哪」與「簡報架構圖講什麼」。學了但上不了架構圖＝浪費時間。
 > 目前沒有比賽 AWS 憑證時，先用 Mock Model、本機 MCP 與本機 PostgreSQL，不建立
 > 假金鑰。主辦方提供環境後，優先使用暫時憑證或 IAM Identity Center，確認指定
@@ -109,7 +113,7 @@
 
 | 服務 | 為什麼不學 | 簡報替代講法 |
 |---|---|---|
-| Bedrock Agents Classic / Knowledge Base | 本案已選自製 Agent＋AgentCore；不要再疊另一套編排框架 | 「目前以 AgentCore 託管自製 Agent，保留框架控制權」 |
+| Bedrock Agents Classic / Knowledge Base | 本案目標是自製 Agent＋AgentCore；不要再疊另一套編排框架 | 「取得 AWS 環境後，目標以 AgentCore 託管自製 Agent」 |
 | Step Functions | 學習成本高，本題狀態流用 DB 欄位即可表達 | 未來架構圖畫一個狀態機示意 |
 | Cognito | 真登入對 demo 無增益，設定繁瑣 | 「production 採 Cognito＋UniOpen SSO」 |
 | SageMaker | 本題零自訓模型需求 | 不提，提了反而被追問 |

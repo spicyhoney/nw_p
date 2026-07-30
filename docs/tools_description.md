@@ -1,5 +1,8 @@
 # tools_description.md — 工具學習與使用說明
 
+> **歷史學習文件**：本頁是早期工具盤點，不代表所有工具已採用或仍具相同優先級。
+> 目前技術棧看 [README](../README.md)，未完成工作看 [TASKS](../TASKS.md)。
+
 > 目的：回答「這次黑客松需要會到什麼程度才夠」，不是教到精通。
 > 求職價值標記：**DS**=資料科學家、**AIE**=AI Engineer、**Infra**=AI Infra、**BE**=Backend、**Cloud**=Cloud Engineer；◎=高價值、○=中等、△=低。
 > 優先級：P0=這次很可能必須會｜P1=非常建議會｜P2=有時間再學｜P3=可以先跳過。
@@ -323,7 +326,7 @@ Model Context Protocol：Anthropic 開源的「AI 工具接口標準」，讓任
 ### 需要學到什麼程度？
 - 30 分鐘：懂 tools/resources 概念、stdio vs HTTP transport
 - 2 小時：用 Python SDK（FastMCP）寫一個帶 2 個 tool 的 server，用 MCP Inspector 測通
-- 1 天：把本題 6–8 個 tools 全部包好、接上真 DB
+- 1 天：早期估計可包 6–8 個候選 tools；目前實際完成四個唯讀 tools
 - 不建議深入：sampling、roots、多 server 編排
 
 ### 最小實作任務
@@ -785,7 +788,8 @@ AES-256-GCM＝帶完整性驗證的對稱加密；hash＝單向摘要，加密�
 系統化驗證 AI 行為：固定測試語料＋預期輸出＋通過率。
 
 ### 和本次黑客松的關係
-「我們有 20 條分類測試案例、通過率 95%」是技術可行性 25% 裡最便宜的加分證據；也是統計系的主場（準確率表、混淆矩陣）。
+固定分類案例、實際通過率與錯誤分析會是很有價值的技術證據；目前尚未完成
+固定 HF eval，不能預先寫成 95%。
 
 ### 是否必要？ **必學（P0）**
 ### 最小實作任務

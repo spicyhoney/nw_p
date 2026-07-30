@@ -1,5 +1,9 @@
 # final_recommendation.md — 總結建議
 
+> **歷史規劃文件**：這是 2026-07-08 的題目與技術棧建議，不代表目前程式狀態。
+> 請以[專案白話指南](project-guide.md)、[實作索引](implementation-index.md)、
+> [HANDOFF](../HANDOFF.md)與[TASKS](../TASKS.md)為準。
+
 ## 1. 最推薦的 Top 3 題目
 
 | 排名 | 題目 | 為什麼 |
@@ -84,7 +88,7 @@ Bedrock Agents Classic 混為一談。
 - 寫 prompt：分類/slot filling/摘要/照片判斷的完整 system prompt＋few-shot
 - 產假資料：25 家廠商、50 句語料、100 筆諮詢單的生成腳本與批量產出
 - 設計 schema：自建表 DDL、feedback_content 組裝函式、加密工具函式
-- 寫 API spec：8 個 tool 的 OpenAPI/JSON Schema 定稿
+- 寫早期候選 API spec；目前實際契約是四個唯讀 MCP Tool
 - 寫 code 骨架：FastAPI 專案結構、MCP server、Streamlit 雙頁 app、docker-compose.yml
 - 寫 README、demo script 逐字稿、簡報每頁講稿
 - 產測試案例：eval 擴充到 50 句＋自動跑分腳本

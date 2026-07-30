@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import mimetypes
 import os
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -13,6 +15,10 @@ from fastapi import FastAPI, Header, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from mcp.shared.memory import create_connected_server_and_client_session
+
+if sys.platform == "win32":
+    # psycopg async connections require a selector-based loop on Windows.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from home_repair_agent.agent.demo import (
     TAIPEI_TIMEZONE,
@@ -27,6 +33,7 @@ from home_repair_agent.backend.case_models import (
     ProviderCaseDetail,
     ProviderDecisionCommand,
 )
+from home_repair_agent.backend.case_ports import CaseWorkflowRepository
 from home_repair_agent.backend.case_services import (
     CaseWorkflowConflictError,
     CaseWorkflowError,
@@ -76,6 +83,22 @@ DEMO_PROVIDER_IDS = frozenset(identity.provider_id for identity in DEMO_PROVIDER
 DemoProviderHeader = Annotated[str, Header(alias="X-Demo-Provider-Id")]
 
 
+def _resolve_case_repository() -> CaseWorkflowRepository:
+    repository_key = os.getenv("WEB_CASE_REPOSITORY", "memory").strip().lower()
+    if repository_key == "memory":
+        return DemoCaseWorkflowRepository()
+    if repository_key == "postgres":
+        database_url = os.getenv("DATABASE_URL", "").strip()
+        if not database_url:
+            raise RuntimeError("WEB_CASE_REPOSITORY=postgres requires a non-empty DATABASE_URL")
+        from home_repair_agent.backend.postgres_case_repository import (
+            PostgresCaseWorkflowRepository,
+        )
+
+        return PostgresCaseWorkflowRepository(database_url)
+    raise RuntimeError("WEB_CASE_REPOSITORY must be one of: memory, postgres")
+
+
 def create_app(
     *,
     session_service: WebSessionService | None = None,
@@ -114,7 +137,7 @@ def create_app(
             case_workflow
             if case_workflow is not None
             else CaseWorkflowService(
-                DemoCaseWorkflowRepository(),
+                _resolve_case_repository(),
                 now=now,
             )
         )
@@ -416,11 +439,16 @@ def _read_port(value: str) -> int:
     return port
 
 
+def _selector_loop_factory() -> asyncio.AbstractEventLoop:
+    return asyncio.SelectorEventLoop()
+
+
 def main() -> None:
     uvicorn.run(
         "home_repair_agent.web.app:app",
         host=os.getenv("WEB_HOST", "127.0.0.1"),
         port=_read_port(os.getenv("WEB_PORT", "8080")),
+        loop=_selector_loop_factory if sys.platform == "win32" else "auto",
         reload=False,
     )
 

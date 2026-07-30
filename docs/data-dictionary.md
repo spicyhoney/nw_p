@@ -183,6 +183,25 @@ erDiagram
 這條 synthetic 鏈是為了展示產品閉環，不能用來宣稱真實市場規模、師傅供給、
 媒合準確率或歷史營運成果。
 
+## Workflow
+
+`workflow` 保存消費者確認後的執行中業務狀態，不是 Agent 可任意查詢的知識庫。
+目前所有資料仍固定為 `source_type=synthetic`。
+
+| 資料表 | 用途 | 重要限制 |
+|---|---|---|
+| `workflow.service_case` | 通用派單案件與服務／表單／地點／廠商快照 | 同 session 最多一筆 active case |
+| `workflow.service_order` | 廠商接受後建立的訂單 | `case_id` unique，一案一單 |
+| `workflow.case_audit_event` | 派單、接受、拒絕與聯絡資料揭露 | `sequence_no` 保序，event／actor type 白名單 |
+| `workflow.idempotency_record` | 防止重複寫入並保存原案件結果 | key unique、SHA-256 fingerprint |
+
+`workflow.service_case` 不對 `core`／`demo` 設硬外鍵，因為 Web 可使用不同的
+已驗證 Read Repository；它會保存建立當下的識別碼與顯示文字快照。候選是否
+有效仍由 `WebSessionService` 與 `CaseWorkflowService` 在確認派單前驗證。
+
+完整 transaction、locking、設定與測試見
+[`postgres-case-persistence.md`](postgres-case-persistence.md)。
+
 ## Agent Views
 
 | View | Agent 用途 |
@@ -203,4 +222,5 @@ erDiagram
 - Service Layer 使用固定參數化查詢，不接受模型產生任意 SQL。
 - Agent 工具的資料庫帳號只授予所需 `agent` views 權限。
 - 建立案件或訂單前，仍需由 Service Layer 驗證服務、行政區、時段與狀態轉換。
+- 模型與唯讀 MCP Tools 不得直接存取 `workflow` schema。
 - `candidate_canonical_id`、`review`、`quarantined` 與歷史範例不得進入建立流程。

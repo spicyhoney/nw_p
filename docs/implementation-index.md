@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-29
+最後更新：2026-07-30
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -9,14 +9,15 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 |---|---|---|---|---|
 | B+ 資料清洗 | 已驗證 | `src/home_repair_agent/data_cleaning/` | [清洗手冊](data-cleaning-runbook.md) | Python 測試、品質報告 |
 | PostgreSQL schema / loader | 已驗證 | `sql/`、`data_cleaning/postgres.py` | [SQL README](../sql/README.md) | PostgreSQL 16.14 整合測試 |
-| Service Layer | 唯讀已驗證；派單／接單 P0 已驗證；媒合 SQL 待 PostgreSQL 複驗 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試；既有 PostgreSQL 整合測試 |
+| Service Layer | 唯讀、媒合、派單／接單與 async PostgreSQL 寫入均已驗證 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試與 PostgreSQL 16.14 整合測試 |
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
-| 寫入 Service / MCP Tools | Web P0 Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`web/demo_case_repository.py` | [派單／接單](provider-workflow.md) | 10 個 workflow tests；目前 process-local |
+| 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證本機雙端 P1；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | 20 個 API tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證本機雙端 P1 與 async repository 切換；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | API tests、桌面／手機瀏覽器 E2E |
+| PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
@@ -45,21 +46,35 @@ Web 另有一條不經 LLM 的受控寫入閉環：
 消費者確認派單
   -> FastAPI
   -> CaseWorkflowService
-  -> process-local CaseWorkflowRepository
+  -> memory 或 PostgreSQL CaseWorkflowRepository
+  -> transaction：case + order + idempotency + audit
   -> 指派廠商 pending 案件（遮罩 contact）
   -> 廠商確認接受／拒絕
   -> accepted 時建立 synthetic Demo 訂單並揭露 synthetic contact
   -> 消費者輪詢取得結果
 ```
 
-目前仍不能永久保存 session／案件／訂單，也不會真的保留師傅時段。廠商 header
-只是 Demo 身分模擬，不是正式登入；寫入尚未暴露為 MCP Tool。CLI 與 Web 可顯式
+PostgreSQL 模式以 async I/O 在程式重啟後重新讀取案件、訂單、idempotency 與 audit；
+Web session 仍不能恢復，也不會真的保留師傅時段。廠商 header 只是 Demo 身分
+模擬，不是正式登入；寫入尚未暴露為 MCP Tool。CLI 與 Web 可顯式
 切換到 Hugging Face hosted open model；沒有 `HF_TOKEN` 時會停止並提示，不會
 靜默切回 Mock。Demo synthetic 時段依啟動時間產生在下一個未來星期六；
 hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-30：PR #12 同步 `main@33f66fe`；案件 repository 契約、Service 與
+  memory／PostgreSQL adapters 全面 async，並以封鎖同步 `psycopg.connect`
+  的 regression test 驗證 Web 路徑。新增可由 PR、`main` push 或手動 dispatch
+  重跑的 PostgreSQL CI。無資料庫 focused `33 passed, 6 skipped, 3 subtests`；
+  原生 PostgreSQL 16.14 integration `15 passed`；完整 suite
+  `113 passed, 43 subtests passed`。
+- 2026-07-29：新增 `workflow` schema、PostgreSQL transaction repository、
+  migration runner 與 `memory|postgres` Web 設定。無資料庫 focused
+  `33 passed, 5 skipped, 3 subtests passed`；原生 PostgreSQL 16.14 新舊
+  integration `14 passed`，涵蓋重啟後讀回、rollback、資料庫 constraint、
+  持久化冪等與兩個獨立 worker 同時接受／拒絕。完整 suite（含測試資料庫）
+  `112 passed, 43 subtests passed`。
 - 2026-07-29：完成 PR #10 review 修正：建案時重驗 `+08:00`、未來時間、
   先後順序與 12 小時上限；provider filter 與詳情同步；App factory 拒絕不同
   workflow。Workflow + Web focused `30 passed, 3 subtests passed`；完整 suite

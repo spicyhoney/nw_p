@@ -1,6 +1,6 @@
 # 服務廠商派單／接單 P0
 
-最後更新：2026-07-29
+最後更新：2026-07-30
 
 ## 1. 做了什麼
 
@@ -21,12 +21,15 @@
 - `backend/case_ports.py`：寫入 repository 介面。
 - `backend/case_services.py`：確認、冪等、授權、狀態轉換與稽核規則。
 - `web/demo_case_repository.py`：process-local P0 repository。
+- `backend/postgres_case_repository.py`：可選的 PostgreSQL transaction repository。
+- `sql/migrations/002_case_workflow.sql`：案件、訂單、冪等與 audit schema。
 - `web/app.py`：消費者派單與廠商案件 HTTP API。
 - `web/static/provider.*`：廠商工作台。
 
 刻意沒做：
 
-- 沒有把案件、訂單或 audit log 寫進 PostgreSQL；重啟程式後會消失。
+- Web 對話 session 仍是 process-local；PostgreSQL 模式只恢復案件業務狀態。
+- 尚未建立或連接 AWS RDS。
 - 沒有建立寫入 MCP Tool；目前四個 MCP Tools 仍全部唯讀。
 - 沒有正式登入、JWT、Cognito、RBAC、廠商帳號或多租戶隔離。
 - 沒有真的保留師傅時段、付款、通知、照片或正式個資。
@@ -66,7 +69,8 @@ POST /api/sessions/{session_id}/dispatch
   -> FastAPI 驗證 DispatchRequest
   -> WebSessionService 確認 session 已完成媒合、候選存在
   -> CaseWorkflowService 驗證 confirmed 與 idempotency key
-  -> CaseWorkflowRepository 建立 pending_provider 案件與 audit
+  -> memory 或 PostgreSQL CaseWorkflowRepository
+  -> 同一 transaction 建立 pending_provider 案件、audit 與 idempotency
   -> ConsumerCaseView
   -> 消費者頁開始輪詢 session
 ```
@@ -121,8 +125,9 @@ GET /api/sessions/{session_id}
 - 列表只回遮罩資料；完整資料只在指派廠商已接受後的詳情 API 回傳。
 - 未授權廠商一律收到 404，不藉由 403 暴露案件是否存在。
 - FastAPI route 只做 adapter；狀態規則在 `CaseWorkflowService`。
-- P0 repository 不含 SQL。正式版要新增 PostgreSQL repository，再以 dependency
-  injection 替換，不把 SQL 放進 Service 或 route。
+- `WEB_CASE_REPOSITORY=memory|postgres` 以 dependency injection 切換；SQL
+  只在 PostgreSQL repository，不放進 Service 或 route。
+- PostgreSQL 模式保存 synthetic contact；pending 仍只能取得遮罩 view。
 - Agent 目前不能呼叫這些寫入 API；四個 MCP Tools 保持唯讀。
 - API response 使用 `Cache-Control: no-store`；前端以 `textContent` 呈現資料。
 
@@ -131,7 +136,10 @@ GET /api/sessions/{session_id}
 聚焦測試：
 
 ```powershell
-python -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
+python -m pytest -q `
+  tests/test_case_workflow.py `
+  tests/test_web_app.py `
+  tests/test_postgres_case_repository.py
 ```
 
 涵蓋：
@@ -150,8 +158,10 @@ python -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
 - App factory 不允許消費者與 provider API 使用不同 workflow。
 - filter 排除目前案件時，右側詳情與決策按鈕同步清除或切換。
 
-2026-07-29 實際聚焦結果：`30 passed, 3 subtests passed`；完整 suite
-`95 passed, 9 skipped, 43 subtests passed`。瀏覽器另外完成消費者派單、廠商
+2026-07-30 無資料庫聚焦結果：`33 passed, 6 skipped, 3 subtests passed`；
+真實 PostgreSQL 新舊 integration 合跑 `15 passed`，完整 suite（提供測試資料庫）
+`113 passed, 43 subtests passed`。PostgreSQL 案件路徑已全面 async，並由可手動
+重跑的 GitHub Actions PostgreSQL CI 驗證。瀏覽器另外完成消費者派單、廠商
 接單、聯絡資料解鎖、消費者狀態回寫與未指派廠商隔離；桌機 `1280x720`、
 手機 `390x844` 無水平 overflow 或 console error。本輪另驗證 filter 切換不會
 保留被排除案件的詳情與操作按鈕。
@@ -160,9 +170,8 @@ python -m pytest -q tests/test_case_workflow.py tests/test_web_app.py
 
 上 AWS 前仍需依序完成：
 
-1. 將 `CaseWorkflowRepository` 實作為 PostgreSQL transaction repository。
-2. 為案件、訂單、idempotency 與 audit 建立 migration、constraints 與整合測試。
-3. 將 `X-Demo-Provider-Id` 換成正式登入身分與角色授權。
-4. 加入時段保留與同一師傅排程衝突控制。
-5. 需要 Agent 或 LumineOne 寫入時，再設計少量受限 MCP Tools；不可直接公開通用 SQL。
-6. 最後才接 RDS、Bedrock／AgentCore、通知與公開部署。
+1. 將 Web session／Agent 記憶另行持久化並提供同意與刪除機制。
+2. 將 `X-Demo-Provider-Id` 換成正式登入身分與角色授權。
+3. 加入時段保留與同一師傅排程衝突控制。
+4. 需要 Agent 或 LumineOne 寫入時，再設計少量受限 MCP Tools；不可直接公開通用 SQL。
+5. 最後才接 RDS、Bedrock／AgentCore、通知與公開部署。

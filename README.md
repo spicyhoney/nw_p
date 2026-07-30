@@ -96,7 +96,8 @@ docs/             架構、計畫與競賽文件
 - [x] 完成 Hugging Face hosted open-model adapter 與顯式 CLI mode
 - [x] 完成本機 Web P1：消費者諮詢／派單、廠商接單／拒絕與狀態回寫
 - [x] 完成 process-local 案件／訂單 P0 Service：確認、冪等、授權與稽核
-- [ ] 將案件／訂單 workflow 持久化至 PostgreSQL，並加入正式登入
+- [x] 將案件／訂單／冪等／audit workflow 持久化至 PostgreSQL
+- [ ] 加入正式登入、角色授權與資料庫最小權限
 - [ ] 完成 Bedrock adapter
 - [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
 
@@ -176,8 +177,8 @@ provider 需要網路、會傳送對話與 Tool 資料，並可能受帳號額�
 
 ## 執行本機 Web Demo
 
-Web P1 不需要 PostgreSQL 或 AWS，預設使用 Mock Model、記憶體 synthetic
-repositories 與四個真實唯讀 MCP Tools：
+Web P1 不需要 PostgreSQL 或 AWS 即可啟動，預設使用 Mock Model、記憶體
+synthetic repositories 與四個真實唯讀 MCP Tools：
 
 ```powershell
 home-repair-web
@@ -202,11 +203,13 @@ home-repair-web
   -> 接單後建立 synthetic Demo 訂單並回寫消費者狀態
 ```
 
-Web session、Demo 案件、訂單、idempotency 與 audit 只存在目前 Python
-process，重新啟動後會消失，也不會真的保留時段。廠商下拉選單是 Demo 身分
-模擬，不是正式登入。API、狀態、安全邊界與測試證據請見
+設定 `WEB_CASE_REPOSITORY=postgres` 與 `DATABASE_URL` 後，案件、訂單、
+idempotency 與 audit 會寫入 PostgreSQL；預設 `memory` 模式仍會在重新啟動後
+消失。Web session 仍只存在目前 Python process，也不會真的保留時段。廠商
+下拉選單是 Demo 身分模擬，不是正式登入。API、狀態、安全邊界與測試證據請見
 [Web P1 實作說明](src/home_repair_agent/web/README.md)與
-[派單／接單 P0](docs/provider-workflow.md)。
+[派單／接單 P0](docs/provider-workflow.md)，PostgreSQL 寫入細節見
+[案件持久化](docs/postgres-case-persistence.md)。
 
 要用 Hugging Face hosted model 啟動時，先在目前 shell 設定 `HF_TOKEN`，
 再設定 `$env:WEB_MODEL_PROVIDER = "huggingface"`；未設定 token 會直接停止，

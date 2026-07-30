@@ -26,3 +26,9 @@
   contact、rejected 永不揭露。
 - 廠商接受／拒絕為原子狀態轉換，並行決策只有一個成功；所有結果保留 audit。
 - 拒絕後可改派其他未拒絕候選，已建立 audit 的 session 不得以 reset 擦除。
+- FastAPI 使用的案件 repository 為 async，封鎖同步 `psycopg.connect` 時仍可
+  完成 PostgreSQL 建案與讀回。
+- `.github/workflows/postgresql-ci.yml` 會以乾淨 PostgreSQL 16.14 service
+  跑完整 suite，並支援 Actions 手動重跑。
+- PostgreSQL loader integration 會從已提交的品質摘要產生暫時、metadata-only
+  quarantine fixture；CI 不依賴被忽略的 `_local_*` 輸出，也不提交 raw payload。

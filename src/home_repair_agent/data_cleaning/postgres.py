@@ -5,6 +5,35 @@ from pathlib import Path
 from typing import Any
 
 
+def apply_migrations(
+    *,
+    database_url: str,
+    project_root: Path,
+) -> list[str]:
+    """Apply every bundled SQL migration in filename order."""
+    try:
+        import psycopg
+    except ImportError as exc:
+        raise RuntimeError(
+            "PostgreSQL migrations require psycopg. "
+            "Install the data dependencies with: pip install -e .[data]"
+        ) from exc
+
+    with psycopg.connect(database_url) as connection, connection.cursor() as cursor:
+        return _apply_migrations(cursor, project_root=project_root)
+
+
+def _apply_migrations(cursor: Any, *, project_root: Path) -> list[str]:
+    migration_dir = project_root / "sql" / "migrations"
+    migration_paths = sorted(migration_dir.glob("*.sql"))
+    if not migration_paths:
+        raise RuntimeError(f"No SQL migrations found in {migration_dir}")
+
+    for migration_path in migration_paths:
+        cursor.execute(migration_path.read_text(encoding="utf-8"))
+    return [migration_path.name for migration_path in migration_paths]
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -43,8 +72,7 @@ def load_pipeline_outputs(
     with psycopg.connect(database_url) as connection:
         with connection.cursor() as cursor:
             if apply_migration:
-                migration = project_root / "sql" / "migrations" / "001_b_plus_schema.sql"
-                cursor.execute(migration.read_text(encoding="utf-8"))
+                _apply_migrations(cursor, project_root=project_root)
 
             counts["core.service_vendor"] = _execute_many(
                 cursor,
@@ -299,9 +327,7 @@ def load_pipeline_outputs(
             quarantine_rows = [
                 {
                     **row,
-                    "issue_codes_json": json.dumps(
-                        row.get("issue_codes", []), ensure_ascii=False
-                    ),
+                    "issue_codes_json": json.dumps(row.get("issue_codes", []), ensure_ascii=False),
                 }
                 for row in quarantine
             ]

@@ -88,8 +88,8 @@
     <rect x="1316" y="168" width="228" height="136" rx="6" fill="#17201c"/>
     <text x="1340" y="201" fill="#f6d47b" font-size="13" font-weight="800">CURRENT SCOPE</text>
     <text x="1340" y="231" fill="#ffffff" font-size="16" font-weight="800">雙端閉環已完成</text>
-    <text x="1340" y="258" fill="#cbd6d2" font-size="13" font-weight="600">案件／訂單為記憶體 Demo</text>
-    <text x="1340" y="279" fill="#cbd6d2" font-size="13" font-weight="600">尚未持久化／正式登入</text>
+    <text x="1340" y="258" fill="#cbd6d2" font-size="13" font-weight="600">案件／訂單可選 PostgreSQL</text>
+    <text x="1340" y="279" fill="#cbd6d2" font-size="13" font-weight="600">Session／正式登入未完成</text>
   </g>
 
   <text class="section-label" x="56" y="354">應用與 Agent 協調層</text>
@@ -189,8 +189,8 @@
     <text class="box-small" x="1248" y="756">B+ 清洗與 synthetic 來源標籤</text>
     <rect x="1231" y="779" width="156" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
     <text class="tool-text" x="1248" y="801">DemoCaseRepo</text>
-    <rect x="1401" y="779" width="120" height="34" rx="5" fill="#fff2cf" stroke="#b87900" stroke-dasharray="5 4"/>
-    <text class="tool-text" x="1418" y="801">PG Write</text>
+    <rect x="1401" y="779" width="120" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
+    <text class="tool-text" x="1418" y="801">Async PG Repo</text>
   </g>
 
   <path class="current-line" d="M 973 518 L 973 550 L 408 550 L 408 590"/>
@@ -205,16 +205,16 @@
     <rect x="56" y="902" width="720" height="124" rx="6" fill="#ffffff" stroke="#007c6c" stroke-width="2"/>
     <text class="flow-title" x="80" y="932">目前：消費者與廠商雙端 Demo</text>
     <text class="flow-text" x="80" y="962">需求 → 表單 → 候選 → 確認派單 → 廠商接單／拒絕 → Demo 訂單／狀態回寫</text>
-    <text class="box-small" x="80" y="990">Session、案件、訂單與 audit 僅在記憶體；模型不能觸發寫入或執行任意 SQL。</text>
+    <text class="box-small" x="80" y="990">案件／訂單／audit 可持久化；聊天 Session 仍在記憶體，模型不能直接寫入。</text>
   </g>
 
   <g id="next-flow">
     <rect x="808" y="902" width="736" height="124" rx="6" fill="#fffaf0" stroke="#b87900" stroke-width="2" stroke-dasharray="8 6"/>
-    <text class="flow-title" x="832" y="932">下一階段：正式持久化與身分</text>
-    <text class="flow-text" x="832" y="962">PostgreSQL transaction → 登入／RBAC → 時段保留 → Bedrock／AgentCore → AWS 部署</text>
+    <text class="flow-title" x="832" y="932">下一階段：正式身分與 AWS</text>
+    <text class="flow-text" x="832" y="962">RDS 連線 → 登入／RBAC → 時段保留 → Bedrock／AgentCore → AWS 部署</text>
     <text class="box-small" x="832" y="990">外部 Agent 確有需求時才新增受限寫入 MCP Tools；不公開通用 SQL。</text>
   </g>
 
   <text x="56" y="1060" fill="#71807a" font-size="12" font-weight="600">資料邊界：官方資料／curated_config／synthetic 必須保留來源標籤；不明代碼不可猜測。</text>
-  <text x="1544" y="1060" text-anchor="end" fill="#71807a" font-size="12" font-weight="600">更新：2026-07-28</text>
+  <text x="1544" y="1060" text-anchor="end" fill="#71807a" font-size="12" font-weight="600">更新：2026-07-30</text>
 </svg>

@@ -8,7 +8,11 @@ from fastapi.testclient import TestClient
 
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
 from home_repair_agent.agent.models import ModelTurn, ToolCall
-from home_repair_agent.web.app import create_app
+from home_repair_agent.backend.postgres_case_repository import (
+    PostgresCaseWorkflowRepository,
+)
+from home_repair_agent.web.app import _resolve_case_repository, create_app
+from home_repair_agent.web.demo_case_repository import DemoCaseWorkflowRepository
 
 
 class _MatchingAttemptModel:
@@ -501,6 +505,51 @@ class WebAppTests(unittest.TestCase):
 
         self.assertEqual(404, response.status_code)
         self.assertEqual("SESSION_NOT_FOUND", response.json()["error"]["code"])
+
+
+class CaseRepositoryConfigurationTests(unittest.TestCase):
+    def test_memory_repository_remains_the_default(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"WEB_CASE_REPOSITORY": "memory"},
+        ):
+            repository = _resolve_case_repository()
+
+        self.assertIsInstance(repository, DemoCaseWorkflowRepository)
+
+    def test_postgres_repository_requires_and_accepts_database_url(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {
+                "WEB_CASE_REPOSITORY": "postgres",
+                "DATABASE_URL": "postgresql://example.invalid/demo",
+            },
+        ):
+            repository = _resolve_case_repository()
+
+        self.assertIsInstance(repository, PostgresCaseWorkflowRepository)
+
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "WEB_CASE_REPOSITORY": "postgres",
+                    "DATABASE_URL": "",
+                },
+            ),
+            self.assertRaisesRegex(RuntimeError, "DATABASE_URL"),
+        ):
+            _resolve_case_repository()
+
+    def test_unknown_repository_mode_fails_fast(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {"WEB_CASE_REPOSITORY": "json"},
+            ),
+            self.assertRaisesRegex(RuntimeError, "memory, postgres"),
+        ):
+            _resolve_case_repository()
 
 
 if __name__ == "__main__":

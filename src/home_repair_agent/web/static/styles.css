@@ -11,13 +11,14 @@
   --teal: #007c6c;
   --teal-dark: #00584d;
   --teal-pale: #e3f3ef;
-  --coral: #c94f3b;
+  --coral: #aa3827;
   --coral-pale: #fbe9e5;
   --amber: #b87900;
   --amber-pale: #fff2cf;
   --blue: #27669a;
+  --focus: #005fcc;
   --shadow: 0 8px 24px rgb(23 32 28 / 8%);
-  --header-height: 68px;
+  --header-height: 72px;
   font-family:
     Inter, "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
   font-synthesis: none;
@@ -30,6 +31,7 @@
 
 html,
 body {
+  width: 100%;
   min-height: 100%;
   margin: 0;
 }
@@ -38,6 +40,9 @@ body {
   min-width: 320px;
   background: var(--canvas);
   color: var(--ink);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
   overflow: hidden;
 }
 
@@ -57,8 +62,13 @@ textarea:focus-visible,
 input:focus-visible,
 summary:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgb(0 124 108 / 28%);
-  outline-offset: 2px;
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+[tabindex="-1"]:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
 }
 
 .skip-link {
@@ -66,7 +76,10 @@ a:focus-visible {
   z-index: 100;
   top: 8px;
   left: 8px;
-  padding: 8px 12px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 14px;
   background: var(--ink);
   color: white;
   transform: translateY(-150%);
@@ -90,6 +103,7 @@ a:focus-visible {
 
 .brand {
   min-width: 0;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 11px;
@@ -115,14 +129,14 @@ a:focus-visible {
 }
 
 .brand strong {
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.2;
 }
 
 .brand small {
   margin-top: 2px;
   color: #b9c7c2;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .header-status {
@@ -138,11 +152,11 @@ a:focus-visible {
 .count-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 4px 9px;
+  min-height: 32px;
+  padding: 6px 10px;
   border: 1px solid var(--line-strong);
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -162,14 +176,14 @@ a:focus-visible {
 }
 
 .workspace-link {
-  min-height: 30px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
-  padding: 4px 9px;
+  padding: 8px 11px;
   border: 1px solid #53605b;
   border-radius: 4px;
   color: #dce6e2;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
@@ -180,9 +194,13 @@ a:focus-visible {
   color: white;
 }
 
+.mobile-provider-link {
+  display: none;
+}
+
 .icon-button {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -319,6 +337,18 @@ a:focus-visible {
   font-size: 11px;
 }
 
+.progress-step__content {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.progress-step__state {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .progress-step--complete {
   color: var(--ink);
 }
@@ -344,6 +374,7 @@ a:focus-visible {
 }
 
 .confirmed-summary {
+  margin-top: 20px;
   border-top: 1px solid var(--line);
   padding-top: 18px;
 }
@@ -378,6 +409,109 @@ a:focus-visible {
   overflow-wrap: anywhere;
   font-size: 12px;
   font-weight: 700;
+}
+
+.manual-checklist {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.manual-checklist__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manual-checklist h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.manual-checklist__heading span {
+  min-width: 52px;
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: white;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+#checklist-help {
+  margin: 9px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.checklist-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist-item {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: white;
+}
+
+.checklist-item:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.checklist-item--checked {
+  border-color: var(--teal-dark);
+  background: var(--teal-pale);
+}
+
+.checklist-item input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--teal-dark);
+}
+
+.checklist-item input:focus-visible {
+  outline: 0;
+}
+
+.checklist-item label {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.checklist-item strong,
+.checklist-item small {
+  display: block;
+}
+
+.checklist-item strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.checklist-item small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .trace-panel {
@@ -1038,6 +1172,198 @@ a:focus-visible {
   line-height: 1.6;
 }
 
+.pane-heading h1,
+.pane-heading h2,
+.workspace-heading h2,
+.form-heading h2 {
+  font-size: 22px;
+}
+
+.eyebrow {
+  font-size: 12px;
+}
+
+.progress-step {
+  min-height: 58px;
+  font-size: 15px;
+}
+
+.progress-step__marker {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.progress-step:not(:last-child)::after {
+  top: 40px;
+  left: 16px;
+}
+
+.confirmed-summary h2,
+.trace-panel summary {
+  font-size: 15px;
+}
+
+.confirmed-summary dt {
+  font-size: 13px;
+}
+
+.confirmed-summary dd {
+  font-size: 14px;
+}
+
+.trace-panel summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.trace-item {
+  min-height: 28px;
+  font-size: 13px;
+}
+
+.readonly-note {
+  font-size: 13px;
+}
+
+.message__bubble {
+  font-size: 16px;
+}
+
+.form-description,
+.required-note {
+  font-size: 14px;
+}
+
+.field-label,
+.field-group legend {
+  font-size: 15px;
+}
+
+.text-input,
+.text-area,
+.datetime-input {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.option-control {
+  min-height: 48px;
+  font-size: 15px;
+}
+
+.option-control input {
+  width: 20px;
+  height: 20px;
+}
+
+.datetime-part {
+  min-width: 0;
+}
+
+.datetime-part label,
+.timezone-note {
+  font-size: 13px;
+}
+
+.field-error,
+.form-error {
+  font-size: 14px;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 48px;
+  font-size: 15px;
+}
+
+.message-composer {
+  grid-template-columns: minmax(0, 1fr) 48px;
+}
+
+.privacy-note {
+  font-size: 13px;
+}
+
+.message-composer textarea {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.send-button {
+  width: 48px;
+  height: 48px;
+}
+
+.candidate-card h3 {
+  font-size: 17px;
+}
+
+.source-label {
+  font-size: 11px;
+}
+
+.score-row {
+  font-size: 12px;
+}
+
+.candidate-metrics small {
+  font-size: 12px;
+}
+
+.candidate-metrics strong {
+  font-size: 14px;
+}
+
+.candidate-time small,
+.candidate-card__action small {
+  font-size: 12px;
+}
+
+.candidate-time time {
+  font-size: 14px;
+}
+
+.candidate-reasons li {
+  font-size: 12px;
+}
+
+.candidate-card__action .primary-button {
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.dispatch-status h3,
+.dispatch-confirmation h3 {
+  font-size: 17px;
+}
+
+.dispatch-status > p,
+.dispatch-confirmation > p:not(.eyebrow) {
+  font-size: 14px;
+}
+
+.dispatch-status dt,
+.dispatch-confirmation dt {
+  font-size: 12px;
+}
+
+.dispatch-status dd,
+.dispatch-confirmation dd {
+  font-size: 13px;
+}
+
+.candidate-empty strong {
+  font-size: 16px;
+}
+
+.candidate-empty p {
+  font-size: 14px;
+}
+
 .app-alert {
   position: fixed;
   z-index: 50;
@@ -1050,7 +1376,7 @@ a:focus-visible {
   background: #fff7f5;
   box-shadow: var(--shadow);
   color: #7d2d20;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.5;
 }
@@ -1104,11 +1430,12 @@ a:focus-visible {
 
 @media (max-width: 860px) {
   :root {
-    --header-height: 62px;
+    --header-height: 66px;
   }
 
   body {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .app-header {
@@ -1121,9 +1448,9 @@ a:focus-visible {
   }
 
   .workspace-link {
-    min-height: 28px;
-    padding-inline: 7px;
-    font-size: 10px;
+    min-height: 44px;
+    padding-inline: 9px;
+    font-size: 12px;
   }
 
   .status-chip {
@@ -1134,7 +1461,7 @@ a:focus-visible {
     position: sticky;
     z-index: 20;
     top: 0;
-    height: 45px;
+    height: 54px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     padding: 5px;
@@ -1143,11 +1470,12 @@ a:focus-visible {
   }
 
   .mobile-tabs button {
+    min-height: 44px;
     border: 0;
     border-radius: 3px;
     background: transparent;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 800;
   }
 
@@ -1163,11 +1491,11 @@ a:focus-visible {
     margin-left: 3px;
     border: 1px solid currentColor;
     border-radius: 3px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .app-layout {
-    height: calc(100vh - var(--header-height) - 45px);
+    height: calc(100dvh - var(--header-height) - 54px);
     display: block;
     overflow: hidden;
   }
@@ -1215,19 +1543,48 @@ a:focus-visible {
 }
 
 @media (max-width: 520px) {
+  .app-header {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
   .brand strong {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .brand-mark {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
   }
 
   .status-chip {
-    max-width: 112px;
+    max-width: 86px;
     padding-inline: 6px;
-    font-size: 9px;
+    font-size: 11px;
+  }
+
+  .workspace-link {
+    display: none;
+  }
+
+  .mobile-provider-link {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: white;
+    color: var(--teal-dark);
+    font-size: 15px;
+    font-weight: 800;
+    text-decoration: none;
   }
 
   .workspace-heading {
@@ -1238,7 +1595,7 @@ a:focus-visible {
   .pane-heading h2,
   .workspace-heading h2,
   .form-heading h2 {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .option-grid,
@@ -1265,5 +1622,16 @@ a:focus-visible {
 
   .consultation-form-section {
     max-height: 62vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

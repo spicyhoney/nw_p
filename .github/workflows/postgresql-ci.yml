@@ -63,6 +63,9 @@ jobs:
             src/home_repair_agent/data_cleaning/postgres.py \
             src/home_repair_agent/web/app.py \
             src/home_repair_agent/web/demo_case_repository.py \
+            src/home_repair_agent/web/models.py \
+            src/home_repair_agent/web/service.py \
+            tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \
             tests/test_web_app.py
@@ -73,6 +76,9 @@ jobs:
             src/home_repair_agent/data_cleaning/postgres.py \
             src/home_repair_agent/web/app.py \
             src/home_repair_agent/web/demo_case_repository.py \
+            src/home_repair_agent/web/models.py \
+            src/home_repair_agent/web/service.py \
+            tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \
             tests/test_web_app.py

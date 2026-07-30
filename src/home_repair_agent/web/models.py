@@ -20,6 +20,7 @@ from home_repair_agent.backend.models import (
 )
 
 AnswerValue = str | list[str]
+ChecklistKey = Literal["service", "location", "consultation"]
 SessionState = Literal[
     "collecting_need",
     "clarifying",
@@ -96,6 +97,10 @@ class DispatchRequest(WebModel):
     idempotency_key: str = Field(min_length=8, max_length=128)
 
 
+class ChecklistUpdateRequest(WebModel):
+    checked: bool
+
+
 class ProviderDecisionRequest(WebModel):
     decision: ProviderDecision
     confirmed: bool
@@ -127,6 +132,13 @@ class ProgressStepView(WebModel):
     state: ProgressState
 
 
+class ChecklistItemView(WebModel):
+    key: ChecklistKey
+    label: str
+    checked: bool
+    suggested: bool
+
+
 class SessionView(WebModel):
     session_id: str
     state: SessionState
@@ -141,6 +153,7 @@ class SessionView(WebModel):
     candidates: list[ProviderMatchCandidate] = Field(default_factory=list)
     dispatch: ConsumerCaseView | None = None
     progress: list[ProgressStepView] = Field(default_factory=list)
+    checklist: list[ChecklistItemView] = Field(default_factory=list)
     tool_trace: list[ToolTraceView] = Field(default_factory=list)
     data_source: Literal["synthetic"] = "synthetic"
     can_send_message: bool

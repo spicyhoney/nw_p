@@ -16,7 +16,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證本機雙端 P1 與 async repository 切換；尚未公開部署 | `src/home_repair_agent/web/` | [Web P1 README](../src/home_repair_agent/web/README.md) | API tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async repository 切換；尚未公開部署 | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
@@ -63,6 +63,11 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-30：新增 process-local 人工 Checklist 的冪等 `PUT`、suggested／checked
+  分離、polling 保留與 Reset 清除；完成 live regions、44px 目標、高對比 focus、
+  reduced-motion 與 `1280x720`／`390x844` 響應式驗收。focused
+  `39 passed, 6 skipped, 3 subtests`；本機完整 `104 passed, 15 skipped,
+  43 subtests`；兩尺寸零 overflow／console error，AA 對比掃描零 finding。
 - 2026-07-30：PR #12 同步 `main@33f66fe`；案件 repository 契約、Service 與
   memory／PostgreSQL adapters 全面 async，並以封鎖同步 `psycopg.connect`
   的 regression test 驗證 Web 路徑。新增可由 PR、`main` push 或手動 dispatch

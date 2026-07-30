@@ -28,6 +28,8 @@ from home_repair_agent.backend.models import (
 from home_repair_agent.web.models import (
     AnswerValue,
     ChatMessageView,
+    ChecklistItemView,
+    ChecklistKey,
     DispatchRequest,
     FormSubmitRequest,
     ProgressStepView,
@@ -53,6 +55,11 @@ TOOL_LABELS = {
     "get_consultation_form": "取得諮詢單",
     "match_service_providers": "媒合候選",
 }
+CHECKLIST_ITEMS: tuple[tuple[ChecklistKey, str], ...] = (
+    ("service", "修繕需求與服務類型無誤"),
+    ("location", "服務地點無誤"),
+    ("consultation", "諮詢內容與希望時段無誤"),
+)
 
 
 class WebSessionError(Exception):
@@ -102,6 +109,9 @@ class _SessionRecord:
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
     candidates: list[ProviderMatchCandidate] = field(default_factory=list)
+    checklist: dict[ChecklistKey, bool] = field(
+        default_factory=lambda: {key: False for key, _label in CHECKLIST_ITEMS}
+    )
     tool_trace: list[ToolTraceView] = field(default_factory=list)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -342,6 +352,18 @@ class WebSessionService:
             )
             return await self._to_view(record)
 
+    async def update_checklist_item(
+        self,
+        session_id: str,
+        *,
+        item_key: ChecklistKey,
+        checked: bool,
+    ) -> SessionView:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            record.checklist[item_key] = checked
+            return await self._to_view(record)
+
     async def reset_session(self, session_id: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
@@ -361,6 +383,7 @@ class WebSessionService:
             record.preferred_start = None
             record.preferred_end = None
             record.candidates.clear()
+            record.checklist = dict(replacement.checklist)
             record.tool_trace.clear()
             return await self._to_view(record)
 
@@ -479,6 +502,7 @@ class WebSessionService:
             candidates=list(record.candidates),
             dispatch=dispatch,
             progress=progress,
+            checklist=_build_checklist(record),
             tool_trace=list(record.tool_trace),
             can_send_message=record.consultation_form is None
             and record.state not in {"matched", "no_candidates"},
@@ -488,6 +512,25 @@ class WebSessionService:
             and record.location is not None,
             can_dispatch=can_dispatch,
         )
+
+
+def _build_checklist(record: _SessionRecord) -> list[ChecklistItemView]:
+    suggestions: dict[ChecklistKey, bool] = {
+        "service": record.service is not None,
+        "location": record.location is not None,
+        "consultation": bool(record.answers)
+        and record.preferred_start is not None
+        and record.preferred_end is not None,
+    }
+    return [
+        ChecklistItemView(
+            key=key,
+            label=label,
+            checked=record.checklist[key],
+            suggested=suggestions[key],
+        )
+        for key, label in CHECKLIST_ITEMS
+    ]
 
 
 def _validate_answers(

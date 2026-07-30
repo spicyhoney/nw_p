@@ -9,11 +9,11 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.2.2" />
-    <script src="/static/app.js?v=0.2.2" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.3.0" />
+    <script src="/static/app.js?v=0.3.0" defer></script>
   </head>
   <body data-mobile-view="conversation">
-    <a class="skip-link" href="#conversation-pane">跳到對話</a>
+    <a class="skip-link" href="#conversation-pane">跳到主要對話</a>
 
     <header class="app-header">
       <a class="brand" href="/" aria-label="修繕小隊長首頁">
@@ -26,7 +26,7 @@
 
       <div class="header-status">
         <span class="status-chip status-chip--source">DEMO · SYNTHETIC</span>
-        <span id="provider-chip" class="status-chip">連線中</span>
+        <span id="provider-chip" class="status-chip" aria-live="polite">連線中</span>
         <a class="workspace-link" href="/provider">廠商端</a>
         <button
           id="reset-button"
@@ -41,11 +41,29 @@
     </header>
 
     <nav class="mobile-tabs" aria-label="工作區切換">
-      <button type="button" data-mobile-target="progress">進度</button>
-      <button type="button" data-mobile-target="conversation" aria-current="page">
+      <button
+        type="button"
+        data-mobile-target="progress"
+        aria-controls="progress-pane"
+        aria-pressed="false"
+      >
+        進度
+      </button>
+      <button
+        type="button"
+        data-mobile-target="conversation"
+        aria-controls="conversation-pane"
+        aria-current="page"
+        aria-pressed="true"
+      >
         對話
       </button>
-      <button type="button" data-mobile-target="candidates">
+      <button
+        type="button"
+        data-mobile-target="candidates"
+        aria-controls="candidates-pane"
+        aria-pressed="false"
+      >
         候選 <span id="mobile-candidate-count">0</span>
       </button>
     </nav>
@@ -54,13 +72,35 @@
       <aside id="progress-pane" class="progress-pane" aria-labelledby="progress-title">
         <div class="pane-heading">
           <p class="eyebrow">本次諮詢</p>
-          <h1 id="progress-title">處理進度</h1>
+          <h1 id="progress-title" tabindex="-1">處理進度</h1>
         </div>
 
         <ol id="progress-list" class="progress-list" aria-label="諮詢進度"></ol>
 
+        <section class="manual-checklist" aria-labelledby="checklist-title">
+          <div class="manual-checklist__heading">
+            <h2 id="checklist-title">由你核對</h2>
+            <span id="checklist-summary">0 / 3</span>
+          </div>
+          <p id="checklist-help">
+            系統只會提示可核對項目；勾選與取消都由你操作。
+          </p>
+          <ul
+            id="checklist-list"
+            class="checklist-list"
+            aria-describedby="checklist-help"
+          ></ul>
+          <p
+            id="checklist-feedback"
+            class="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
+        </section>
+
         <section class="confirmed-summary" aria-labelledby="confirmed-title">
-          <h2 id="confirmed-title">已確認</h2>
+          <h2 id="confirmed-title">系統已整理</h2>
           <dl>
             <div>
               <dt>服務</dt>
@@ -85,6 +125,7 @@
         <p id="workflow-note" class="readonly-note">
           尚未建立案件；確認候選後才會送出派單。
         </p>
+        <a class="mobile-provider-link" href="/provider">開啟廠商工作台</a>
       </aside>
 
       <section
@@ -95,9 +136,16 @@
         <header class="workspace-heading">
           <div>
             <p class="eyebrow">AI 生活管家</p>
-            <h2 id="conversation-title">修繕諮詢</h2>
+            <h2 id="conversation-title" tabindex="-1">修繕諮詢</h2>
           </div>
-          <span id="session-state" class="state-label">建立對話中</span>
+          <span
+            id="session-state"
+            class="state-label"
+            role="status"
+            aria-live="polite"
+          >
+            建立對話中
+          </span>
         </header>
 
         <div
@@ -108,7 +156,12 @@
           aria-relevant="additions"
         ></div>
 
-        <section id="form-section" class="consultation-form-section" hidden>
+        <section
+          id="form-section"
+          class="consultation-form-section"
+          aria-labelledby="form-title"
+          hidden
+        >
           <div class="form-heading">
             <div>
               <p class="eyebrow">諮詢單</p>
@@ -117,18 +170,28 @@
             <span class="required-note">＊ 必填</span>
           </div>
           <p id="form-description" class="form-description"></p>
-          <form id="consultation-form" novalidate>
+          <form id="consultation-form" aria-describedby="form-error" novalidate>
             <div id="form-fields" class="form-fields"></div>
-            <p id="form-error" class="form-error" role="alert" hidden></p>
+            <p
+              id="form-error"
+              class="form-error"
+              role="alert"
+              tabindex="-1"
+              hidden
+            ></p>
             <button class="primary-button" type="submit">
               查看媒合結果 <span aria-hidden="true">→</span>
             </button>
           </form>
         </section>
 
-        <form id="message-form" class="message-composer">
+        <form
+          id="message-form"
+          class="message-composer"
+          aria-describedby="privacy-note"
+        >
           <label class="sr-only" for="message-input">修繕需求</label>
-          <p class="privacy-note">
+          <p id="privacy-note" class="privacy-note">
             Demo 請勿輸入真實姓名、電話、門牌或其他個人資料。
           </p>
           <textarea
@@ -159,12 +222,19 @@
         <header class="pane-heading candidates-heading">
           <div>
             <p class="eyebrow">媒合結果</p>
-            <h2 id="candidates-title">師傅候選</h2>
+            <h2 id="candidates-title" tabindex="-1">師傅候選</h2>
           </div>
           <span id="candidate-count" class="count-badge">0</span>
         </header>
 
-        <section id="dispatch-status" class="dispatch-status" hidden>
+        <section
+          id="dispatch-status"
+          class="dispatch-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          hidden
+        >
           <div>
             <p class="eyebrow">案件狀態</p>
             <h3 id="dispatch-status-title"></h3>
@@ -217,7 +287,21 @@
       </aside>
     </main>
 
-    <div id="app-alert" class="app-alert" role="alert" hidden></div>
+    <p
+      id="app-status"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></p>
+    <div
+      id="app-alert"
+      class="app-alert"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      hidden
+    ></div>
 
     <noscript>
       <p class="noscript-message">此頁面需要 JavaScript 才能操作。</p>

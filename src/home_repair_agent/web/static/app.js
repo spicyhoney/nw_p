@@ -1,3 +1,46 @@
+class SessionResponseCoordinator {
+  constructor() {
+    this.nextSequence = 0;
+    this.latestStartedSequence = 0;
+    this.latestAppliedSequence = 0;
+    this.generation = 0;
+  }
+
+  begin(sessionId) {
+    this.nextSequence += 1;
+    this.latestStartedSequence = this.nextSequence;
+    return {
+      sequence: this.nextSequence,
+      generation: this.generation,
+      sessionId,
+    };
+  }
+
+  beginReplacement() {
+    this.generation += 1;
+    return this.begin(null);
+  }
+
+  apply(targetStore, request, response) {
+    const currentSessionId = targetStore.session?.session_id || null;
+    const responseSessionId = response?.session_id || null;
+    if (
+      request.generation !== this.generation ||
+      request.sequence < this.latestStartedSequence ||
+      request.sequence <= this.latestAppliedSequence ||
+      (request.sessionId && request.sessionId !== currentSessionId) ||
+      (request.sessionId && request.sessionId !== responseSessionId)
+    ) {
+      return false;
+    }
+    this.latestAppliedSequence = request.sequence;
+    targetStore.session = response;
+    return true;
+  }
+}
+
+const sessionResponses = new SessionResponseCoordinator();
+
 const store = {
   session: null,
   busy: false,
@@ -5,16 +48,20 @@ const store = {
   alertTimer: null,
   pollTimer: null,
   checklistBusy: new Set(),
+  checklistSyncing: false,
+  checklistNeedsRecovery: false,
   lastDispatchSignature: "",
 };
 
 const elements = {};
 
-document.addEventListener("DOMContentLoaded", () => {
-  bindElements();
-  bindEvents();
-  createSession();
-});
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    bindElements();
+    bindEvents();
+    createSession();
+  });
+}
 
 function bindElements() {
   elements.providerChip = document.querySelector("#provider-chip");
@@ -92,13 +139,22 @@ function bindEvents() {
 }
 
 async function createSession() {
+  if (hasChecklistMutation()) {
+    return;
+  }
+  const request = sessionResponses.beginReplacement();
   setBusy(true, "正在建立新諮詢。");
   try {
     stopSessionPolling();
     store.selectedProviderId = "";
     store.checklistBusy.clear();
+    store.checklistSyncing = false;
+    store.checklistNeedsRecovery = false;
     store.lastDispatchSignature = "";
-    store.session = await api("/api/sessions", { method: "POST" });
+    const response = await api("/api/sessions", { method: "POST" });
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
     announce("新諮詢已建立，可以開始描述修繕需求。");
   } catch (error) {
@@ -110,7 +166,7 @@ async function createSession() {
 
 async function handleMessageSubmit(event) {
   event.preventDefault();
-  if (!store.session || store.busy) {
+  if (!store.session || isSessionMutationBlocked()) {
     return;
   }
   const text = elements.messageInput.value.trim();
@@ -118,15 +174,20 @@ async function handleMessageSubmit(event) {
     return;
   }
 
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   setBusy(true, "正在整理你的修繕需求。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/messages`,
+    const response = await api(
+      `/api/sessions/${sessionId}/messages`,
       {
         method: "POST",
         body: JSON.stringify({ text }),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     elements.messageInput.value = "";
     resizeMessageInput();
     renderSession();
@@ -143,7 +204,11 @@ async function handleMessageSubmit(event) {
 
 async function handleFormSubmit(event) {
   event.preventDefault();
-  if (!store.session || store.busy || !store.session.consultation_form) {
+  if (
+    !store.session ||
+    isSessionMutationBlocked() ||
+    !store.session.consultation_form
+  ) {
     return;
   }
 
@@ -153,15 +218,20 @@ async function handleFormSubmit(event) {
     return;
   }
 
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   setBusy(true, "正在核對表單並媒合師傅。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/form`,
+    const response = await api(
+      `/api/sessions/${sessionId}/form`,
       {
         method: "POST",
         body: JSON.stringify(payload),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
     announce(`媒合完成，共有 ${store.session.candidates.length} 位候選。`);
     setMobileView("candidates", { focusHeading: true });
@@ -173,7 +243,7 @@ async function handleFormSubmit(event) {
 }
 
 async function resetSession() {
-  if (!store.session || store.busy) {
+  if (!store.session || isSessionMutationBlocked()) {
     return;
   }
   setBusy(true, "正在重新開始這次諮詢。");
@@ -184,10 +254,15 @@ async function resetSession() {
       elements.messageInput.focus();
       return;
     }
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/reset`,
+    const sessionId = store.session.session_id;
+    const request = sessionResponses.begin(sessionId);
+    const response = await api(
+      `/api/sessions/${sessionId}/reset`,
       { method: "POST" },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
     announce("諮詢已重設，人工核對清單也已清除。");
     setMobileView("conversation", { focusHeading: true });
@@ -200,10 +275,17 @@ async function resetSession() {
 }
 
 async function updateChecklistItem(itemKey, checked) {
-  if (!store.session || store.checklistBusy.has(itemKey)) {
+  if (
+    !store.session ||
+    store.busy ||
+    store.checklistSyncing ||
+    store.checklistBusy.has(itemKey)
+  ) {
     return;
   }
 
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   const item = store.session.checklist.find(
     (candidate) => candidate.key === itemKey,
   );
@@ -214,10 +296,11 @@ async function updateChecklistItem(itemKey, checked) {
     activeControl.disabled = true;
     activeControl.closest(".checklist-item")?.setAttribute("aria-busy", "true");
   }
+  updateControls();
   announce(`正在儲存「${item?.label || "核對項目"}」。`);
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/checklist/${encodeURIComponent(
+    const response = await api(
+      `/api/sessions/${sessionId}/checklist/${encodeURIComponent(
         itemKey,
       )}`,
       {
@@ -225,19 +308,72 @@ async function updateChecklistItem(itemKey, checked) {
         body: JSON.stringify({ checked }),
       },
     );
-    renderSession();
-    const resultText = checked ? "已由你勾選" : "已由你取消勾選";
-    elements.checklistFeedback.textContent =
-      `${item?.label || "核對項目"}：${resultText}。`;
+    if (sessionResponses.apply(store, request, response)) {
+      renderSession();
+    }
+    if (store.session?.session_id === sessionId) {
+      const resultText = checked ? "已由你勾選" : "已由你取消勾選";
+      elements.checklistFeedback.textContent =
+        `${item?.label || "核對項目"}：${resultText}。`;
+    }
   } catch (error) {
+    store.checklistNeedsRecovery = true;
     showAlert(error.message);
+    announce(`「${item?.label || "核對項目"}」儲存失敗，正在重新同步。`);
   } finally {
     store.checklistBusy.delete(itemKey);
-    renderChecklist();
-    window.requestAnimationFrame(() => {
-      document.querySelector(`#${inputId}`)?.focus({ preventScroll: true });
-    });
+    let synchronized = false;
+    if (
+      store.session?.session_id === sessionId &&
+      store.checklistBusy.size === 0
+    ) {
+      synchronized = await synchronizeChecklistSession(sessionId);
+    } else {
+      renderChecklist();
+      updateControls();
+    }
+    if (synchronized && store.checklistNeedsRecovery) {
+      store.checklistNeedsRecovery = false;
+      announce("核對清單已恢復伺服器狀態。");
+    }
+    if (store.session?.session_id === sessionId) {
+      window.requestAnimationFrame(() => {
+        document.querySelector(`#${inputId}`)?.focus({ preventScroll: true });
+      });
+    }
   }
+}
+
+async function synchronizeChecklistSession(sessionId) {
+  if (
+    !store.session ||
+    store.session.session_id !== sessionId ||
+    store.checklistBusy.size > 0
+  ) {
+    return false;
+  }
+
+  store.checklistSyncing = true;
+  renderChecklist();
+  updateControls();
+  const request = sessionResponses.begin(sessionId);
+  let synchronized = false;
+  try {
+    const response = await api(`/api/sessions/${sessionId}`);
+    synchronized = sessionResponses.apply(store, request, response);
+    if (synchronized) {
+      renderSession();
+    }
+  } catch (error) {
+    showAlert(`核對清單同步失敗：${error.message}`);
+  } finally {
+    store.checklistSyncing = false;
+    if (store.session?.session_id === sessionId) {
+      renderChecklist();
+      updateControls();
+    }
+  }
+  return synchronized;
 }
 
 function selectCandidate(providerId) {
@@ -267,25 +403,30 @@ async function confirmDispatch() {
     !store.session ||
     !store.selectedProviderId ||
     !store.session.can_dispatch ||
-    store.busy
+    isSessionMutationBlocked()
   ) {
     return;
   }
 
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   setBusy(true, "正在建立案件並通知所選廠商。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/dispatch`,
+    const response = await api(
+      `/api/sessions/${sessionId}/dispatch`,
       {
         method: "POST",
         body: JSON.stringify({
           provider_id: store.selectedProviderId,
           confirmed: true,
           idempotency_key:
-            `dispatch:${store.session.session_id}:${store.selectedProviderId}`,
+            `dispatch:${sessionId}:${store.selectedProviderId}`,
         }),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     store.selectedProviderId = "";
     renderSession();
     startSessionPolling();
@@ -314,17 +455,20 @@ function stopSessionPolling() {
 async function refreshSession() {
   if (
     !store.session ||
-    store.busy ||
+    isSessionMutationBlocked() ||
     store.session.dispatch?.status !== "pending_provider"
   ) {
     return;
   }
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}`,
-    );
-    renderSession();
-    if (store.session.dispatch?.status !== "pending_provider") {
+    const response = await api(`/api/sessions/${sessionId}`);
+    const applied = sessionResponses.apply(store, request, response);
+    if (applied) {
+      renderSession();
+    }
+    if (applied && store.session.dispatch?.status !== "pending_provider") {
       stopSessionPolling();
     }
   } catch (error) {
@@ -473,7 +617,10 @@ function renderChecklist() {
     input.id = `checklist-${item.key}`;
     input.type = "checkbox";
     input.checked = item.checked;
-    input.disabled = store.checklistBusy.has(item.key);
+    input.disabled =
+      store.busy ||
+      store.checklistSyncing ||
+      store.checklistBusy.has(item.key);
     input.setAttribute("aria-describedby", `checklist-${item.key}-hint`);
     input.addEventListener("change", () => {
       updateChecklistItem(item.key, input.checked);
@@ -934,12 +1081,21 @@ function metric(labelText, valueText) {
   return wrapper;
 }
 
+function hasChecklistMutation() {
+  return store.checklistBusy.size > 0 || store.checklistSyncing;
+}
+
+function isSessionMutationBlocked() {
+  return store.busy || hasChecklistMutation();
+}
+
 function updateControls() {
+  const sessionMutationBlocked = isSessionMutationBlocked();
   const canSend = Boolean(store.session?.can_send_message);
   elements.messageForm.hidden = !canSend;
-  elements.messageInput.disabled = store.busy || !canSend;
-  elements.sendButton.disabled = store.busy || !canSend;
-  elements.resetButton.disabled = store.busy;
+  elements.messageInput.disabled = sessionMutationBlocked || !canSend;
+  elements.sendButton.disabled = sessionMutationBlocked || !canSend;
+  elements.resetButton.disabled = sessionMutationBlocked;
   elements.resetButton.title = store.session?.dispatch
     ? "建立新諮詢"
     : "重新開始";
@@ -948,20 +1104,22 @@ function updateControls() {
     elements.resetButton.title,
   );
   elements.confirmDispatch.disabled =
-    store.busy ||
+    sessionMutationBlocked ||
     !Boolean(store.selectedProviderId) ||
     !Boolean(store.session?.can_dispatch);
-  elements.cancelDispatch.disabled = store.busy;
+  elements.cancelDispatch.disabled = sessionMutationBlocked;
   document.querySelectorAll("[data-provider-select]").forEach((button) => {
-    button.disabled = store.busy;
+    button.disabled = sessionMutationBlocked;
   });
 
   const submitButton =
     elements.consultationForm.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.disabled =
-      store.busy || !Boolean(store.session?.can_submit_form);
-    submitButton.textContent = store.busy ? "媒合中…" : "查看媒合結果 →";
+      sessionMutationBlocked || !Boolean(store.session?.can_submit_form);
+    submitButton.textContent = sessionMutationBlocked
+      ? "處理中…"
+      : "查看媒合結果 →";
   }
 }
 
@@ -972,6 +1130,7 @@ function setBusy(value, message = "") {
     announce(message);
   }
   if (store.session) {
+    renderChecklist();
     updateControls();
   }
 }
@@ -1113,4 +1272,8 @@ function cssEscape(value) {
     return window.CSS.escape(value);
   }
   return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { SessionResponseCoordinator };
 }

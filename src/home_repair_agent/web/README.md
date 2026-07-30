@@ -55,7 +55,9 @@ FastAPI route 只做 HTTP adapter。主要責任分工如下：
 
 Checklist 的 `suggested` 與 `checked` 亦分開：structured state 只能提示可核對，
 只有使用者的 click／Space／Enter 經冪等 `PUT` 才能改 checked。Checklist 不取代
-派單確認，也不寫入案件 repository。
+派單確認，也不寫入案件 repository。不同項目的 PUT 可同時執行，但前端只接受
+目前 session 中序號最新的完整 `SessionView`，全部完成後再 GET 同步；寫入與同步
+期間會鎖住 Reset、送出需求、表單、派單與 polling，避免舊回應覆蓋新狀態。
 
 模型只看前三個查詢 Tool；第四個媒合 Tool 必須在使用者手動送出且後端驗證
 表單後執行。派單與廠商決策則由明確按鈕直接呼叫 Service Layer，不經 LLM，
@@ -88,6 +90,8 @@ Browser manual checklist
   -> idempotent PUT for one fixed checklist key
   -> WebSessionService session lock
   -> process-local checked state
+  -> response sequence rejects stale SessionView
+  -> final GET reconciles browser with server
   -> rerender / polling keeps the state
 ```
 
@@ -203,20 +207,24 @@ Linux／AWS 不受此限制。
 python -m pytest -q `
   tests/test_case_workflow.py `
   tests/test_web_app.py `
-  tests/test_postgres_case_repository.py
+  tests/test_postgres_case_repository.py `
+  tests/test_consumer_accessibility.py
 ```
 
-2026-07-30 無資料庫聚焦結果：`39 passed, 6 skipped, 3 subtests passed`。
+2026-07-30 PR #13 race review 修正後，無資料庫聚焦結果：
+`40 passed, 6 skipped, 3 subtests passed`。
 真實 PostgreSQL 與原有 loader／read integration 合跑為 `15 passed`。除了
 原有 Web session、
 三個初始 Tools、動態
 表單、時區驗證、媒合與安全 headers，亦涵蓋確認、冪等、授權、遮罩、接單、
 拒絕、改派、audit、並行狀態競爭、派單時段重新驗證與 workflow 注入一致性。
 
-本機完整 suite（未提供測試 PostgreSQL）：`104 passed, 15 skipped,
+本機完整 suite（未提供測試 PostgreSQL）：`105 passed, 15 skipped,
 43 subtests passed`。15 個 skip 由 PR PostgreSQL CI 補跑。受影響 Python 檔案
 Ruff／format、compileall、JavaScript syntax 與 diff check 通過。既有回歸測試會封鎖
 同步 `psycopg.connect`，確認 Web 使用的 repository 呼叫仍能完成建案與讀回。
+Node regression 刻意讓兩個 checklist PUT 反序完成，並驗證舊回應不能覆蓋
+Reset／新 session；CI 會直接執行該測試。
 另在 Windows 以專案入口實際啟動 async Web + PostgreSQL，走完 session、需求、
 表單、媒合與 `dispatch_pending` 建案 smoke。
 
@@ -227,6 +235,8 @@ pytest；不使用開發者本機資料庫或正式 RDS。
 瀏覽器已在桌機 `1280x720` 與手機 `390x844` 驗證：
 
 - Checklist 可 click／Space／Enter，rerender／polling 保留，Reset 清空。
+- 反序 PUT 最後與伺服器一致；寫入時 Reset 鎖定，500 失敗後恢復 checked、
+  解除 disabled 並回到原 checkbox 焦點。
 - 主要控制有效觸控範圍至少 `44x44px`，focus 明顯，reduced-motion 生效。
 - 消費者完成諮詢、媒合、選擇與確認派單。
 - 指派廠商 pending 時只見遮罩 contact。

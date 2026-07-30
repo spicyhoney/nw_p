@@ -9,6 +9,8 @@
 - 三項人工 Checklist：服務需求、地點、諮詢內容與希望時段。
 - 系統只回傳 `suggested` 提示；只有使用者操作受限 `PUT` API 才能改 `checked`。
 - checked 保存在目前 process-local Web session，重畫與案件 polling 後仍保留。
+- 完整 `SessionView` 回應帶前端 request sequence；較舊回應不能覆蓋較新狀態。
+- 一批 checklist PUT 完成後再 GET 對齊伺服器；期間鎖住其他 session mutation。
 - 未建案時 Reset 清空同一 session；已有案件時前端建立新 session，預設亦全未勾。
 - 原生 checkbox 支援滑鼠與 Space，另補 Enter 操作、label、checked 與 live feedback。
 - 放大主要文字與表單，主要互動有效觸控範圍至少約 `44x44px`。
@@ -33,6 +35,12 @@ Checklist 是使用者的 UI 核對狀態，不是模型推論或案件事實。
 不需要依賴瀏覽器暫存，也不會混入需要 audit 的案件 repository。真正派單仍走既有
 `DispatchRequest(confirmed, idempotency_key)` 與 `CaseWorkflowService`。
 
+不同 checklist 項目仍可快速連續操作。每個 request 取得遞增 sequence，回應只有在
+generation、session id 與 sequence 仍有效時才可更新畫面；一批 PUT 全部 settled 後，
+前端執行 GET 作為伺服器真值同步。Checklist 寫入或同步時，Reset、新諮詢、訊息、
+表單、派單與 polling 不會並行。PUT 失敗會先用目前 store 還原 checkbox，再同步
+伺服器，最後解除 disabled 並把焦點放回原項目。
+
 ## 3. 資料流
 
 ```text
@@ -40,7 +48,8 @@ User click / Space / Enter
   -> PUT /api/sessions/{id}/checklist/{service|location|consultation}
   -> WebSessionService + session lock
   -> process-local checklist state
-  -> SessionView.checked
+  -> sequenced SessionView（stale response 不套用）
+  -> final GET reconciliation
   -> rerender / GET polling 維持
 
 Agent / MCP result
@@ -65,10 +74,12 @@ Reset before dispatch
 
 自動測試（本機未提供 `TEST_DATABASE_URL`）：
 
-- Web／workflow／repository focused：`39 passed, 6 skipped, 3 subtests passed`。
-- 完整 pytest：`104 passed, 15 skipped, 43 subtests passed`。
+- Web／workflow／repository focused：`40 passed, 6 skipped, 3 subtests passed`。
+- 完整 pytest：`105 passed, 15 skipped, 43 subtests passed`。
 - 15 skipped 為 PostgreSQL integration；Draft PR 的 PostgreSQL 16 CI 會另行補跑。
 - 受影響檔案 Ruff、format、compileall、JavaScript syntax 與 `git diff --check` 通過。
+- Node regression 以兩個 deferred Promise 刻意反序完成，並覆蓋 Reset／新 session
+  不得被舊回應覆寫；GitHub CI 會執行同一測試。
 
 瀏覽器人工驗收（Mock mode，無 HF token）：
 
@@ -79,6 +90,9 @@ Reset before dispatch
 - focus 為 `3px solid rgb(0, 95, 204)`；初始、媒合與確認畫面 AA 掃描無 finding。
 - `prefers-reduced-motion: reduce` 實測生效；桌機與手機 console／page error 均為 0。
 - pending API 實測 `masked / 0912***678`；accepted 後才為 `full / 0912-345-678`。
+- 桌機故障注入使 service PUT 延遲於 location PUT：最終 UI 與 API 均為兩項 checked。
+- 寫入期間 Reset disabled；人為 500 後 checked 復原、disabled 解除、焦點回原項目，
+  console／page error 皆為 0。
 
 ## 6. 待辦與風險
 

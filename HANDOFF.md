@@ -5,7 +5,7 @@
 - PR #11、#12 已合併；本階段從 `main@9177a880cad503bcf71e515c90a4f3672e46fc5a`
   建立 `codex/consumer-accessibility-ui`。
 - 已完成消費者人工 Checklist、高齡／無障礙 UI 與桌機／手機驗收。
-- Draft PR #13 已建立；PostgreSQL 16 CI 已通過。等待對方 review，
+- PR #13 review 指出的 checklist 反序競態已修正。等待對方重新 review，
   人類決定是否合併，Agent 不得自行 merge。
 
 > 更新：2026-07-30　更新者：Codex
@@ -17,6 +17,9 @@
 - `suggested` 只表示系統已有資料可核對；`checked` 只能由使用者修改。
 - 新增 `PUT /api/sessions/{id}/checklist/{service|location|consultation}`。
 - checked 保存在 process-local Web session；rerender／GET polling 不會消失。
+- response sequence／session generation 阻擋 stale SessionView；最後 GET 對齊伺服器。
+- checklist 寫入／同步期間鎖住 Reset 與其他 session mutation。
+- 失敗會恢復 checkbox、解除 disabled，並把焦點放回原項目。
 - 未建案 Reset 清空同一 session；已有案件時前端建立全新 session。
 - 原生 checkbox 支援 click／Space，另補 Enter、label、checked 與 live feedback。
 - 放大文字／表單，互動有效目標約 `44x44px` 以上，高對比 focus、合理 Tab 順序。
@@ -39,6 +42,7 @@ User click / Space / Enter
   -> idempotent PUT
   -> WebSessionService session lock
   -> process-local checked state
+  -> reject stale response -> final GET sync
   -> SessionView -> rerender / polling
 
 Agent / Tool structured result -> suggested=true
@@ -61,10 +65,9 @@ Agent / Model / MCP -X-> checked
 
 ## 4. 驗證證據
 
-- focused：`39 passed, 6 skipped, 3 subtests passed`。
-- 本機完整：`104 passed, 15 skipped, 43 subtests passed`。
-- 15 skipped 是本機未提供 `TEST_DATABASE_URL`；PR #13 的
-  `PostgreSQL CI / PostgreSQL 16 integration` 已通過（56 秒）。
+- focused：`40 passed, 6 skipped, 3 subtests passed`。
+- 本機完整：`105 passed, 15 skipped, 43 subtests passed`。
+- 15 skipped 是本機未提供 `TEST_DATABASE_URL`；PR #13 必須以 PostgreSQL CI 補跑。
 - 受影響檔案 Ruff／format、compileall、JavaScript syntax、diff check 通過。
 - 全 repo Ruff 仍有既有 data-cleaning 規則債；本 PR 沒有修改那些檔案。
 
@@ -76,6 +79,7 @@ Agent / Model / MCP -X-> checked
 - 手機確認區返回與派單按鈕皆完整可見；返回會關閉確認區。
 - focus 為 3px 高對比藍框；初始／媒合／確認畫面 AA 掃描零 finding。
 - reduced-motion 實測生效；桌機／手機 console 與 page error 均為 0。
+- 反序 PUT 最終 UI／API 一致；寫入時 Reset 鎖定；人為 500 後狀態與焦點復原。
 
 ## 5. 現有雙端與持久化
 
@@ -105,8 +109,8 @@ Agent / Model / MCP -X-> checked
 
 ## 8. 下一步
 
-1. 等待對方重新 review Draft PR #13；PostgreSQL CI 已通過，不得自行 merge。
-2. 依 review 修正 consumer accessibility regressions。
+1. 推送 PR #13 checklist race 修正，等待 PostgreSQL CI 與對方重新 review。
+2. 修正完成前不得 merge；是否合併永遠由人類決定。
 3. 決定下一個本機功能：正式身分 adapter 或時段保留／衝突控制。
 4. 取得 AWS 環境後建立 RDS，套用現有 migration，切換 repository 連線。
 5. 最後替換 Bedrock／AgentCore adapters 並公開部署。

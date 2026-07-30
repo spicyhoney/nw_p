@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "src" / "home_repair_agent" / "web" / "static"
+CHECKLIST_CONCURRENCY_TEST = Path(__file__).with_name("test_checklist_concurrency.js")
 
 
 class ConsumerAccessibilityContractTests(unittest.TestCase):
@@ -47,6 +50,22 @@ class ConsumerAccessibilityContractTests(unittest.TestCase):
         self.assertIn('aria-pressed="true"', self.html)
         self.assertIn('button.setAttribute("aria-pressed", "true")', self.javascript)
         self.assertIn("100dvh", self.css)
+
+    def test_out_of_order_checklist_responses_do_not_replace_newer_state(self) -> None:
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required for the browser-state regression test")
+
+        result = subprocess.run(
+            [node, str(CHECKLIST_CONCURRENCY_TEST)],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("checklist concurrency regression: passed", result.stdout)
 
 
 if __name__ == "__main__":

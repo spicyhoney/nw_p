@@ -63,11 +63,16 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-07-30：完成 PR #13 checklist race review：完整 SessionView 使用
+  request sequence／session generation 阻擋 stale response，一批 PUT 完成後 GET
+  對齊；寫入期間鎖住其他 session mutation，失敗時恢復 checked／disabled／focus。
+  Node regression 刻意反序回應並覆蓋 Reset／新 session。focused
+  `40 passed, 6 skipped, 3 subtests`；本機完整 `105 passed, 15 skipped,
+  43 subtests`；瀏覽器反序與 500 故障注入通過，無 console／page error。
 - 2026-07-30：新增 process-local 人工 Checklist 的冪等 `PUT`、suggested／checked
   分離、polling 保留與 Reset 清除；完成 live regions、44px 目標、高對比 focus、
-  reduced-motion 與 `1280x720`／`390x844` 響應式驗收。focused
-  `39 passed, 6 skipped, 3 subtests`；本機完整 `104 passed, 15 skipped,
-  43 subtests`；兩尺寸零 overflow／console error，AA 對比掃描零 finding。
+  reduced-motion 與 `1280x720`／`390x844` 響應式驗收。兩尺寸零
+  overflow／console error，AA 對比掃描零 finding。
 - 2026-07-30：PR #12 同步 `main@33f66fe`；案件 repository 契約、Service 與
   memory／PostgreSQL adapters 全面 async，並以封鎖同步 `psycopg.connect`
   的 regression test 驗證 Web 路徑。新增可由 PR、`main` push 或手動 dispatch

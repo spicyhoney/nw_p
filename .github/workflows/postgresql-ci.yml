@@ -86,5 +86,10 @@ jobs:
       - name: Compile Python modules
         run: python -m compileall -q src tests
 
+      - name: Check consumer JavaScript
+        run: |
+          node --check src/home_repair_agent/web/static/app.js
+          node tests/test_checklist_concurrency.js
+
       - name: Run full test suite with PostgreSQL
         run: python -m pytest -q

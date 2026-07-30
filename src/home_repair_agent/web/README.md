@@ -1,4 +1,4 @@
-# Web P1：消費者與服務廠商 Demo
+# Web P2：消費者無障礙與服務廠商 Demo
 
 ## 1. 做了什麼
 
@@ -9,6 +9,7 @@
 
 - 建立 process-local 諮詢 session。
 - 以自然語言觸發 Agent 查詢服務、行政區與諮詢單。
+- 以人工 Checklist 核對需求、地點、諮詢內容與希望時段；系統只提示，不代勾。
 - 手動完成動態表單與 `Asia/Taipei` 希望時段。
 - 呼叫 `match_service_providers` 顯示 synthetic 候選。
 - 選擇候選並明確確認後建立 `pending_provider` Demo 案件。
@@ -25,10 +26,13 @@
 
 詳細五項規則、狀態機與 API 流程請見
 [服務廠商派單／接單 P0](../../../docs/provider-workflow.md)。
+Checklist 狀態、無障礙契約與桌機／手機證據請見
+[消費者 Checklist 與無障礙 UI P0](../../../docs/consumer-accessibility.md)。
 
 刻意沒做：
 
 - Web 對話 session 尚未寫進 PostgreSQL；程式重啟後聊天畫面不能直接恢復。
+- 人工 Checklist 與對話共用 process-local session，不是案件持久化資料。
 - PostgreSQL 模式尚未連接 RDS；目前只驗證相同的 PostgreSQL 16.14 契約。
 - 廠商下拉選單是身分模擬，不是登入或正式授權。
 - 尚未保留時段、付款、通知、照片、語音或使用真實個資。
@@ -48,6 +52,12 @@ FastAPI route 只做 HTTP adapter。主要責任分工如下：
 
 聊天文字與商業狀態不混用。LLM 回覆負責說明與追問；服務、地點、表單、候選、
 案件與訂單都來自後端結構化 view model。
+
+Checklist 的 `suggested` 與 `checked` 亦分開：structured state 只能提示可核對，
+只有使用者的 click／Space／Enter 經冪等 `PUT` 才能改 checked。Checklist 不取代
+派單確認，也不寫入案件 repository。不同項目的 PUT 可同時執行，但前端只接受
+目前 session 中序號最新的完整 `SessionView`，全部完成後再 GET 同步；寫入與同步
+期間會鎖住 Reset、送出需求、表單、派單與 polling，避免舊回應覆蓋新狀態。
 
 模型只看前三個查詢 Tool；第四個媒合 Tool 必須在使用者手動送出且後端驗證
 表單後執行。派單與廠商決策則由明確按鈕直接呼叫 Service Layer，不經 LLM，
@@ -75,6 +85,14 @@ Browser confirmed form
   -> WebSessionService validates fields and +08:00 window
   -> match_service_providers MCP Tool
   -> synthetic candidates
+
+Browser manual checklist
+  -> idempotent PUT for one fixed checklist key
+  -> WebSessionService session lock
+  -> process-local checked state
+  -> response sequence rejects stale SessionView
+  -> final GET reconciles browser with server
+  -> rerender / polling keeps the state
 ```
 
 ### 派單與接單
@@ -106,6 +124,7 @@ Provider explicit decision
 | `POST` | `/api/sessions/{id}/messages` | 傳送自然語言需求 |
 | `POST` | `/api/sessions/{id}/form` | 驗證表單並媒合 |
 | `POST` | `/api/sessions/{id}/dispatch` | 明確確認派單 |
+| `PUT` | `/api/sessions/{id}/checklist/{key}` | 人工勾選／取消單一核對項目 |
 | `POST` | `/api/sessions/{id}/reset` | 未建案前重設；已有 audit 時拒絕清除 |
 | `GET` | `/api/provider/identities` | 列出 synthetic Demo 身分 |
 | `GET` | `/api/provider/cases` | 列出目前指派案件 |
@@ -118,6 +137,7 @@ Provider explicit decision
 ## 5. 安全與資料邊界
 
 - session 永遠仍是 process-local。
+- Checklist 只保存於 session；Agent、模型與四個 MCP Tools 都不能修改 checked。
 - `WEB_CASE_REPOSITORY=memory` 時，案件、訂單與 audit 也會隨程式重啟消失。
 - `WEB_CASE_REPOSITORY=postgres` 時，案件、訂單、idempotency 與 audit 可由新
   Repository 實例重新讀取；但尚不能恢復消費者聊天 session。
@@ -187,19 +207,24 @@ Linux／AWS 不受此限制。
 python -m pytest -q `
   tests/test_case_workflow.py `
   tests/test_web_app.py `
-  tests/test_postgres_case_repository.py
+  tests/test_postgres_case_repository.py `
+  tests/test_consumer_accessibility.py
 ```
 
-2026-07-30 無資料庫聚焦結果：`33 passed, 6 skipped, 3 subtests passed`。
+2026-07-30 PR #13 race review 修正後，無資料庫聚焦結果：
+`40 passed, 6 skipped, 3 subtests passed`。
 真實 PostgreSQL 與原有 loader／read integration 合跑為 `15 passed`。除了
 原有 Web session、
 三個初始 Tools、動態
 表單、時區驗證、媒合與安全 headers，亦涵蓋確認、冪等、授權、遮罩、接單、
 拒絕、改派、audit、並行狀態競爭、派單時段重新驗證與 workflow 注入一致性。
 
-完整 suite（提供測試 PostgreSQL）：`113 passed, 43 subtests passed`。受影響
-Python 檔案 Ruff／format、compileall 與 diff check 通過。新增回歸測試會封鎖
+本機完整 suite（未提供測試 PostgreSQL）：`105 passed, 15 skipped,
+43 subtests passed`。15 個 skip 由 PR PostgreSQL CI 補跑。受影響 Python 檔案
+Ruff／format、compileall、JavaScript syntax 與 diff check 通過。既有回歸測試會封鎖
 同步 `psycopg.connect`，確認 Web 使用的 repository 呼叫仍能完成建案與讀回。
+Node regression 刻意讓兩個 checklist PUT 反序完成，並驗證舊回應不能覆蓋
+Reset／新 session；CI 會直接執行該測試。
 另在 Windows 以專案入口實際啟動 async Web + PostgreSQL，走完 session、需求、
 表單、媒合與 `dispatch_pending` 建案 smoke。
 
@@ -209,13 +234,18 @@ pytest；不使用開發者本機資料庫或正式 RDS。
 
 瀏覽器已在桌機 `1280x720` 與手機 `390x844` 驗證：
 
+- Checklist 可 click／Space／Enter，rerender／polling 保留，Reset 清空。
+- 反序 PUT 最後與伺服器一致；寫入時 Reset 鎖定，500 失敗後恢復 checked、
+  解除 disabled 並回到原 checkbox 焦點。
+- 主要控制有效觸控範圍至少 `44x44px`，focus 明顯，reduced-motion 生效。
 - 消費者完成諮詢、媒合、選擇與確認派單。
 - 指派廠商 pending 時只見遮罩 contact。
 - 廠商二次確認接單後才見完整 synthetic contact。
 - 消費者自動取得接單狀態與 `SYN-ORDER-*`。
 - 未指派廠商列表為空。
 - filter 排除目前案件時，右側詳情與決策按鈕不會殘留。
-- 無水平 overflow 或 console error。
+- 無水平 overflow、遮住按鈕、無法關閉確認區或 console error。
+- 初始、媒合與派單確認畫面的 WCAG AA 對比掃描無 finding。
 
 真實 HF Web fixed case 使用 `Qwen/Qwen3-4B-Instruct-2507`、
 `provider=auto`：synthetic「台北市大安區水龍頭漏水」於 7.41 秒依序完成
@@ -229,7 +259,7 @@ warning；目前不影響功能或結果。
 
 ## 8. 下一階段
 
-1. 持久化 Web session／Agent 記憶，並設計同意、保存期間與刪除機制。
+1. 決定是否持久化 Web session／Checklist，並設計同意、保存期間與刪除機制。
 2. 加入正式 authentication／authorization 與廠商帳號。
 3. 實作時段保留與排程衝突控制。
 4. 將單一 HF live case 擴成正常、模糊服務、缺地點、多地點與 provider error

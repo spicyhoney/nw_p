@@ -47,6 +47,8 @@ from home_repair_agent.web.demo_case_repository import DemoCaseWorkflowRepositor
 from home_repair_agent.web.models import (
     ApiErrorBody,
     ApiErrorResponse,
+    ChecklistKey,
+    ChecklistUpdateRequest,
     DemoProviderIdentityListView,
     DispatchRequest,
     FormSubmitRequest,
@@ -300,6 +302,22 @@ def create_app(
         request: Request,
     ) -> SessionView:
         return await _session_service(request).dispatch_case(session_id, payload)
+
+    @app.put(
+        "/api/sessions/{session_id}/checklist/{item_key}",
+        response_model=SessionView,
+    )
+    async def update_checklist_item(
+        session_id: str,
+        item_key: ChecklistKey,
+        payload: ChecklistUpdateRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).update_checklist_item(
+            session_id,
+            item_key=item_key,
+            checked=payload.checked,
+        )
 
     @app.post(
         "/api/sessions/{session_id}/reset",

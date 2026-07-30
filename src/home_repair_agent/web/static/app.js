@@ -1,18 +1,67 @@
+class SessionResponseCoordinator {
+  constructor() {
+    this.nextSequence = 0;
+    this.latestStartedSequence = 0;
+    this.latestAppliedSequence = 0;
+    this.generation = 0;
+  }
+
+  begin(sessionId) {
+    this.nextSequence += 1;
+    this.latestStartedSequence = this.nextSequence;
+    return {
+      sequence: this.nextSequence,
+      generation: this.generation,
+      sessionId,
+    };
+  }
+
+  beginReplacement() {
+    this.generation += 1;
+    return this.begin(null);
+  }
+
+  apply(targetStore, request, response) {
+    const currentSessionId = targetStore.session?.session_id || null;
+    const responseSessionId = response?.session_id || null;
+    if (
+      request.generation !== this.generation ||
+      request.sequence < this.latestStartedSequence ||
+      request.sequence <= this.latestAppliedSequence ||
+      (request.sessionId && request.sessionId !== currentSessionId) ||
+      (request.sessionId && request.sessionId !== responseSessionId)
+    ) {
+      return false;
+    }
+    this.latestAppliedSequence = request.sequence;
+    targetStore.session = response;
+    return true;
+  }
+}
+
+const sessionResponses = new SessionResponseCoordinator();
+
 const store = {
   session: null,
   busy: false,
   selectedProviderId: "",
   alertTimer: null,
   pollTimer: null,
+  checklistBusy: new Set(),
+  checklistSyncing: false,
+  checklistNeedsRecovery: false,
+  lastDispatchSignature: "",
 };
 
 const elements = {};
 
-document.addEventListener("DOMContentLoaded", () => {
-  bindElements();
-  bindEvents();
-  createSession();
-});
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    bindElements();
+    bindEvents();
+    createSession();
+  });
+}
 
 function bindElements() {
   elements.providerChip = document.querySelector("#provider-chip");
@@ -20,6 +69,9 @@ function bindElements() {
   elements.progressList = document.querySelector("#progress-list");
   elements.serviceSummary = document.querySelector("#service-summary");
   elements.locationSummary = document.querySelector("#location-summary");
+  elements.checklistList = document.querySelector("#checklist-list");
+  elements.checklistSummary = document.querySelector("#checklist-summary");
+  elements.checklistFeedback = document.querySelector("#checklist-feedback");
   elements.traceList = document.querySelector("#trace-list");
   elements.workflowNote = document.querySelector("#workflow-note");
   elements.sessionState = document.querySelector("#session-state");
@@ -61,6 +113,7 @@ function bindElements() {
     "#mobile-candidate-count",
   );
   elements.appAlert = document.querySelector("#app-alert");
+  elements.appStatus = document.querySelector("#app-status");
   elements.mobileTabs = [...document.querySelectorAll("[data-mobile-target]")];
 }
 
@@ -79,19 +132,31 @@ function bindEvents() {
   });
   elements.mobileTabs.forEach((button) => {
     button.addEventListener("click", () => {
-      setMobileView(button.dataset.mobileTarget);
+      setMobileView(button.dataset.mobileTarget, { focusHeading: true });
     });
   });
   window.addEventListener("beforeunload", stopSessionPolling);
 }
 
 async function createSession() {
-  setBusy(true);
+  if (hasChecklistMutation()) {
+    return;
+  }
+  const request = sessionResponses.beginReplacement();
+  setBusy(true, "正在建立新諮詢。");
   try {
     stopSessionPolling();
     store.selectedProviderId = "";
-    store.session = await api("/api/sessions", { method: "POST" });
+    store.checklistBusy.clear();
+    store.checklistSyncing = false;
+    store.checklistNeedsRecovery = false;
+    store.lastDispatchSignature = "";
+    const response = await api("/api/sessions", { method: "POST" });
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
+    announce("新諮詢已建立，可以開始描述修繕需求。");
   } catch (error) {
     showAlert(error.message);
   } finally {
@@ -101,7 +166,7 @@ async function createSession() {
 
 async function handleMessageSubmit(event) {
   event.preventDefault();
-  if (!store.session || store.busy) {
+  if (!store.session || isSessionMutationBlocked()) {
     return;
   }
   const text = elements.messageInput.value.trim();
@@ -109,18 +174,24 @@ async function handleMessageSubmit(event) {
     return;
   }
 
-  setBusy(true);
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  setBusy(true, "正在整理你的修繕需求。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/messages`,
+    const response = await api(
+      `/api/sessions/${sessionId}/messages`,
       {
         method: "POST",
         body: JSON.stringify({ text }),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     elements.messageInput.value = "";
     resizeMessageInput();
     renderSession();
+    announce("需求已更新，請核對系統整理的內容。");
     if (store.session.consultation_form) {
       setMobileView("conversation");
     }
@@ -133,7 +204,11 @@ async function handleMessageSubmit(event) {
 
 async function handleFormSubmit(event) {
   event.preventDefault();
-  if (!store.session || store.busy || !store.session.consultation_form) {
+  if (
+    !store.session ||
+    isSessionMutationBlocked() ||
+    !store.session.consultation_form
+  ) {
     return;
   }
 
@@ -143,17 +218,23 @@ async function handleFormSubmit(event) {
     return;
   }
 
-  setBusy(true);
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  setBusy(true, "正在核對表單並媒合師傅。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/form`,
+    const response = await api(
+      `/api/sessions/${sessionId}/form`,
       {
         method: "POST",
         body: JSON.stringify(payload),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
-    setMobileView("candidates");
+    announce(`媒合完成，共有 ${store.session.candidates.length} 位候選。`);
+    setMobileView("candidates", { focusHeading: true });
   } catch (error) {
     showFormError(error);
   } finally {
@@ -162,29 +243,137 @@ async function handleFormSubmit(event) {
 }
 
 async function resetSession() {
-  if (!store.session || store.busy) {
+  if (!store.session || isSessionMutationBlocked()) {
     return;
   }
-  setBusy(true);
+  setBusy(true, "正在重新開始這次諮詢。");
   try {
     if (store.session.dispatch) {
       await createSession();
-      setMobileView("conversation");
+      setMobileView("conversation", { focusHeading: true });
       elements.messageInput.focus();
       return;
     }
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/reset`,
+    const sessionId = store.session.session_id;
+    const request = sessionResponses.begin(sessionId);
+    const response = await api(
+      `/api/sessions/${sessionId}/reset`,
       { method: "POST" },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     renderSession();
-    setMobileView("conversation");
+    announce("諮詢已重設，人工核對清單也已清除。");
+    setMobileView("conversation", { focusHeading: true });
     elements.messageInput.focus();
   } catch (error) {
     showAlert(error.message);
   } finally {
     setBusy(false);
   }
+}
+
+async function updateChecklistItem(itemKey, checked) {
+  if (
+    !store.session ||
+    store.busy ||
+    store.checklistSyncing ||
+    store.checklistBusy.has(itemKey)
+  ) {
+    return;
+  }
+
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  const item = store.session.checklist.find(
+    (candidate) => candidate.key === itemKey,
+  );
+  const inputId = `checklist-${itemKey}`;
+  store.checklistBusy.add(itemKey);
+  const activeControl = document.querySelector(`#${inputId}`);
+  if (activeControl) {
+    activeControl.disabled = true;
+    activeControl.closest(".checklist-item")?.setAttribute("aria-busy", "true");
+  }
+  updateControls();
+  announce(`正在儲存「${item?.label || "核對項目"}」。`);
+  try {
+    const response = await api(
+      `/api/sessions/${sessionId}/checklist/${encodeURIComponent(
+        itemKey,
+      )}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ checked }),
+      },
+    );
+    if (sessionResponses.apply(store, request, response)) {
+      renderSession();
+    }
+    if (store.session?.session_id === sessionId) {
+      const resultText = checked ? "已由你勾選" : "已由你取消勾選";
+      elements.checklistFeedback.textContent =
+        `${item?.label || "核對項目"}：${resultText}。`;
+    }
+  } catch (error) {
+    store.checklistNeedsRecovery = true;
+    showAlert(error.message);
+    announce(`「${item?.label || "核對項目"}」儲存失敗，正在重新同步。`);
+  } finally {
+    store.checklistBusy.delete(itemKey);
+    let synchronized = false;
+    if (
+      store.session?.session_id === sessionId &&
+      store.checklistBusy.size === 0
+    ) {
+      synchronized = await synchronizeChecklistSession(sessionId);
+    } else {
+      renderChecklist();
+      updateControls();
+    }
+    if (synchronized && store.checklistNeedsRecovery) {
+      store.checklistNeedsRecovery = false;
+      announce("核對清單已恢復伺服器狀態。");
+    }
+    if (store.session?.session_id === sessionId) {
+      window.requestAnimationFrame(() => {
+        document.querySelector(`#${inputId}`)?.focus({ preventScroll: true });
+      });
+    }
+  }
+}
+
+async function synchronizeChecklistSession(sessionId) {
+  if (
+    !store.session ||
+    store.session.session_id !== sessionId ||
+    store.checklistBusy.size > 0
+  ) {
+    return false;
+  }
+
+  store.checklistSyncing = true;
+  renderChecklist();
+  updateControls();
+  const request = sessionResponses.begin(sessionId);
+  let synchronized = false;
+  try {
+    const response = await api(`/api/sessions/${sessionId}`);
+    synchronized = sessionResponses.apply(store, request, response);
+    if (synchronized) {
+      renderSession();
+    }
+  } catch (error) {
+    showAlert(`核對清單同步失敗：${error.message}`);
+  } finally {
+    store.checklistSyncing = false;
+    if (store.session?.session_id === sessionId) {
+      renderChecklist();
+      updateControls();
+    }
+  }
+  return synchronized;
 }
 
 function selectCandidate(providerId) {
@@ -214,25 +403,30 @@ async function confirmDispatch() {
     !store.session ||
     !store.selectedProviderId ||
     !store.session.can_dispatch ||
-    store.busy
+    isSessionMutationBlocked()
   ) {
     return;
   }
 
-  setBusy(true);
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  setBusy(true, "正在建立案件並通知所選廠商。");
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}/dispatch`,
+    const response = await api(
+      `/api/sessions/${sessionId}/dispatch`,
       {
         method: "POST",
         body: JSON.stringify({
           provider_id: store.selectedProviderId,
           confirmed: true,
           idempotency_key:
-            `dispatch:${store.session.session_id}:${store.selectedProviderId}`,
+            `dispatch:${sessionId}:${store.selectedProviderId}`,
         }),
       },
     );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
     store.selectedProviderId = "";
     renderSession();
     startSessionPolling();
@@ -261,17 +455,20 @@ function stopSessionPolling() {
 async function refreshSession() {
   if (
     !store.session ||
-    store.busy ||
+    isSessionMutationBlocked() ||
     store.session.dispatch?.status !== "pending_provider"
   ) {
     return;
   }
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
   try {
-    store.session = await api(
-      `/api/sessions/${store.session.session_id}`,
-    );
-    renderSession();
-    if (store.session.dispatch?.status !== "pending_provider") {
+    const response = await api(`/api/sessions/${sessionId}`);
+    const applied = sessionResponses.apply(store, request, response);
+    if (applied) {
+      renderSession();
+    }
+    if (applied && store.session.dispatch?.status !== "pending_provider") {
       stopSessionPolling();
     }
   } catch (error) {
@@ -323,6 +520,7 @@ function renderSession() {
   }
   renderHeader();
   renderProgress();
+  renderChecklist();
   renderMessages();
   renderForm();
   renderDispatch();
@@ -332,10 +530,17 @@ function renderSession() {
 
 function renderHeader() {
   const session = store.session;
-  elements.providerChip.textContent = session.provider.label;
+  elements.providerChip.textContent = {
+    mock: "Mock 模式",
+    huggingface: "HF 模式",
+  }[session.provider.key];
   elements.providerChip.title = session.provider.is_external
-    ? "外部 hosted model"
-    : "本機規則式 Mock Model";
+    ? `${session.provider.label}，外部 hosted model`
+    : `${session.provider.label}，本機規則式 Mock Model`;
+  elements.providerChip.setAttribute(
+    "aria-label",
+    elements.providerChip.title,
+  );
   const labels = {
     collecting_need: "確認需求",
     clarifying: "補充資料",
@@ -360,10 +565,21 @@ function renderProgress() {
       const marker = document.createElement("span");
       marker.className = "progress-step__marker";
       marker.textContent = step.state === "complete" ? "✓" : String(index + 1);
+      marker.setAttribute("aria-hidden", "true");
 
+      const content = document.createElement("span");
+      content.className = "progress-step__content";
       const label = document.createElement("span");
       label.textContent = step.label;
-      item.append(marker, label);
+      const state = document.createElement("small");
+      state.className = "progress-step__state";
+      state.textContent = {
+        complete: "完成",
+        active: "目前步驟",
+        pending: "尚未開始",
+      }[step.state];
+      content.append(label, state);
+      item.append(marker, content);
       return item;
     }),
   );
@@ -385,6 +601,61 @@ function renderProgress() {
     traceItems.push(empty);
   }
   elements.traceList.replaceChildren(...traceItems);
+}
+
+function renderChecklist() {
+  const checklist = store.session?.checklist || [];
+  const activeId = document.activeElement?.id || "";
+  const nodes = checklist.map((item) => {
+    const row = document.createElement("li");
+    row.className = "checklist-item";
+    if (item.checked) {
+      row.classList.add("checklist-item--checked");
+    }
+
+    const input = document.createElement("input");
+    input.id = `checklist-${item.key}`;
+    input.type = "checkbox";
+    input.checked = item.checked;
+    input.disabled =
+      store.busy ||
+      store.checklistSyncing ||
+      store.checklistBusy.has(item.key);
+    input.setAttribute("aria-describedby", `checklist-${item.key}-hint`);
+    input.addEventListener("change", () => {
+      updateChecklistItem(item.key, input.checked);
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        updateChecklistItem(item.key, !input.checked);
+      }
+    });
+
+    const label = document.createElement("label");
+    label.htmlFor = input.id;
+    const text = document.createElement("strong");
+    text.textContent = item.label;
+    const hint = document.createElement("small");
+    hint.id = `checklist-${item.key}-hint`;
+    hint.textContent = item.suggested
+      ? "系統已有資料，請自行核對"
+      : "等待更多資料，也可由你自行勾選";
+    label.append(text, hint);
+    row.append(input, label);
+    return row;
+  });
+  elements.checklistList.replaceChildren(...nodes);
+
+  const checkedCount = checklist.filter((item) => item.checked).length;
+  elements.checklistSummary.textContent =
+    `${checkedCount} / ${checklist.length}`;
+
+  if (activeId.startsWith("checklist-")) {
+    window.requestAnimationFrame(() => {
+      document.querySelector(`#${activeId}`)?.focus({ preventScroll: true });
+    });
+  }
 }
 
 function renderMessages() {
@@ -629,6 +900,7 @@ function renderDispatch() {
   const dispatch = store.session.dispatch;
   elements.dispatchStatus.hidden = !dispatch;
   if (!dispatch) {
+    store.lastDispatchSignature = "";
     elements.workflowNote.textContent =
       "尚未建立案件；確認候選後才會送出派單。";
     return;
@@ -660,6 +932,11 @@ function renderDispatch() {
     definitionItem("廠商", dispatch.provider_name),
     definitionItem("訂單編號", dispatch.order_no || "尚未建立"),
   );
+  const signature = `${dispatch.case_id}:${dispatch.status}`;
+  if (signature !== store.lastDispatchSignature) {
+    store.lastDispatchSignature = signature;
+    announce(`${copy.title}。${copy.text}`);
+  }
 }
 
 function renderCandidates() {
@@ -804,12 +1081,21 @@ function metric(labelText, valueText) {
   return wrapper;
 }
 
+function hasChecklistMutation() {
+  return store.checklistBusy.size > 0 || store.checklistSyncing;
+}
+
+function isSessionMutationBlocked() {
+  return store.busy || hasChecklistMutation();
+}
+
 function updateControls() {
+  const sessionMutationBlocked = isSessionMutationBlocked();
   const canSend = Boolean(store.session?.can_send_message);
   elements.messageForm.hidden = !canSend;
-  elements.messageInput.disabled = store.busy || !canSend;
-  elements.sendButton.disabled = store.busy || !canSend;
-  elements.resetButton.disabled = store.busy;
+  elements.messageInput.disabled = sessionMutationBlocked || !canSend;
+  elements.sendButton.disabled = sessionMutationBlocked || !canSend;
+  elements.resetButton.disabled = sessionMutationBlocked;
   elements.resetButton.title = store.session?.dispatch
     ? "建立新諮詢"
     : "重新開始";
@@ -818,40 +1104,56 @@ function updateControls() {
     elements.resetButton.title,
   );
   elements.confirmDispatch.disabled =
-    store.busy ||
+    sessionMutationBlocked ||
     !Boolean(store.selectedProviderId) ||
     !Boolean(store.session?.can_dispatch);
-  elements.cancelDispatch.disabled = store.busy;
+  elements.cancelDispatch.disabled = sessionMutationBlocked;
   document.querySelectorAll("[data-provider-select]").forEach((button) => {
-    button.disabled = store.busy;
+    button.disabled = sessionMutationBlocked;
   });
 
   const submitButton =
     elements.consultationForm.querySelector('button[type="submit"]');
   if (submitButton) {
     submitButton.disabled =
-      store.busy || !Boolean(store.session?.can_submit_form);
-    submitButton.textContent = store.busy ? "媒合中…" : "查看媒合結果 →";
+      sessionMutationBlocked || !Boolean(store.session?.can_submit_form);
+    submitButton.textContent = sessionMutationBlocked
+      ? "處理中…"
+      : "查看媒合結果 →";
   }
 }
 
-function setBusy(value) {
+function setBusy(value, message = "") {
   store.busy = value;
   document.body.setAttribute("aria-busy", String(value));
+  if (value && message) {
+    announce(message);
+  }
   if (store.session) {
+    renderChecklist();
     updateControls();
   }
 }
 
-function setMobileView(view) {
+function setMobileView(view, { focusHeading = false } = {}) {
   document.body.dataset.mobileView = view;
   elements.mobileTabs.forEach((button) => {
     if (button.dataset.mobileTarget === view) {
       button.setAttribute("aria-current", "page");
+      button.setAttribute("aria-pressed", "true");
     } else {
       button.removeAttribute("aria-current");
+      button.setAttribute("aria-pressed", "false");
     }
   });
+  if (focusHeading) {
+    const heading = {
+      progress: document.querySelector("#progress-title"),
+      conversation: document.querySelector("#conversation-title"),
+      candidates: document.querySelector("#candidates-title"),
+    }[view];
+    heading?.focus({ preventScroll: true });
+  }
 }
 
 function showFormError(error) {
@@ -869,9 +1171,18 @@ function showFormError(error) {
       group.classList.add("field-group--error");
       errorNode.textContent = message;
       errorNode.hidden = false;
+      errorNode.id = `error-${key}`;
+      group.querySelectorAll("input, textarea").forEach((control) => {
+        control.setAttribute("aria-invalid", "true");
+        control.setAttribute("aria-describedby", errorNode.id);
+      });
     }
   });
   elements.formError.scrollIntoView({ block: "nearest" });
+  const firstInvalid = elements.formFields.querySelector(
+    '[aria-invalid="true"]',
+  );
+  (firstInvalid || elements.formError).focus?.();
 }
 
 function clearFormErrors() {
@@ -880,6 +1191,12 @@ function clearFormErrors() {
   elements.formFields
     .querySelectorAll(".field-group--error")
     .forEach((group) => group.classList.remove("field-group--error"));
+  elements.formFields
+    .querySelectorAll('[aria-invalid="true"]')
+    .forEach((control) => {
+      control.removeAttribute("aria-invalid");
+      control.removeAttribute("aria-describedby");
+    });
   elements.formFields.querySelectorAll(".field-error").forEach((node) => {
     node.hidden = true;
     node.textContent = "";
@@ -893,6 +1210,13 @@ function showAlert(message) {
   store.alertTimer = window.setTimeout(() => {
     elements.appAlert.hidden = true;
   }, 6000);
+}
+
+function announce(message) {
+  if (!elements.appStatus || !message) {
+    return;
+  }
+  elements.appStatus.textContent = message;
 }
 
 function resizeMessageInput() {
@@ -948,4 +1272,8 @@ function cssEscape(value) {
     return window.CSS.escape(value);
   }
   return String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { SessionResponseCoordinator };
 }

@@ -63,6 +63,9 @@ jobs:
             src/home_repair_agent/data_cleaning/postgres.py \
             src/home_repair_agent/web/app.py \
             src/home_repair_agent/web/demo_case_repository.py \
+            src/home_repair_agent/web/models.py \
+            src/home_repair_agent/web/service.py \
+            tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \
             tests/test_web_app.py
@@ -73,12 +76,20 @@ jobs:
             src/home_repair_agent/data_cleaning/postgres.py \
             src/home_repair_agent/web/app.py \
             src/home_repair_agent/web/demo_case_repository.py \
+            src/home_repair_agent/web/models.py \
+            src/home_repair_agent/web/service.py \
+            tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \
             tests/test_web_app.py
 
       - name: Compile Python modules
         run: python -m compileall -q src tests
+
+      - name: Check consumer JavaScript
+        run: |
+          node --check src/home_repair_agent/web/static/app.js
+          node tests/test_checklist_concurrency.js
 
       - name: Run full test suite with PostgreSQL
         run: python -m pytest -q

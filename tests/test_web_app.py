@@ -92,6 +92,10 @@ class WebAppTests(unittest.TestCase):
             "idempotency_key": f"dispatch:test:{provider_id}",
         }
 
+    @staticmethod
+    def checklist_by_key(session: dict[str, object]) -> dict[str, dict[str, object]]:
+        return {item["key"]: item for item in session["checklist"]}
+
     def test_root_serves_the_operational_demo_and_asset(self) -> None:
         response = self.client.get("/")
         asset = self.client.get("/static/repair-workbench.webp")
@@ -148,6 +152,40 @@ class WebAppTests(unittest.TestCase):
         )
         self.assertEqual("datetime_range", preferred_time["config"]["control"])
         self.assertEqual("Asia/Taipei", preferred_time["config"]["timezone"])
+        checklist = self.checklist_by_key(session)
+        self.assertTrue(checklist["service"]["suggested"])
+        self.assertTrue(checklist["location"]["suggested"])
+        self.assertFalse(checklist["consultation"]["suggested"])
+        self.assertTrue(all(not item["checked"] for item in checklist.values()))
+
+    def test_manual_checklist_toggle_persists_through_session_refresh(self) -> None:
+        session = self.prepare_form()
+        session_id = session["session_id"]
+        endpoint = f"/api/sessions/{session_id}/checklist/service"
+
+        checked = self.client.put(endpoint, json={"checked": True})
+        refreshed = self.client.get(f"/api/sessions/{session_id}")
+        unchecked = self.client.put(endpoint, json={"checked": False})
+
+        self.assertEqual(200, checked.status_code)
+        self.assertTrue(self.checklist_by_key(checked.json())["service"]["checked"])
+        self.assertTrue(self.checklist_by_key(refreshed.json())["service"]["checked"])
+        self.assertEqual(200, unchecked.status_code)
+        self.assertFalse(self.checklist_by_key(unchecked.json())["service"]["checked"])
+        self.assertTrue(self.checklist_by_key(unchecked.json())["service"]["suggested"])
+
+    def test_unknown_checklist_item_is_rejected_without_changing_state(self) -> None:
+        session = self.create_session()
+        session_id = session["session_id"]
+
+        response = self.client.put(
+            f"/api/sessions/{session_id}/checklist/model_confirmed",
+            json={"checked": True},
+        )
+        refreshed = self.client.get(f"/api/sessions/{session_id}").json()
+
+        self.assertEqual(422, response.status_code)
+        self.assertTrue(all(not item["checked"] for item in refreshed["checklist"]))
 
     def test_form_submission_calls_matching_tool_and_returns_synthetic_candidates(self) -> None:
         session = self.prepare_form()
@@ -291,6 +329,10 @@ class WebAppTests(unittest.TestCase):
         session = self.prepare_form()
         service = self.client.app.state.web_sessions
         record_before_reset = service._sessions[session["session_id"]]
+        checklist_response = self.client.put(
+            f"/api/sessions/{session['session_id']}/checklist/service",
+            json={"checked": True},
+        )
         response = self.client.post(
             f"/api/sessions/{session['session_id']}/reset",
         )
@@ -299,6 +341,7 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(200, response.status_code)
         self.assertIs(record_before_reset, record_after_reset)
         self.assertIs(record_before_reset.lock, record_after_reset.lock)
+        self.assertTrue(self.checklist_by_key(checklist_response.json())["service"]["checked"])
         reset = response.json()
         self.assertEqual(session["session_id"], reset["session_id"])
         self.assertEqual("collecting_need", reset["state"])
@@ -306,6 +349,7 @@ class WebAppTests(unittest.TestCase):
         self.assertIsNone(reset["consultation_form"])
         self.assertEqual([], reset["candidates"])
         self.assertEqual(1, len(reset["messages"]))
+        self.assertTrue(all(not item["checked"] for item in reset["checklist"]))
 
     def test_provider_page_and_synthetic_identities_are_available(self) -> None:
         page = self.client.get("/provider")

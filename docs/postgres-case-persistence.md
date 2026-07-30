@@ -1,6 +1,6 @@
 # PostgreSQL 案件持久化
 
-最後更新：2026-07-29
+最後更新：2026-07-30
 
 ## 1. 做了什麼
 
@@ -9,10 +9,14 @@
 - `sql/migrations/002_case_workflow.sql` 建立 `workflow` schema。
 - `PostgresCaseWorkflowRepository` 保存案件、訂單、冪等紀錄與 audit。
 - `CaseWorkflowService` 讓一次命令的檢查與寫入共用同一 transaction。
+- Repository 契約與 Service 呼叫全面 async，PostgreSQL 使用
+  `psycopg.AsyncConnection`，不阻塞 FastAPI event loop。
 - PostgreSQL advisory transaction lock 依 idempotency key 與 session 序列化建案。
 - 廠商決策使用 `SELECT ... FOR UPDATE`，另以 `version` 防止遺失更新。
 - Web 以 `WEB_CASE_REPOSITORY=memory|postgres` 顯式切換。
 - Migration runner 會依檔名順序套用所有 `sql/migrations/*.sql`。
+- `.github/workflows/postgresql-ci.yml` 在乾淨 PostgreSQL 16.14 service 上驗證
+  migration、repository 與完整測試，並支援手動重跑。
 
 刻意沒做：
 
@@ -29,6 +33,10 @@
 Service Layer 保留確認、授權、狀態轉換與聯絡資料揭露規則；SQL 只存在
 Repository。`workflow` 表使用 `service_case` 等通用名稱，服務名稱、表單、
 地點、廠商與回答保存建立當下快照，不把水電題目寫死在 SQL。
+
+FastAPI route、Service Layer 與 repository 共用 async 呼叫鏈。同步 loader
+仍只用於離線 migration／資料清洗；每次 HTTP 案件讀寫都走
+`psycopg.AsyncConnection`，不把同步資料庫 I/O 放在 Web event loop。
 
 ## 3. 完整資料流
 
@@ -83,6 +91,11 @@ $env:WEB_CASE_REPOSITORY = "postgres"
 home-repair-web
 ```
 
+Windows 上的 psycopg async 需要 Selector event loop；請用 `home-repair-web`
+或 `python -m home_repair_agent.web.app` 啟動。專案啟動器會自動選用相容 loop。
+Linux／AWS 不需要額外設定。不要在 Windows PostgreSQL 模式改用裸
+`python -m uvicorn ...` 指令，因為該入口不會套用本專案的 loop factory。
+
 正式密碼、RDS URL、AWS 金鑰與 `.env` 不得提交。應由環境變數或未來的
 Secrets Manager 注入。
 
@@ -111,14 +124,22 @@ python -m pytest -q `
   tests/test_postgres_case_repository.py
 ```
 
-2026-07-29 已在原生 Windows PostgreSQL 16.14 驗證：
+2026-07-30 已在原生 Windows PostgreSQL 16.14 驗證：
 
-- 新舊 PostgreSQL integration：`14 passed`。
-- 完整 suite（提供測試 PostgreSQL）：`112 passed, 43 subtests passed`。
+- 無資料庫 focused：`33 passed, 6 skipped, 3 subtests passed`。
+- 新舊 PostgreSQL integration：`15 passed`。
+- 完整 suite（提供測試 PostgreSQL）：`113 passed, 43 subtests passed`。
 - Repository 重建後仍能讀取案件、接單、訂單與三筆 audit。
 - idempotency 跨 Repository 實例仍只建立一案。
 - 強制 idempotency 寫入失敗時，案件與 audit 全部 rollback。
 - 兩個獨立 worker 同時接受／拒絕，只有一個 terminal transition 成功。
+- 封鎖同步 `psycopg.connect` 後，async repository 仍可建案與讀回。
+- Windows 以專案入口實際啟動 FastAPI + PostgreSQL，已完成 session、需求解析、
+  表單媒合與 `dispatch_pending` 建案 smoke。
+
+GitHub Actions 的 `PostgreSQL CI` 在 PR、`main` push 時自動執行，也可在
+Actions 頁面用 `Run workflow` 手動重跑。每次 job 都建立新的
+`postgres:16.14-alpine` service，不依賴開發者電腦、Docker Desktop 或正式 RDS。
 
 ## 8. 下一階段
 

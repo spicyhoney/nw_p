@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import mimetypes
 import os
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -13,6 +15,10 @@ from fastapi import FastAPI, Header, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from mcp.shared.memory import create_connected_server_and_client_session
+
+if sys.platform == "win32":
+    # psycopg async connections require a selector-based loop on Windows.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from home_repair_agent.agent.demo import (
     TAIPEI_TIMEZONE,
@@ -433,11 +439,16 @@ def _read_port(value: str) -> int:
     return port
 
 
+def _selector_loop_factory() -> asyncio.AbstractEventLoop:
+    return asyncio.SelectorEventLoop()
+
+
 def main() -> None:
     uvicorn.run(
         "home_repair_agent.web.app:app",
         host=os.getenv("WEB_HOST", "127.0.0.1"),
         port=_read_port(os.getenv("WEB_PORT", "8080")),
+        loop=_selector_loop_factory if sys.platform == "win32" else "auto",
         reload=False,
     )
 

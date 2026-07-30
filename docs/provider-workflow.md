@@ -1,6 +1,6 @@
 # 服務廠商派單／接單 P0
 
-最後更新：2026-07-29
+最後更新：2026-07-30
 
 ## 1. 做了什麼
 
@@ -158,9 +158,10 @@ python -m pytest -q `
 - App factory 不允許消費者與 provider API 使用不同 workflow。
 - filter 排除目前案件時，右側詳情與決策按鈕同步清除或切換。
 
-2026-07-29 無資料庫聚焦結果：`33 passed, 5 skipped, 3 subtests passed`；
-真實 PostgreSQL 新舊 integration 合跑 `14 passed`，完整 suite（提供測試資料庫）
-`112 passed, 43 subtests passed`。瀏覽器另外完成消費者派單、廠商
+2026-07-30 無資料庫聚焦結果：`33 passed, 6 skipped, 3 subtests passed`；
+真實 PostgreSQL 新舊 integration 合跑 `15 passed`，完整 suite（提供測試資料庫）
+`113 passed, 43 subtests passed`。PostgreSQL 案件路徑已全面 async，並由可手動
+重跑的 GitHub Actions PostgreSQL CI 驗證。瀏覽器另外完成消費者派單、廠商
 接單、聯絡資料解鎖、消費者狀態回寫與未指派廠商隔離；桌機 `1280x720`、
 手機 `390x844` 無水平 overflow 或 console error。本輪另驗證 filter 切換不會
 保留被排除案件的詳情與操作按鈕。

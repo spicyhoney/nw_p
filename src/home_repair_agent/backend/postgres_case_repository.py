@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager, contextmanager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
@@ -235,24 +235,25 @@ class PostgresCaseWorkflowRepository:
             return
 
         psycopg, dict_row = _load_psycopg()
-        with psycopg.connect(
+        connection = await psycopg.AsyncConnection.connect(
             self._database_url,
             row_factory=dict_row,
-        ) as connection:
-            token = self._active_connection.set(connection)
-            try:
-                with connection.transaction():
-                    yield
-            finally:
-                self._active_connection.reset(token)
+        )
+        token = self._active_connection.set(connection)
+        try:
+            async with connection.transaction():
+                yield
+        finally:
+            self._active_connection.reset(token)
+            await connection.close()
 
-    def lock_idempotency_key(self, key: str) -> None:
-        self._lock(f"idempotency:{key}")
+    async def lock_idempotency_key(self, key: str) -> None:
+        await self._lock(f"idempotency:{key}")
 
-    def lock_session(self, session_id: str) -> None:
-        self._lock(f"session:{session_id}")
+    async def lock_session(self, session_id: str) -> None:
+        await self._lock(f"session:{session_id}")
 
-    def get_case(
+    async def get_case(
         self,
         case_id: str,
         *,
@@ -263,41 +264,45 @@ class PostgresCaseWorkflowRepository:
         statement = SELECT_CASE_SQL
         if for_update:
             statement += "\nFOR UPDATE"
-        with self._connection() as connection:
-            row = connection.execute(statement, {"case_id": case_id}).fetchone()
-            return self._assemble_case(connection, row) if row is not None else None
+        async with self._connection() as connection:
+            cursor = await connection.execute(statement, {"case_id": case_id})
+            row = await cursor.fetchone()
+            return await self._assemble_case(connection, row) if row is not None else None
 
-    def list_cases_for_session(self, session_id: str) -> list[WorkflowCase]:
-        with self._connection() as connection:
-            rows = connection.execute(
+    async def list_cases_for_session(self, session_id: str) -> list[WorkflowCase]:
+        async with self._connection() as connection:
+            cursor = await connection.execute(
                 LIST_SESSION_CASES_SQL,
                 {"session_id": session_id},
-            ).fetchall()
-            return [self._assemble_case(connection, row) for row in rows]
+            )
+            rows = await cursor.fetchall()
+            return [await self._assemble_case(connection, row) for row in rows]
 
-    def list_cases_for_provider(self, provider_id: str) -> list[WorkflowCase]:
-        with self._connection() as connection:
-            rows = connection.execute(
+    async def list_cases_for_provider(self, provider_id: str) -> list[WorkflowCase]:
+        async with self._connection() as connection:
+            cursor = await connection.execute(
                 LIST_PROVIDER_CASES_SQL,
                 {"provider_id": provider_id},
-            ).fetchall()
-            return [self._assemble_case(connection, row) for row in rows]
+            )
+            rows = await cursor.fetchall()
+            return [await self._assemble_case(connection, row) for row in rows]
 
-    def save_case(self, case: WorkflowCase) -> None:
+    async def save_case(self, case: WorkflowCase) -> None:
         connection = self._require_transaction()
         parameters = _case_parameters(case)
         psycopg, _dict_row = _load_psycopg()
         try:
             if case.version == 1:
-                saved = connection.execute(INSERT_CASE_SQL, parameters).fetchone()
+                cursor = await connection.execute(INSERT_CASE_SQL, parameters)
             else:
-                saved = connection.execute(
+                cursor = await connection.execute(
                     UPDATE_CASE_SQL,
                     {
                         **parameters,
                         "expected_version": case.version - 1,
                     },
-                ).fetchone()
+                )
+            saved = await cursor.fetchone()
             if saved is None:
                 raise CaseRepositoryConflictError(
                     code="CONCURRENT_CASE_UPDATE",
@@ -305,7 +310,7 @@ class PostgresCaseWorkflowRepository:
                 )
 
             if case.order_no is not None:
-                connection.execute(
+                await connection.execute(
                     INSERT_ORDER_SQL,
                     {
                         "order_no": case.order_no,
@@ -320,7 +325,7 @@ class PostgresCaseWorkflowRepository:
                 )
 
             for sequence_no, event in enumerate(case.audit_events, start=1):
-                connection.execute(
+                await connection.execute(
                     INSERT_AUDIT_SQL,
                     {
                         **event.model_dump(),
@@ -331,12 +336,13 @@ class PostgresCaseWorkflowRepository:
         except psycopg.errors.UniqueViolation as error:
             raise _write_conflict(error) from error
 
-    def get_idempotency(self, key: str) -> IdempotencyRecord | None:
-        with self._connection() as connection:
-            row = connection.execute(
+    async def get_idempotency(self, key: str) -> IdempotencyRecord | None:
+        async with self._connection() as connection:
+            cursor = await connection.execute(
                 SELECT_IDEMPOTENCY_SQL,
                 {"key": key},
-            ).fetchone()
+            )
+            row = await cursor.fetchone()
         if row is None:
             return None
         return IdempotencyRecord(
@@ -346,20 +352,20 @@ class PostgresCaseWorkflowRepository:
             case_id=row["case_id"],
         )
 
-    def save_idempotency(self, record: IdempotencyRecord) -> None:
+    async def save_idempotency(self, record: IdempotencyRecord) -> None:
         connection = self._require_transaction()
         psycopg, _dict_row = _load_psycopg()
         try:
-            connection.execute(
+            await connection.execute(
                 INSERT_IDEMPOTENCY_SQL,
                 record.model_dump(),
             )
         except psycopg.errors.UniqueViolation as error:
             raise _write_conflict(error) from error
 
-    def _lock(self, lock_key: str) -> None:
+    async def _lock(self, lock_key: str) -> None:
         connection = self._require_transaction()
-        connection.execute(ADVISORY_LOCK_SQL, {"lock_key": lock_key})
+        await connection.execute(ADVISORY_LOCK_SQL, {"lock_key": lock_key})
 
     def _require_transaction(self) -> Any:
         connection = self._active_connection.get()
@@ -367,29 +373,33 @@ class PostgresCaseWorkflowRepository:
             raise RuntimeError("case workflow writes require an active transaction")
         return connection
 
-    @contextmanager
-    def _connection(self) -> Iterator[Any]:
+    @asynccontextmanager
+    async def _connection(self) -> AsyncIterator[Any]:
         existing = self._active_connection.get()
         if existing is not None:
             yield existing
             return
 
         psycopg, dict_row = _load_psycopg()
-        with psycopg.connect(
+        connection = await psycopg.AsyncConnection.connect(
             self._database_url,
             row_factory=dict_row,
-        ) as connection:
+        )
+        try:
             yield connection
+        finally:
+            await connection.close()
 
-    def _assemble_case(
+    async def _assemble_case(
         self,
         connection: Any,
         row: dict[str, Any],
     ) -> WorkflowCase:
-        audit_rows = connection.execute(
+        cursor = await connection.execute(
             SELECT_AUDIT_SQL,
             {"case_id": row["case_id"]},
-        ).fetchall()
+        )
+        audit_rows = await cursor.fetchall()
         return WorkflowCase(
             case_id=row["case_id"],
             session_id=row["session_id"],

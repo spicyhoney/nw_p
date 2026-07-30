@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 try:
     import psycopg
 except ImportError:
     psycopg = None
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
 from home_repair_agent.backend.case_models import (
@@ -33,7 +38,7 @@ REFERENCE_TIME = datetime(2026, 7, 28, 12, tzinfo=TAIPEI_TIMEZONE)
 
 
 class _FailingIdempotencyRepository(PostgresCaseWorkflowRepository):
-    def save_idempotency(self, record) -> None:
+    async def save_idempotency(self, record) -> None:
         del record
         raise RuntimeError("forced idempotency failure")
 
@@ -158,6 +163,20 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
             1,
             self._scalar("SELECT count(*) FROM workflow.idempotency_record"),
         )
+
+    async def test_async_repository_never_uses_sync_psycopg_connect(self) -> None:
+        with patch.object(
+            psycopg,
+            "connect",
+            side_effect=AssertionError("sync psycopg.connect reached async Web path"),
+        ):
+            submitted = await self._service().submit_case(self._submission())
+            reloaded = await self._service().get_provider_case(
+                provider_id="SYN-PROVIDER-001",
+                case_id=submitted.case_id,
+            )
+
+        self.assertEqual("pending_provider", reloaded.status)
 
     async def test_case_and_audit_roll_back_when_idempotency_write_fails(self) -> None:
         service = self._service(

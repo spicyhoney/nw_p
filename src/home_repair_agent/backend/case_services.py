@@ -93,19 +93,19 @@ class CaseWorkflowService:
         )
 
         async with self._lock, self._transaction():
-            self._repository.lock_idempotency_key(key)
-            existing = self._idempotent_case(
+            await self._repository.lock_idempotency_key(key)
+            existing = await self._idempotent_case(
                 key=key,
                 operation="submit_case",
                 fingerprint=fingerprint,
             )
             if existing is not None:
-                return self._consumer_view(existing)
+                return await self._consumer_view(existing)
 
             created_at = self._now()
             _validate_submission_window(command, now=created_at)
-            self._repository.lock_session(command.session_id)
-            previous_cases = self._repository.list_cases_for_session(command.session_id)
+            await self._repository.lock_session(command.session_id)
+            previous_cases = await self._repository.list_cases_for_session(command.session_id)
             active = next(
                 (case for case in previous_cases if case.status in ACTIVE_CASE_STATUSES),
                 None,
@@ -154,8 +154,8 @@ class CaseWorkflowService:
                     )
                 ],
             )
-            self._repository.save_case(case)
-            self._repository.save_idempotency(
+            await self._repository.save_case(case)
+            await self._repository.save_idempotency(
                 IdempotencyRecord(
                     key=key,
                     operation="submit_case",
@@ -163,18 +163,18 @@ class CaseWorkflowService:
                     case_id=case.case_id,
                 )
             )
-            return self._consumer_view(case)
+            return await self._consumer_view(case)
 
     async def get_consumer_case(self, session_id: str) -> ConsumerCaseView | None:
         async with self._lock, self._transaction():
-            cases = self._repository.list_cases_for_session(session_id)
+            cases = await self._repository.list_cases_for_session(session_id)
             if not cases:
                 return None
-            return self._consumer_view(_latest_case(cases), all_cases=cases)
+            return await self._consumer_view(_latest_case(cases), all_cases=cases)
 
     async def has_session_cases(self, session_id: str) -> bool:
         async with self._lock, self._transaction():
-            return bool(self._repository.list_cases_for_session(session_id))
+            return bool(await self._repository.list_cases_for_session(session_id))
 
     async def list_provider_cases(
         self,
@@ -183,7 +183,7 @@ class CaseWorkflowService:
         status: CaseStatus | None = None,
     ) -> list[ProviderCaseSummary]:
         async with self._lock, self._transaction():
-            cases = self._repository.list_cases_for_provider(provider_id)
+            cases = await self._repository.list_cases_for_provider(provider_id)
             if status is not None:
                 cases = [case for case in cases if case.status == status]
             cases.sort(key=lambda case: (case.updated_at, case.case_id), reverse=True)
@@ -196,7 +196,10 @@ class CaseWorkflowService:
         case_id: str,
     ) -> ProviderCaseDetail:
         async with self._lock, self._transaction():
-            case = self._authorized_case(provider_id=provider_id, case_id=case_id)
+            case = await self._authorized_case(
+                provider_id=provider_id,
+                case_id=case_id,
+            )
             return self._provider_detail(case)
 
     async def decide_case(
@@ -215,8 +218,8 @@ class CaseWorkflowService:
         )
 
         async with self._lock, self._transaction():
-            self._repository.lock_idempotency_key(key)
-            existing = self._idempotent_case(
+            await self._repository.lock_idempotency_key(key)
+            existing = await self._idempotent_case(
                 key=key,
                 operation=operation,
                 fingerprint=fingerprint,
@@ -226,7 +229,7 @@ class CaseWorkflowService:
                     raise CaseWorkflowNotFoundError()
                 return self._provider_detail(existing)
 
-            case = self._authorized_case(
+            case = await self._authorized_case(
                 provider_id=command.provider_id,
                 case_id=command.case_id,
                 for_update=True,
@@ -272,8 +275,8 @@ class CaseWorkflowService:
             case.audit_events = events
             case.updated_at = changed_at
             case.version += 1
-            self._repository.save_case(case)
-            self._repository.save_idempotency(
+            await self._repository.save_case(case)
+            await self._repository.save_idempotency(
                 IdempotencyRecord(
                     key=key,
                     operation=operation,
@@ -294,26 +297,26 @@ class CaseWorkflowService:
                 message=error.message,
             ) from error
 
-    def _authorized_case(
+    async def _authorized_case(
         self,
         *,
         provider_id: str,
         case_id: str,
         for_update: bool = False,
     ) -> WorkflowCase:
-        case = self._repository.get_case(case_id, for_update=for_update)
+        case = await self._repository.get_case(case_id, for_update=for_update)
         if case is None or case.provider_id != provider_id:
             raise CaseWorkflowNotFoundError()
         return case
 
-    def _idempotent_case(
+    async def _idempotent_case(
         self,
         *,
         key: str,
         operation: str,
         fingerprint: str,
     ) -> WorkflowCase | None:
-        record = self._repository.get_idempotency(key)
+        record = await self._repository.get_idempotency(key)
         if record is None:
             return None
         if record.operation != operation or record.fingerprint != fingerprint:
@@ -321,7 +324,7 @@ class CaseWorkflowService:
                 code="IDEMPOTENCY_KEY_REUSED",
                 message="同一個冪等鍵已用於不同操作，已拒絕寫入。",
             )
-        case = self._repository.get_case(record.case_id)
+        case = await self._repository.get_case(record.case_id)
         if case is None:
             raise CaseWorkflowConflictError(
                 code="IDEMPOTENCY_RESULT_MISSING",
@@ -329,7 +332,7 @@ class CaseWorkflowService:
             )
         return case
 
-    def _consumer_view(
+    async def _consumer_view(
         self,
         case: WorkflowCase,
         *,
@@ -338,7 +341,7 @@ class CaseWorkflowService:
         cases = (
             all_cases
             if all_cases is not None
-            else self._repository.list_cases_for_session(case.session_id)
+            else await self._repository.list_cases_for_session(case.session_id)
         )
         rejected_provider_ids = sorted(
             {item.provider_id for item in cases if item.status == "rejected"}

@@ -190,7 +190,7 @@
     <rect x="1231" y="779" width="156" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
     <text class="tool-text" x="1248" y="801">DemoCaseRepo</text>
     <rect x="1401" y="779" width="120" height="34" rx="5" fill="#e3f3ef" stroke="#9bcfc4"/>
-    <text class="tool-text" x="1418" y="801">PG Case Repo</text>
+    <text class="tool-text" x="1418" y="801">Async PG Repo</text>
   </g>
 
   <path class="current-line" d="M 973 518 L 973 550 L 408 550 L 408 590"/>
@@ -216,5 +216,5 @@
   </g>
 
   <text x="56" y="1060" fill="#71807a" font-size="12" font-weight="600">資料邊界：官方資料／curated_config／synthetic 必須保留來源標籤；不明代碼不可猜測。</text>
-  <text x="1544" y="1060" text-anchor="end" fill="#71807a" font-size="12" font-weight="600">更新：2026-07-29</text>
+  <text x="1544" y="1060" text-anchor="end" fill="#71807a" font-size="12" font-weight="600">更新：2026-07-30</text>
 </svg>

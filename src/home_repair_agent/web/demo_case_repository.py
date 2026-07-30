@@ -20,13 +20,13 @@ class DemoCaseWorkflowRepository:
     async def transaction(self) -> AsyncIterator[None]:
         yield
 
-    def lock_idempotency_key(self, key: str) -> None:
+    async def lock_idempotency_key(self, key: str) -> None:
         del key
 
-    def lock_session(self, session_id: str) -> None:
+    async def lock_session(self, session_id: str) -> None:
         del session_id
 
-    def get_case(
+    async def get_case(
         self,
         case_id: str,
         *,
@@ -36,26 +36,26 @@ class DemoCaseWorkflowRepository:
         case = self._cases.get(case_id)
         return case.model_copy(deep=True) if case is not None else None
 
-    def list_cases_for_session(self, session_id: str) -> list[WorkflowCase]:
+    async def list_cases_for_session(self, session_id: str) -> list[WorkflowCase]:
         return [
             case.model_copy(deep=True)
             for case in self._cases.values()
             if case.session_id == session_id
         ]
 
-    def list_cases_for_provider(self, provider_id: str) -> list[WorkflowCase]:
+    async def list_cases_for_provider(self, provider_id: str) -> list[WorkflowCase]:
         return [
             case.model_copy(deep=True)
             for case in self._cases.values()
             if case.provider_id == provider_id
         ]
 
-    def save_case(self, case: WorkflowCase) -> None:
+    async def save_case(self, case: WorkflowCase) -> None:
         self._cases[case.case_id] = case.model_copy(deep=True)
 
-    def get_idempotency(self, key: str) -> IdempotencyRecord | None:
+    async def get_idempotency(self, key: str) -> IdempotencyRecord | None:
         record = self._idempotency.get(key)
         return record.model_copy(deep=True) if record is not None else None
 
-    def save_idempotency(self, record: IdempotencyRecord) -> None:
+    async def save_idempotency(self, record: IdempotencyRecord) -> None:
         self._idempotency[record.key] = record.model_copy(deep=True)

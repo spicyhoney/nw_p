@@ -42,7 +42,7 @@ FastAPI route 只做 HTTP adapter。主要責任分工如下：
 - `WebSessionService`：消費者 session、表單驗證、Agent／媒合編排。
 - `CaseWorkflowService`：確認、冪等、授權、audit 與案件狀態轉換。
 - `DemoCaseWorkflowRepository`：預設 process-local 快速 Demo。
-- `PostgresCaseWorkflowRepository`：可選的 transaction 持久化。
+- `PostgresCaseWorkflowRepository`：可選的 async transaction 持久化。
 - `AgentRunner`：模型多輪與唯讀 Tool loop。
 - `ReadServiceLayer`：服務、行政區、表單與媒合規則。
 
@@ -128,6 +128,8 @@ Provider explicit decision
 - 寫入必須有 `confirmed=true`、idempotency key、合法狀態與指定廠商身分。
 - 相同 idempotency key 不得搭配不同 payload。
 - 並行接受／拒絕只能有一個合法轉換成功。
+- FastAPI、Case Service 與 PostgreSQL repository 全程 async；HTTP 案件路徑
+  不呼叫同步 `psycopg.connect`。
 - 已建立 audit 的 session 不能用 reset 擦除。
 - API response 使用 `Cache-Control: no-store`；頁面加 CSP 等安全 headers。
 - 前端只用 `textContent` 呈現 Agent 與 Tool 文字。
@@ -159,8 +161,12 @@ home-repair-web
 也可直接啟動：
 
 ```powershell
-python -m uvicorn home_repair_agent.web.app:app --host 127.0.0.1 --port 8080
+python -m home_repair_agent.web.app
 ```
+
+Windows 的 psycopg async 需要 Selector event loop；上述兩個專案入口會自動
+設定。Windows PostgreSQL 模式不要改用裸 `python -m uvicorn ...` 啟動。
+Linux／AWS 不受此限制。
 
 | 變數 | 預設 | 用途 |
 |---|---|---|
@@ -184,15 +190,22 @@ python -m pytest -q `
   tests/test_postgres_case_repository.py
 ```
 
-2026-07-29 無資料庫聚焦結果：`33 passed, 5 skipped, 3 subtests passed`。
-真實 PostgreSQL 與原有 loader／read integration 合跑為 `14 passed`。除了
+2026-07-30 無資料庫聚焦結果：`33 passed, 6 skipped, 3 subtests passed`。
+真實 PostgreSQL 與原有 loader／read integration 合跑為 `15 passed`。除了
 原有 Web session、
 三個初始 Tools、動態
 表單、時區驗證、媒合與安全 headers，亦涵蓋確認、冪等、授權、遮罩、接單、
 拒絕、改派、audit、並行狀態競爭、派單時段重新驗證與 workflow 注入一致性。
 
-完整 suite（提供測試 PostgreSQL）：`112 passed, 43 subtests passed`。受影響 Python 檔案
-Ruff／format、兩支 JavaScript syntax check 與 diff check 通過。
+完整 suite（提供測試 PostgreSQL）：`113 passed, 43 subtests passed`。受影響
+Python 檔案 Ruff／format、compileall 與 diff check 通過。新增回歸測試會封鎖
+同步 `psycopg.connect`，確認 Web 使用的 repository 呼叫仍能完成建案與讀回。
+另在 Windows 以專案入口實際啟動 async Web + PostgreSQL，走完 session、需求、
+表單、媒合與 `dispatch_pending` 建案 smoke。
+
+`.github/workflows/postgresql-ci.yml` 會在 PR、`main` push 或手動
+`workflow_dispatch` 時建立乾淨 PostgreSQL 16.14 service，重跑靜態檢查與完整
+pytest；不使用開發者本機資料庫或正式 RDS。
 
 瀏覽器已在桌機 `1280x720` 與手機 `390x844` 驗證：
 

@@ -1,23 +1,23 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-## 最新狀態（2026-07-29）
-- PR #10 reviewed head `7ed7667` 已通過複審並合併至 `main`。
-- merge commit：`7bca6565aaa8d27f72a0fc1bdde9045d753d0a44`。
-- 派單／廠商工作台 P0 現已是 `main` 的有效基線。
-- `codex/postgres-case-repository` 已完成案件 workflow PostgreSQL 寫入，待 Draft PR 複查。
-- 本機：focused `33 passed, 5 skipped, 3 subtests`；PostgreSQL integration `14 passed`；
-  完整 `112 passed, 43 subtests`。
+## 最新狀態（2026-07-30）
+- PR #11 已合併至 `main`，merge commit `33f66fe`。
+- PR #12 分支已合併最新 `main`，仍為待複查 Draft；不得自行 merge。
+- PR #12 review 三項要求已處理：Web PostgreSQL I/O 全面 async、可重跑
+  PostgreSQL CI、交接與測試證據更新。
+- 本機：focused `33 passed, 6 skipped, 3 subtests`；PostgreSQL integration
+  `15 passed`；完整 `113 passed, 43 subtests`。
 
-> 更新：2026-07-29　更新者：Codex
+> 更新：2026-07-30　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先讀本檔，再按連結讀細節。
 
 ## 1. 目前狀態（active）
 
-- `main` 已包含 PR #10 merge commit `7bca656`。
-- 三項 review finding 與三份文件衝突均已修正並通過複審。
+- `main` 已包含 PR #11 merge commit `33f66fe`。
+- PR #12 已同步該基線；等待對方依新 head SHA 重新 review。
 - 派單／廠商工作台方向與五項規則未改。
-- 本分支已新增可選 PostgreSQL 寫入；尚未連 RDS、公開部署、正式登入、
-  Bedrock 或其他 AWS 服務。
+- 本分支已新增可選的 async PostgreSQL 寫入與 GitHub CI；尚未連 RDS、
+  公開部署、正式登入、Bedrock 或其他 AWS 服務。
 
 ## 2. PR #10 完成內容
 
@@ -50,46 +50,36 @@
 4. accepted 才揭露完整 synthetic contact；rejected 永不揭露。
 5. 所有寫入必須有確認、冪等、稽核與合法原子狀態轉換。
 
-## 4. Review finding 修正
+## 4. PR #12 review 修正
 
-### P1：派單時重新驗證時段
+### Async Web PostgreSQL
 
-- `CaseSubmissionCommand` 與 `CaseWorkflowService.submit_case()` 均檢查
-  `Asia/Taipei +08:00`、結束晚於開始及最長 12 小時。
-- 真正建案時再次要求 `preferred_start > now`；已成功建立的冪等重試仍回原結果。
-- `WebSessionService.dispatch_case()` 會提早拒絕表單完成後已過期的時段。
-- 測試涵蓋「媒合後時間才過期」及繞過 model validation 的三種錯誤時段。
+- `CaseWorkflowRepository` 契約、memory adapter、Service Layer 與 PostgreSQL
+  repository 全部改為 async／await。
+- PostgreSQL 使用 `psycopg.AsyncConnection`；Web event loop 不再執行同步
+  `psycopg.connect`。
+- 回歸測試會把同步 `psycopg.connect` 改成必定失敗，仍可完成建案與讀回。
+- Windows 啟動器使用 Selector event loop，符合 psycopg async 的平台需求；
+  AWS/Linux 不需此相容設定。
 
-### P2：狀態 filter 與案件詳情一致
+### 可重跑 PostgreSQL CI
 
-- `provider.js` 以同一份 visible cases 同步列表與 selection。
-- 目前案件被 filter 排除時，改選第一筆可見案件；沒有結果時清空詳情與操作按鈕。
-- polling／案件狀態轉換後也會重新套用相同規則。
-
-### P2：App factory workflow 一致
-
-- 同時注入 `session_service` 與不同的 `case_workflow` 時立即丟出 `ValueError`。
-- 合法注入一律由消費者與 provider API 共用 `session_service.case_workflow`。
-- 已補 factory regression test。
-
-### Merge conflicts
-
-- 已整合 `HANDOFF.md`、`docs/implementation-index.md`、
-  `src/home_repair_agent/web/README.md`。
-- 保留 HF live eval、AI mode、HF token 安全設定與 provider workflow 現況。
-- 不再使用「服務廠商後台尚未完成」或「正式 Demo 使用 mock」等過時敘述。
+- 新增 `.github/workflows/postgresql-ci.yml`。
+- PR、`main` push 會自動跑；`workflow_dispatch` 可由 Actions 頁面手動重跑。
+- CI 啟動固定 PostgreSQL `16.14-alpine` service，執行 Ruff、format、
+  compileall 與含真實 PostgreSQL 的完整 pytest。
+- CI 只使用暫時測試資料庫，沒有正式憑證或 RDS 連線。
 
 ## 5. 驗證證據
 
-- 無資料庫 focused：`33 passed, 5 skipped, 3 subtests passed`。
-- 原生 PostgreSQL 16.14 新舊 integration：`14 passed`。
-- 完整 suite（含測試 PostgreSQL）：`112 passed, 43 subtests passed`。
-- 5 skipped 是 focused run 未提供測試 PostgreSQL；不是 regression。
+- 無資料庫 focused：`33 passed, 6 skipped, 3 subtests passed`。
+- 原生 PostgreSQL 16.14 新舊 integration：`15 passed`。
+- 完整 suite（含測試 PostgreSQL）：`113 passed, 43 subtests passed`。
+- 6 skipped 是 focused run 未提供測試 PostgreSQL；不是 regression。
 - 受影響 Python：Ruff 與 format check 通過。
-- `app.js`、`provider.js`：Node syntax check 通過。
+- Windows 實際啟動 async Web + PostgreSQL，已走到 `dispatch_pending` 建案成功。
 - FastAPI TestClient 仍有第三方 `httpx2` deprecation warning；不影響結果。
-- 原 PR 瀏覽器驗收：桌機 `1280x720`、手機 `390x844` 雙端流程通過。
-- 本輪另驗收 filter 切換時不保留被排除案件的詳情／決策按鈕。
+- CI workflow 可由 PR、`main` push 或手動 dispatch 重新建立乾淨資料庫驗證。
 
 ## 6. 現有邊界
 
@@ -132,7 +122,8 @@
 
 ## 9. 下一步
 
-1. 複查並由人類決定是否合併 PostgreSQL case repository Draft PR。
+1. 依 PR #12 新 head SHA 複查 async repository 與 PostgreSQL CI；由人類決定
+   是否合併，Agent 不得自行 merge。
 2. 完成消費者介面與高齡／無障礙體驗。
 3. 取得 AWS 環境後建立 RDS，套用相同 migration 並切換連線設定。
 4. 將 Demo provider header 換成正式登入與 RBAC。
@@ -147,4 +138,6 @@
 - **2026-07-29**：每 3 小時檢查 PR；技術 finding 可直接修正，以本檔交接。
 - **2026-07-29**：本機 Demo 可暫用 RAM；不做 JSON 持久化。PostgreSQL
   repository 已在本分支實作，RDS／相容 Aurora 等取得 AWS 環境後再連接。
+- **2026-07-30**：PR #12 必須同步 `main@33f66fe`、修正 async I/O、提供
+  可重跑 PostgreSQL CI 並更新測試證據後，再交由對方重新 review。
 - 是否合併 PR 永遠由人類決定；Agent 不得自行 merge。

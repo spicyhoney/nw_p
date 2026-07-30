@@ -21,14 +21,14 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 | 層級 | 目前狀態 | 下一步 |
 |---|---|---|
 | 資料清洗 | 已完成 B+ pipeline 與品質報告 | 持續補測試資料 |
-| PostgreSQL | 已在真實 PostgreSQL 16.14 通過 loader、讀取與案件 workflow transaction 測試 | 實作最小權限與正式 RDS 連線 |
-| Service Layer | 已完成唯讀查詢／媒合、派單／接單與 memory／PostgreSQL repository | 正式登入、時段保留與排程衝突 |
+| PostgreSQL | 已在真實 PostgreSQL 16.14 通過 loader、讀取與 async 案件 workflow transaction 測試 | 實作最小權限與正式 RDS 連線 |
+| Service Layer | 已完成唯讀查詢／媒合、派單／接單與 memory／async PostgreSQL repository | 正式登入、時段保留與排程衝突 |
 | MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests；寫入仍未公開 | 先做真實模型 eval；外部 Agent 確有需求時才加受限寫入 Tool |
 | Agent | 已完成核心迴圈、MCP Client 與 Mock 多輪測試 | 實作 BedrockModelClient 與 tool-selection eval |
 | AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
 | Web / FastAPI | 已完成本機雙端 P1 與可選 PostgreSQL 案件持久化 | 消費者無障礙體驗、正式登入、固定模型 eval、公開部署 |
 
-目前派單 workflow 與 Web 無資料庫聚焦測試為 `33 passed, 5 skipped`；完整測試結果以
+目前派單 workflow 與 Web 無資料庫聚焦測試為 `33 passed, 6 skipped`；完整測試結果以
 [實作索引](implementation-index.md)的最近驗證為準。這些測試已驗證資料清洗、
 Service Layer、MCP 協定、Mock/HF adapter contract，以及本機雙端 Web 流程；
 仍不代表正式身分驗證、Bedrock、語音或 AWS 部署已

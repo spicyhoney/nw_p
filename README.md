@@ -97,9 +97,11 @@ docs/             架構、計畫與競賽文件
 - [x] 完成本機 Web P1：消費者諮詢／派單、廠商接單／拒絕與狀態回寫
 - [x] 完成 process-local 案件／訂單 P0 Service：確認、冪等、授權與稽核
 - [x] 將案件／訂單／冪等／audit workflow 持久化至 PostgreSQL
+- [x] 完成消費者人工 Checklist、桌機／手機響應式與無障礙基線
+- [ ] 建立固定 Hugging Face eval 與外部 HTTP MCP 驗證
 - [ ] 加入正式登入、角色授權與資料庫最小權限
 - [ ] 完成 Bedrock adapter
-- [ ] 取得比賽 AWS 環境後串接 Bedrock 與 AgentCore
+- [ ] 取得比賽 AWS 環境後串接 Bedrock、AgentCore、RDS 與公開部署
 
 ## 執行資料清洗
 
@@ -124,9 +126,11 @@ GitHub。完整操作與資料流請見
 
 ## AI 與實作文件
 
-隊友或 AI 請先讀 [AI 協作入口](AGENTS.md) 與
+隊友或 AI 請依序讀 [專案白話指南](docs/project-guide.md)、
+[HANDOFF](HANDOFF.md)、[TASKS](TASKS.md)、[AI 協作入口](AGENTS.md) 與
 [實作索引](docs/implementation-index.md)。每次新增功能都必須留下「做了什麼、
-為什麼、資料流、安全邊界、測試、下一步」，並在同一個 commit 更新索引。
+為什麼、資料流、安全邊界、測試、下一步」；功能完成後同步更新 HANDOFF、
+TASKS、實作索引及相關模組 README。
 
 ## 執行唯讀 MCP Server
 

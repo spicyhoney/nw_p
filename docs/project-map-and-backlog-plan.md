@@ -1,6 +1,6 @@
 # 專案地圖與任務管理文件整理計畫
 
-> 狀態：待實作  
+> 狀態：已實作，待 Draft PR 與團隊 review
 > 基線：`main@82c910ae1d766399f499ddd8c8f5de7a42d456e6`  
 > 工作分支：`codex/project-map-and-backlog`  
 > 範圍：只整理文件與流程圖，不修改產品功能、不重跑完整 Demo、不自行合併。
@@ -62,6 +62,7 @@
 
 ### P0
 
+- 讓 Web 唯讀資料可設定切換 Demo／PostgreSQL repository。
 - 建立固定 Hugging Face 評估案例。
 - 驗證外部 HTTP MCP Client 能呼叫現有四個唯讀工具。
 - 準備可攜式部署與公開 HTTPS 所需文件和封裝。

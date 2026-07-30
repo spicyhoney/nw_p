@@ -1,5 +1,9 @@
 # technical_strategy.md — 技術架構方案（3 套）
 
+> **歷史規劃文件**：本頁保存早期方案比較，不代表目前已部署元件。
+> 現行架構以 [architecture.md](architecture.md) 與
+> [implementation-index.md](implementation-index.md) 為準。
+
 > **2026-07-26 更新**：本文件保留早期三案比較供決策追溯。工作坊完整資料與
 > AgentCore 路線確認後，現在採用的實作架構以
 > [architecture.md](architecture.md) 為唯一準則；兩份內容衝突時，以該文件為準。

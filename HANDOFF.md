@@ -5,8 +5,9 @@
 - PR #11、#12 已合併；本階段從 `main@9177a880cad503bcf71e515c90a4f3672e46fc5a`
   建立 `codex/consumer-accessibility-ui`。
 - 已完成消費者人工 Checklist、高齡／無障礙 UI 與桌機／手機驗收。
-- PR #13 review 指出的 checklist 反序競態已修正。等待對方重新 review，
-  人類決定是否合併，Agent 不得自行 merge。
+- PR #13 checklist 反序競態修正已推送；implementation commit
+  `70b3c91ae823529cc5f670b4d0556dad7282b090` 的 PostgreSQL CI 已通過（56 秒）。
+  等待對方重新 review；人類決定是否合併，Agent 不得自行 merge。
 
 > 更新：2026-07-30　更新者：Codex
 > 規則：全文 ≤150 行；只描述現在；接手者先讀本檔，再按連結讀細節。
@@ -67,7 +68,8 @@ Agent / Model / MCP -X-> checked
 
 - focused：`40 passed, 6 skipped, 3 subtests passed`。
 - 本機完整：`105 passed, 15 skipped, 43 subtests passed`。
-- 15 skipped 是本機未提供 `TEST_DATABASE_URL`；PR #13 必須以 PostgreSQL CI 補跑。
+- 15 skipped 是本機未提供 `TEST_DATABASE_URL`；PR #13 implementation commit 的
+  `PostgreSQL CI / PostgreSQL 16 integration` 已通過（56 秒）。
 - 受影響檔案 Ruff／format、compileall、JavaScript syntax、diff check 通過。
 - 全 repo Ruff 仍有既有 data-cleaning 規則債；本 PR 沒有修改那些檔案。
 
@@ -109,8 +111,8 @@ Agent / Model / MCP -X-> checked
 
 ## 8. 下一步
 
-1. 推送 PR #13 checklist race 修正，等待 PostgreSQL CI 與對方重新 review。
-2. 修正完成前不得 merge；是否合併永遠由人類決定。
+1. 等待對方重新 review PR #13；目前分支不得自行 merge。
+2. 合併前確認 PR 最新 head 的 PostgreSQL CI 維持綠燈。
 3. 決定下一個本機功能：正式身分 adapter 或時段保留／衝突控制。
 4. 取得 AWS 環境後建立 RDS，套用現有 migration，切換 repository 連線。
 5. 最後替換 Bedrock／AgentCore adapters 並公開部署。

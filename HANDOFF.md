@@ -2,12 +2,11 @@
 
 ## 最新狀態（2026-07-30）
 
-- `main@9729fadbf5315cc08eb71a071d8e8bc4d3573533` 已包含 PR #13 的消費者
-  Checklist、無障礙雙端 UI、派單／接單與 async PostgreSQL repository。
-- PR #14 已由隊友合併；專案地圖、文件分工與真實 backlog 已完成，DOC-001
-  已從待辦移到實作索引。
-- 目前分支 `codex/post-pr14-handoff-sync` 只修正合併後的 HANDOFF 狀態，不修改
-  產品程式；是否合併仍由人類決定。
+- PR #14 已由隊友合併為
+  `main@9729fadbf5315cc08eb71a071d8e8bc4d3573533`；專案地圖、文件分工與
+  真實 backlog 已完成，DOC-001 已從待辦移到實作索引。
+- 目前產品基線包含 PR #13 的消費者 Checklist、無障礙雙端 UI、派單／接單與
+  async PostgreSQL repository；尚未選定下一個進行中的產品任務。
 
 > 更新者：Codex
 > 規則：全文維持 150 行內；只描述現在。接手者先讀本檔，再按下列順序閱讀。
@@ -91,8 +90,8 @@ PR #14 最終 head `76ac2148d26401da9197669aa5b9e8b10867675e`，已合併為
 - 本機完整：`104 passed, 16 skipped, 43 subtests passed`。
 - 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML 與 `1600x1080` 視覺
   檢查、secret pattern scan 及 `git diff --check` 通過。
-- PR 原 review head 的 GitHub PostgreSQL CI 為 1/1 通過；最終 docs-only head
-  已由隊友合併。本次狀態修正只異動 HANDOFF，不重跑產品 Demo 或完整 pytest。
+- PR 最終 docs-only head 的 GitHub PostgreSQL CI 為 1/1 通過。本次狀態修正
+  只異動 HANDOFF，不重跑產品 Demo 或完整 pytest。
 
 ## 7. PR #14 文件成果
 
@@ -106,7 +105,7 @@ PR #14 最終 head `76ac2148d26401da9197669aa5b9e8b10867675e`，已合併為
 
 ## 8. 下一步
 
-1. 本次 HANDOFF 修正經隊友確認並合併後，同步最新 `main`。
+1. 接手時先同步最新 `main`，確認本檔與 GitHub 的已合併狀態一致。
 2. 從 `TASKS.md` 的 P0 任務中選一項開始，不同時展開多項，也不從歷史規劃
    文件猜測目前狀態。
 

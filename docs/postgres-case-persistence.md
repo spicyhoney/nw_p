@@ -131,6 +131,13 @@ python -m pytest -q `
 - 無資料庫 focused：`33 passed, 6 skipped, 3 subtests passed`。
 - 新舊 PostgreSQL integration：`15 passed`。
 - 完整 suite（提供測試 PostgreSQL）：`113 passed, 43 subtests passed`。
+
+2026-08-01 再以 GitHub Actions 的乾淨 PostgreSQL 16.14 service 驗證 MEDIA-001：
+
+- [Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182) 套用 migration
+  001–003，並通過圖片 path／analysis constraint、repository 重建還原與完整 suite。
+- 結果：`151 passed, 1 skipped, 52 subtests passed`；Ruff／format、compileall、
+  JavaScript syntax 與 checklist concurrency 均通過。
 - Repository 重建後仍能讀取案件、接單、訂單與三筆 audit。
 - idempotency 跨 Repository 實例仍只建立一案。
 - 強制 idempotency 寫入失敗時，案件與 audit 全部 rollback。

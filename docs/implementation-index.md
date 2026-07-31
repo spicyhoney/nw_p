@@ -15,7 +15,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
-| 圖片上傳與 HF VLM | 已實作並完成本機 contract／API 驗證，待人類 review／PR | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端 tests |
+| 圖片上傳與 HF VLM | 已整合並完成本機、live HF 與 PostgreSQL 16.14 驗證 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003 tests |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
 | FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
@@ -76,8 +76,10 @@ hosted model 不得自行把相對日期換成具體年月日。
   fallback；未確認不影響表單／媒合／派單；Browser 不取得 `image_path`。圖片
   focused Web／a11y 驗證 `40 passed`，JavaScript syntax 與 Python Ruff 通過；
   本機完整 `134 passed, 18 skipped, 52 subtests passed`；compileall、兩支 JS
-  syntax、受影響 Python Ruff 與 diff check 通過。PostgreSQL migration 003 因本機
-  未設 `TEST_DATABASE_URL`，待 CI 複驗。`1280x720`／`390x844` 瀏覽器無水平
+  syntax、受影響 Python Ruff 與 diff check 通過。格式修正 `5410e75` 後，
+  [PostgreSQL CI Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182)
+  以 PostgreSQL 16.14 完整執行 migration 001–003 與 repository／constraint cases，
+  結果 `151 passed, 1 skipped, 52 subtests passed`。`1280x720`／`390x844` 瀏覽器無水平
   overflow／console error，圖片同意列具 44px 觸控範圍。另以無個資 synthetic 水漬
   圖片完成 Hugging Face live smoke：`Qwen/Qwen3-VL-30B-A3B-Instruct` 在
   `HF_VL_PROVIDER=novita` 與 `auto` 均回傳合約內的繁中結構化結果。

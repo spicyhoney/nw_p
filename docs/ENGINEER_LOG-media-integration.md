@@ -59,8 +59,14 @@ live HF VLM: pass with a synthetic image, Qwen/Qwen3-VL-30B-A3B-Instruct,
              provider=novita and provider=auto
 ```
 
-The 18 skips include PostgreSQL integration because this machine has no
-`TEST_DATABASE_URL`; CI must apply and verify migration 003. Full-repository
+The local 18 skips include PostgreSQL integration because this machine has no
+`TEST_DATABASE_URL`. Follow-up GitHub Actions Run #15 stopped before pytest
+because Ruff 0.16.1 would reformat `web/app.py` and
+`test_postgres_case_repository.py`; commit `5410e75` applied exactly that
+formatter output. [Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182)
+then passed on PostgreSQL 16.14 with `151 passed, 1 skipped, 52 subtests passed`,
+which executes the migration 001–003 assertion, repository recreation and
+database constraint cases. Full-repository
 Ruff still reports 16 pre-existing `data_cleaning` findings outside this task;
 all changed Python files pass. The live smoke used only an in-memory synthetic
 image and did not record the token, image payload or provider request ID. The

@@ -1,12 +1,14 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-## 最新狀態（2026-07-31）
+## 最新狀態（2026-08-01）
 
 - `MEDIA-001` 已由使用者授權直接整合至 `main`（未開 PR）；完成 HF 圖片分析、私有
   local media storage、人工確認、case memory／PostgreSQL 欄位、消費者／廠商 UI
   與授權圖片 endpoint。
 - `TASKS.md` 已把 MEDIA-001 移至本檔與實作索引，並保留使用者要求的「為什麼需要」欄位。
 - Terra subagent 的 PR-ready review 為 `Approve`；完整本機驗證與 live HF smoke 均通過。
+- 格式修正 `5410e75` 後，[PostgreSQL CI Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182)
+  已在 PostgreSQL 16.14 套用 migration 001–003 並完成真實 repository／全套測試。
 
 > 更新者：Codex
 > 規則：全文維持 150 行內；只描述現在。
@@ -95,14 +97,14 @@ python -m home_repair_agent.web.app
 - Terra subagent 獨立 PR-ready review 結論為 `Approve`，focused `65 passed, 8 skipped,
   12 subtests passed`，full suite 結果相同，secret pattern scan 無命中。
 - 全 repo Ruff 仍有 data-cleaning baseline 的 16 個既有 finding；本輪未擴張修改。
-  PostgreSQL tests 因未設 `TEST_DATABASE_URL` skip，需由 CI 重跑 migration 003。
+- PostgreSQL CI Run #16：`151 passed, 1 skipped, 52 subtests passed`；Ruff／format、
+  compileall、JavaScript 與 checklist concurrency 均通過，migration 003 已真實驗證。
 - 瀏覽器 `1280x720`／`390x844`：無水平 overflow／console error；圖片同意列
   44px；Mock 清楚停用；廠商圖片使用授權 fetch 與受限尺寸。
 
 下一步：
 
-1. 在有 `TEST_DATABASE_URL` 的環境套用並驗證 migration 003。
-2. 從 `TASKS.md` 選下一個單一任務；目前未授權部署、AWS 寫入或正式個資處理。
+1. 從 `TASKS.md` 選下一個單一任務；目前未授權部署、AWS 寫入或正式個資處理。
 
 ## 7. 既有團隊決策
 

@@ -108,16 +108,12 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
             ),
             confirmed=True,
             idempotency_key="submit:postgres-session-001",
-            image_path=(
-                "sessions/postgres-session-001/faucet-leak.webp" if with_image else None
-            ),
+            image_path=("sessions/postgres-session-001/faucet-leak.webp" if with_image else None),
             image_analysis=(
                 CaseImageAnalysis(
                     service_query="leaking faucet repair",
                     problem_summary="Water is leaking from the faucet base.",
-                    safety_warnings=[
-                        "Turn off the local water supply before inspection."
-                    ],
+                    safety_warnings=["Turn off the local water supply before inspection."],
                     confidence=0.88,
                     uncertain=False,
                     confirmed=True,
@@ -289,16 +285,18 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
     async def test_database_rejects_unpaired_or_unconfirmed_image_metadata(self) -> None:
         submitted = await self._service().submit_case(self._submission(with_image=True))
 
-        with psycopg.connect(DATABASE_URL) as connection, self.assertRaises(
-            psycopg.errors.CheckViolation
+        with (
+            psycopg.connect(DATABASE_URL) as connection,
+            self.assertRaises(psycopg.errors.CheckViolation),
         ):
             connection.execute(
                 "UPDATE workflow.service_case SET image_analysis = NULL WHERE case_id = %s",
                 (submitted.case_id,),
             )
 
-        with psycopg.connect(DATABASE_URL) as connection, self.assertRaises(
-            psycopg.errors.CheckViolation
+        with (
+            psycopg.connect(DATABASE_URL) as connection,
+            self.assertRaises(psycopg.errors.CheckViolation),
         ):
             connection.execute(
                 """

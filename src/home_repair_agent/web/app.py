@@ -140,9 +140,7 @@ def create_app(
         model_client, provider_label = _resolve_model_client(provider_key)
         media_storage = LocalMediaStorage()
         vision_client = (
-            HuggingFaceVisionClient.from_environment()
-            if provider_key == "huggingface"
-            else None
+            HuggingFaceVisionClient.from_environment() if provider_key == "huggingface" else None
         )
         repository = DemoReadRepository(reference_time=reference_time)
         workflow = (

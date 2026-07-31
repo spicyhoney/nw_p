@@ -8,6 +8,7 @@ from typing import Any
 
 from home_repair_agent.backend.case_models import (
     CaseAuditEvent,
+    CaseImageAnalysis,
     IdempotencyRecord,
     SyntheticContact,
     WorkflowCase,
@@ -23,6 +24,8 @@ CASE_COLUMNS = """
     location_id,
     location_name,
     problem_summary,
+    image_path,
+    image_analysis,
     answers,
     preferred_start,
     preferred_end,
@@ -70,6 +73,8 @@ INSERT INTO workflow.service_case (
     location_id,
     location_name,
     problem_summary,
+    image_path,
+    image_analysis,
     answers,
     preferred_start,
     preferred_end,
@@ -94,6 +99,8 @@ INSERT INTO workflow.service_case (
     %(location_id)s,
     %(location_name)s,
     %(problem_summary)s,
+    %(image_path)s,
+    %(image_analysis)s::jsonb,
     %(answers)s::jsonb,
     %(preferred_start)s,
     %(preferred_end)s,
@@ -118,6 +125,8 @@ UPDATE workflow.service_case
 SET
     status = %(status)s,
     order_no = %(order_no)s,
+    image_path = %(image_path)s,
+    image_analysis = %(image_analysis)s::jsonb,
     updated_at = %(updated_at)s,
     version = %(version)s
 WHERE
@@ -409,6 +418,12 @@ class PostgresCaseWorkflowRepository:
             location_id=row["location_id"],
             location_name=row["location_name"],
             problem_summary=row["problem_summary"],
+            image_path=row["image_path"],
+            image_analysis=(
+                CaseImageAnalysis.model_validate(row["image_analysis"])
+                if row["image_analysis"] is not None
+                else None
+            ),
             answers=row["answers"],
             preferred_start=row["preferred_start"],
             preferred_end=row["preferred_end"],
@@ -441,6 +456,12 @@ def _case_parameters(case: WorkflowCase) -> dict[str, Any]:
         "location_id": case.location_id,
         "location_name": case.location_name,
         "problem_summary": case.problem_summary,
+        "image_path": case.image_path,
+        "image_analysis": (
+            json.dumps(case.image_analysis.model_dump(mode="json"), ensure_ascii=False)
+            if case.image_analysis is not None
+            else None
+        ),
         "answers": json.dumps(case.answers, ensure_ascii=False),
         "preferred_start": case.preferred_start,
         "preferred_end": case.preferred_end,

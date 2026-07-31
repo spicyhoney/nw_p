@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-30
+最後更新：2026-07-31
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -15,6 +15,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
+| 圖片上傳與 HF VLM | 已實作並完成本機 contract／API 驗證，待人類 review／PR | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端 tests |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
 | FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
@@ -68,6 +69,18 @@ Web session 仍不能恢復，也不會真的保留師傅時段。廠商 header 
 hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
+
+- 2026-07-31：實作 MEDIA-001：一張 JPEG／PNG／WebP、8 MiB、實際解碼與 EXIF
+  清除、安全相對路徑、HF VLM 結構化建議、人工更正／確認、服務目錄重驗、
+  memory／PostgreSQL case 欄位與廠商受控圖片 endpoint。Mock 與 HF error 都不
+  fallback；未確認不影響表單／媒合／派單；Browser 不取得 `image_path`。圖片
+  focused Web／a11y 驗證 `40 passed`，JavaScript syntax 與 Python Ruff 通過；
+  本機完整 `134 passed, 18 skipped, 52 subtests passed`；compileall、兩支 JS
+  syntax、受影響 Python Ruff 與 diff check 通過。PostgreSQL migration 003 因本機
+  未設 `TEST_DATABASE_URL`，待 CI 複驗。`1280x720`／`390x844` 瀏覽器無水平
+  overflow／console error，圖片同意列具 44px 觸控範圍。另以無個資 synthetic 水漬
+  圖片完成 Hugging Face live smoke：`Qwen/Qwen3-VL-30B-A3B-Instruct` 在
+  `HF_VL_PROVIDER=novita` 與 `auto` 均回傳合約內的繁中結構化結果。
 
 - 2026-07-30：完成 PR #13 checklist race review：完整 SessionView 使用
   request sequence／session generation 阻擋 stale response，一批 PUT 完成後 GET

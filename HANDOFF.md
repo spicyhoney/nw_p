@@ -1,118 +1,113 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-## 最新狀態（2026-07-30）
+## 最新狀態（2026-07-31）
 
-- PR #14 已由隊友合併為
-  `main@9729fadbf5315cc08eb71a071d8e8bc4d3573533`；專案地圖、文件分工與
-  真實 backlog 已完成，DOC-001 已從待辦移到實作索引。
-- 目前產品基線包含 PR #13 的消費者 Checklist、無障礙雙端 UI、派單／接單與
-  async PostgreSQL repository；尚未選定下一個進行中的產品任務。
+- `MEDIA-001` 已由使用者授權直接整合至 `main`（未開 PR）；完成 HF 圖片分析、私有
+  local media storage、人工確認、case memory／PostgreSQL 欄位、消費者／廠商 UI
+  與授權圖片 endpoint。
+- `TASKS.md` 已把 MEDIA-001 移至本檔與實作索引，並保留使用者要求的「為什麼需要」欄位。
+- Terra subagent 的 PR-ready review 為 `Approve`；完整本機驗證與 live HF smoke 均通過。
 
 > 更新者：Codex
-> 規則：全文維持 150 行內；只描述現在。接手者先讀本檔，再按下列順序閱讀。
+> 規則：全文維持 150 行內；只描述現在。
 
-## 1. 接手閱讀順序
+## 1. 閱讀順序
 
-1. [專案白話指南](docs/project-guide.md)：系統流程、重要模組與常見邊界。
-2. [待辦清單](TASKS.md)：尚未完成的工作、優先級、依賴與驗收。
-3. [實作索引](docs/implementation-index.md)：已完成程式、位置與驗證。
-4. [系統與 AWS 架構](docs/architecture.md)：本機與未來雲端元件。
-5. 正在修改之模組 README 與 [資料政策](docs/data-policy.md)。
+1. [專案白話指南](docs/project-guide.md)
+2. [待辦清單](TASKS.md)
+3. [實作索引](docs/implementation-index.md)
+4. [Web README](src/home_repair_agent/web/README.md)
+5. [資料政策](docs/data-policy.md)與[廠商流程](docs/provider-workflow.md)
 
-## 2. 目前可執行流程
+## 2. MEDIA-001 已實作契約
 
-消費者端 `/`：
+消費者：
 
-- 自然語言需求經 Agent 查詢服務、行政區與彈性諮詢單。
-- 人工 Checklist 只能由使用者 click／Space／Enter 修改；模型只能提出提示。
-- 使用者填表後執行 synthetic 媒合，選擇候選並明確確認才建立案件。
-- 消費者輪詢廠商狀態，accepted 後看到 `SYN-ORDER-*` Demo 訂單。
+1. 只有 `WEB_MODEL_PROVIDER=huggingface` 可使用圖片分析；Mock 明確不可用，失敗不
+   fallback。
+2. 一個 session／case 最多一張實際可解碼 JPEG／PNG／WebP，輸入上限 8 MiB。
+3. 使用者須勾選同意把圖片送至 Hugging Face；Demo 只允許 synthetic／公開測試圖。
+4. 圖片重新編碼移除 metadata，寫到 `MEDIA_ROOT`（預設 `var/media`、不進 Git）。
+5. VLM 只回服務查詢、摘要、安全提醒、confidence、uncertain；不產生 service ID、
+   不建案、不派單。
+6. 結果可修改；人工確認後仍須由既有 `search_services` 唯讀 Tool 唯一驗證，才會
+   影響後續表單／媒合。未確認時訊息、表單與派單均被擋下。
+7. 未建案圖片在 remove／reset／上傳或 VLM 失敗時清除。
 
-廠商端 `/provider`：
+廠商／資料：
 
-- 切換 synthetic Demo 廠商身分，只能查看指派給目前身分的案件。
-- pending 只見遮罩 contact；接受後才見完整 synthetic contact。
-- 廠商可接受或拒絕；拒絕後消費者可改派下一位候選。
+- case memory 與 PostgreSQL 保存 server-relative `image_path` 及已確認
+  `image_analysis`；圖片 bytes 不進 DB、audit、log 或例外。
+- Browser API 只回 `has_image`，不回內部 `image_path`。
+- 指派廠商在 pending／accepted 可用帶 `X-Demo-Provider-Id` 的受控 GET 讀圖片；
+  unassigned／rejected／missing 回 404。response 為正確 MIME、inline、no-store。
+- 圖片目前保留原 `sessions/{session_id}/{media_id}.{ext}` 相對 key，即使建案後也不
+  移動；reset 在建案後已被禁止，因此不會誤刪案件圖片。未來 object storage adapter
+  可在同一 `MediaStorage` contract 下改成 case key。
+- MCP 仍是四個唯讀 Tools；沒有新增寫入或圖片 MCP。
 
-資料與 Agent：
+## 3. 主要檔案
 
-```text
-Web／Terminal message -> AgentRunner -> Mock／Hugging Face ModelClient
-                     -> MCPToolClient -> 四個唯讀 MCP Tools
-                     -> ReadServiceLayer -> DemoReadRepository
+- `agent/huggingface_vision.py`：HF VLM adapter 與嚴格 JSON contract。
+- `backend/media_storage.py`：Pillow 解碼／正規化、safe path、讀取與刪除 rollback。
+- `backend/case_models.py`、`case_services.py`、`postgres_case_repository.py`：案件欄位。
+- `sql/migrations/003_case_media_contract.sql`：nullable path／JSONB 與 constraints。
+- `web/service.py`、`web/app.py`、`web/models.py`：流程、API 與授權。
+- `web/static/`：消費者上傳／確認與廠商授權預覽。
+- `tests/test_media_*.py`、`tests/test_huggingface_vision.py`：新測試。
+- `docs/ENGINEER_LOG-media-*.md`：四個子工作與主整合紀錄。
 
-Standalone MCP server -> ReadServiceLayer -> PostgresReadRepository
-                      -> PostgreSQL agent.* views
+## 4. 執行設定
 
-Web confirmed buttons -> CaseWorkflowService
-                      -> memory／async PostgreSQL CaseWorkflowRepository
+```powershell
+$env:WEB_MODEL_PROVIDER = "huggingface"
+$env:HF_TOKEN = "<只放 shell，不寫進 repo>"
+$env:HF_MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
+$env:HF_VL_MODEL_ID = "Qwen/Qwen3-VL-30B-A3B-Instruct"
+$env:HF_PROVIDER = "auto"
+$env:HF_VL_PROVIDER = "auto"
+python -m home_repair_agent.web.app
 ```
 
-## 3. 不可破壞契約
+- 對話模型與 VLM 是兩個獨立 model ID，共用 `HF_TOKEN`。
+- 已用無個資、無 EXIF 的 synthetic 水漬圖片完成 live smoke；
+  `Qwen/Qwen3-VL-30B-A3B-Instruct` 搭配 `novita` 與 `auto` 都成功。原先的 Qwen 2.5 VL
+  對此帳號已啟用的 provider 不可用。部署時仍需重跑，因 provider availability 可能改變。
 
-1. 消費者明確確認後才建立案件。
-2. 只有指派廠商可讀案件；未指派身分回 404。
-3. pending 只能看到遮罩 contact。
-4. accepted 才揭露完整 synthetic contact；rejected 永不揭露。
-5. 寫入具確認、冪等、audit 與合法原子狀態轉換。
-6. Agent 不得執行任意 SQL；SQL 只在 repository。
-7. 四個 MCP Tools 維持唯讀，不得由模型修改 Checklist 或建立案件。
-8. 原始資料不可覆寫；不明代碼不可猜測；synthetic 必須保留來源標籤。
+## 5. 不可破壞邊界
 
-## 4. 目前持久化邊界
+1. 消費者明確確認後才建立案件；模型不得自行媒合／派單。
+2. 只有指派廠商可讀案件；pending contact 遮罩，accepted 才完整揭露，rejected
+   永不揭露 contact 或圖片。
+3. 寫入具確認、冪等、audit、合法狀態轉換；SQL 只在 repository。
+4. 四個 MCP Tools 維持唯讀；Agent 不得改 Checklist 或建立案件。
+5. synthetic 必須標示；不得上傳／記錄真實個資、token、絕對路徑或圖片 bytes。
+6. Demo header 不是正式 authentication；正式圖片功能前仍需 auth、加密、保存期限與
+   刪除政策。
 
-- `WEB_CASE_REPOSITORY=memory|postgres`。
-- PostgreSQL 保存案件、訂單、idempotency 與 audit，使用 async I/O。
-- Web 與 Terminal Demo 的服務、地區、表單與媒合固定使用
-  `DemoReadRepository`；獨立 MCP Server 與 PostgreSQL 整合測試使用
-  `PostgresReadRepository`。Web 讀取 adapter 切換列為 P0，不要誤認
-  `WEB_CASE_REPOSITORY` 會切換這些唯讀資料。
-- Web 對話 session 與人工 Checklist 仍在 process memory，重啟後不會恢復。
-- PostgreSQL 模式不是 AWS RDS；目前只驗證相同 PostgreSQL 16.14 契約。
-- 廠商 header 是 Demo 身分模擬，不是 authentication 或 RBAC。
-- Demo contact 為 synthetic；正式個資加密、同意、期限及刪除政策尚未完成。
+## 6. 驗證與下一步
 
-## 5. AI 與 MCP 狀態
+- MEDIA focused Web／a11y：`40 passed`。
+- VLM／storage／case focused：`33 passed, 7 skipped, 12 subtests passed`。
+- JavaScript `node --check` 與受影響 Python Ruff 通過。
+- 本機完整：`134 passed, 18 skipped, 52 subtests passed`；compileall、兩支
+  JavaScript `node --check`、受影響 Python Ruff 與 `git diff --check` 通過。
+- Terra subagent 獨立 PR-ready review 結論為 `Approve`，focused `65 passed, 8 skipped,
+  12 subtests passed`，full suite 結果相同，secret pattern scan 無命中。
+- 全 repo Ruff 仍有 data-cleaning baseline 的 16 個既有 finding；本輪未擴張修改。
+  PostgreSQL tests 因未設 `TEST_DATABASE_URL` skip，需由 CI 重跑 migration 003。
+- 瀏覽器 `1280x720`／`390x844`：無水平 overflow／console error；圖片同意列
+  44px；Mock 清楚停用；廠商圖片使用授權 fetch 與受限尺寸。
 
-- 團隊 Demo 基線可選 Hugging Face；Mock 供離線開發與 CI。
-- 模型：`Qwen/Qwen3-4B-Instruct-2507`，`HF_PROVIDER=auto`。
-- 沒有 `HF_TOKEN` 時不得宣稱執行 AI mode，也不會靜默切回 Mock。
-- 真實 HF 目前只有單一固定 Web case；完整 eval 矩陣仍是 P0 待辦。
-- FastMCP 支援 stdio 與 Streamable HTTP `/mcp`，但外部 HTTP Client 驗證仍待做。
-- Bedrock、AgentCore Gateway／Runtime、RDS、IAM 與 CloudWatch 均未實作。
+下一步：
 
-## 6. 最近驗證基線
+1. 在有 `TEST_DATABASE_URL` 的環境套用並驗證 migration 003。
+2. 從 `TASKS.md` 選下一個單一任務；目前未授權部署、AWS 寫入或正式個資處理。
 
-PR #14 最終 head `76ac2148d26401da9197669aa5b9e8b10867675e`，已合併為
-`main@9729fadbf5315cc08eb71a071d8e8bc4d3573533`：
+## 7. 既有團隊決策
 
-- review 後直接修正 `git diff --check` 尾端空白及 DOC-001 合併後狀態。
-- 本機完整：`104 passed, 16 skipped, 43 subtests passed`。
-- 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML 與 `1600x1080` 視覺
-  檢查、secret pattern scan 及 `git diff --check` 通過。
-- PR 最終 docs-only head 的 GitHub PostgreSQL CI 為 1/1 通過。本次狀態修正
-  只異動 HANDOFF，不重跑產品 Demo 或完整 pytest。
-
-## 7. PR #14 文件成果
-
-- 新增 `TASKS.md`，把未完成工作集中成可驗收 backlog。
-- 新增 `docs/project-guide.md`，用白話與 Mermaid 說明三條主要資料流。
-- 更新目前架構 SVG、文件索引與 AI 閱讀順序。
-- 將舊構想文件標示為歷史規劃，不再冒充目前成果。
-- 修正簡報策略中的錯誤筆數及尚未實作宣稱。
-
-詳細範圍見[文件整理計畫](docs/project-map-and-backlog-plan.md)。
-
-## 8. 下一步
-
-1. 接手時先同步最新 `main`，確認本檔與 GitHub 的已合併狀態一致。
-2. 從 `TASKS.md` 的 P0 任務中選一項開始，不同時展開多項，也不從歷史規劃
-   文件猜測目前狀態。
-
-## 9. 團隊決策
-
-- 本機 Demo 可暫用 RAM；不做 JSON 案件持久化。
-- Hugging Face 是目前 hosted model 基線；Mock 只供離線測試。
-- Kiro 加分目前不投入，不建立回溯性紀錄。
-- 寫入 MCP Tool 只有在外部 Agent 確有完整建案需求時才設計。
+- 本機案件可暫用 RAM；不做 JSON 案件持久化。
+- Hugging Face 是 hosted model 基線；Mock 只供離線測試與 CI。
+- Kiro 加分暫不投入；寫入 MCP 只有外部 Agent 真有需求才設計。
+- AWS／Bedrock／AgentCore／RDS 等待主辦方帳號、Region、權限與額度。
 - 是否合併 PR 永遠由人類決定。

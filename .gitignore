@@ -51,3 +51,4 @@ Thumbs.db
 *.dump
 *.log
 /uploads/
+/var/media/

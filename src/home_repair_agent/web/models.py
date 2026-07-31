@@ -120,6 +120,44 @@ class ProviderView(WebModel):
     is_external: bool
 
 
+class ImageAnalysisView(WebModel):
+    service_query: str = Field(min_length=1, max_length=300)
+    problem_summary: str = Field(min_length=1, max_length=1000)
+    safety_warnings: list[str] = Field(default_factory=list, max_length=10)
+    confidence: float = Field(ge=0, le=1)
+    uncertain: bool
+    confirmed: bool = False
+    correction: str | None = Field(default=None, max_length=1000)
+
+
+class SessionMediaView(WebModel):
+    media_id: str
+    content_type: Literal["image/jpeg", "image/png", "image/webp"]
+    analysis: ImageAnalysisView
+
+
+class ImageAnalysisConfirmRequest(WebModel):
+    service_query: str = Field(min_length=1, max_length=300)
+    problem_summary: str = Field(min_length=1, max_length=1000)
+    safety_warnings: list[str] = Field(default_factory=list, max_length=10)
+
+    @field_validator("service_query", "problem_summary")
+    @classmethod
+    def normalize_required_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("欄位不可為空白。")
+        return normalized
+
+    @field_validator("safety_warnings")
+    @classmethod
+    def normalize_warnings(cls, values: list[str]) -> list[str]:
+        normalized = [value.strip() for value in values if value.strip()]
+        if any(len(value) > 500 for value in normalized):
+            raise ValueError("單一安全提醒不可超過 500 個字元。")
+        return list(dict.fromkeys(normalized))
+
+
 class ToolTraceView(WebModel):
     name: str
     label: str
@@ -152,6 +190,7 @@ class SessionView(WebModel):
     preferred_end: datetime | None = None
     candidates: list[ProviderMatchCandidate] = Field(default_factory=list)
     dispatch: ConsumerCaseView | None = None
+    media: SessionMediaView | None = None
     progress: list[ProgressStepView] = Field(default_factory=list)
     checklist: list[ChecklistItemView] = Field(default_factory=list)
     tool_trace: list[ToolTraceView] = Field(default_factory=list)
@@ -165,6 +204,7 @@ class HealthView(WebModel):
     ok: Literal[True] = True
     service: Literal["home-repair-web"] = "home-repair-web"
     mode: Literal["provider-workflow-demo"] = "provider-workflow-demo"
+    model_provider: Literal["mock", "huggingface"]
 
 
 class DemoProviderIdentityListView(WebModel):

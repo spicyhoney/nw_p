@@ -91,3 +91,21 @@
 - 損壞的密文不可還原，清洗後應設為 `NULL` 並記錄原因。
 - Demo 使用明確標示的虛構個資。
 - 金鑰與資料庫連線字串只能放在 `.env` 或雲端秘密管理服務。
+
+## 圖片與外部模型
+
+- MEDIA-001 Demo 只允許 synthetic 或公開測試圖片，不得上傳真實住家門牌、臉孔、
+  文件、姓名、電話或其他可識別個人資訊。
+- UI 必須在每次上傳前明確說明圖片會送到 Hugging Face Inference Provider，並取得
+  使用者勾選同意；未同意不傳送，provider 失敗不 fallback。
+- 只接受實際可解碼的 JPEG／PNG／WebP，最大 8 MiB；重新編碼移除 EXIF 與其他
+  metadata，使用伺服器 media ID，不信任 client 檔名或 MIME。
+- 圖片 bytes 只放在私有 `MEDIA_ROOT`（預設 `var/media`，不進 Git）；PostgreSQL
+  僅保存 server-relative path 與已確認結構化分析，audit／log／例外不得包含圖片、
+  base64、token 或絕對路徑。
+- 未建案的圖片在移除／reset／失敗時清除；建案後由案件生命週期保留。正式保存
+  期限與刪除政策尚未決定，因此此功能不適用於真實個資。
+- 模型結果只是建議。使用者確認／更正後仍須透過 `ReadServiceLayer` 的正式服務
+  目錄驗證，才能影響表單、媒合與派單。
+- 廠商只能讀取指派給自己的 pending／accepted 案件圖片；rejected 與未指派一律
+  回 404。Browser 只知道 `has_image`，不取得內部 storage path。

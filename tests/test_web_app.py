@@ -120,6 +120,7 @@ class WebAppTests(unittest.TestCase):
                 "ok": True,
                 "service": "home-repair-web",
                 "mode": "provider-workflow-demo",
+                "model_provider": "mock",
             },
             response.json(),
         )

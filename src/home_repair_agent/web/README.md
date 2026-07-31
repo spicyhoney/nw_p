@@ -14,6 +14,8 @@
 - 呼叫 `match_service_providers` 顯示 synthetic 候選。
 - 選擇候選並明確確認後建立 `pending_provider` Demo 案件。
 - 輪詢廠商回覆，顯示拒絕、接單與 synthetic Demo 訂單編號。
+- HF 模式可上傳一張 JPEG／PNG／WebP 修繕測試圖片；模型建議必須先人工修正／確認，
+  再由服務目錄驗證後才進入諮詢流程。
 
 廠商端 `/provider`：
 
@@ -23,6 +25,7 @@
 - 查看需求摘要、表單答案、希望時段、聯絡資料權限與 audit。
 - 二次確認接受或拒絕案件。
 - 待回覆時顯示遮罩 contact；接單後才顯示完整 synthetic contact。
+- pending／accepted 的指派廠商可查看案件圖片；未指派或 rejected 一律 404。
 
 詳細五項規則、狀態機與 API 流程請見
 [服務廠商派單／接單 P0](../../../docs/provider-workflow.md)。
@@ -37,7 +40,8 @@ Checklist 狀態、無障礙契約與桌機／手機證據請見
   `WEB_CASE_REPOSITORY` 只切換案件 repository，不會切換這些唯讀資料。
 - PostgreSQL 模式尚未連接 RDS；目前只驗證相同的 PostgreSQL 16.14 契約。
 - 廠商下拉選單是身分模擬，不是登入或正式授權。
-- 尚未保留時段、付款、通知、照片、語音或使用真實個資。
+- 尚未保留時段、付款、通知、語音或使用真實個資；圖片只允許 synthetic／公開
+  測試素材，正式住家影像的同意與保存政策仍待完成。
 - 尚未新增寫入 MCP Tool；現有四個 MCP Tools 仍全部唯讀。
 - 尚未連接 AWS、Bedrock、AgentCore、RDS 或公開網域。
 
@@ -51,6 +55,8 @@ FastAPI route 只做 HTTP adapter。主要責任分工如下：
 - `PostgresCaseWorkflowRepository`：可選的 async transaction 持久化。
 - `AgentRunner`：模型多輪與唯讀 Tool loop。
 - `ReadServiceLayer`：服務、行政區、表單與媒合規則。
+- `LocalMediaStorage`：實際解碼、重新編碼移除 metadata、安全相對路徑與刪除。
+- `HuggingFaceVisionClient`：HF VLM 結構化建議；不查服務、不建案、不派單。
 
 聊天文字與商業狀態不混用。LLM 回覆負責說明與追問；服務、地點、表單、候選、
 案件與訂單都來自後端結構化 view model。
@@ -97,6 +103,22 @@ Browser manual checklist
   -> rerender / polling keeps the state
 ```
 
+### 圖片建議（HF only）
+
+```text
+Browser explicit external-processing consent + multipart image
+  -> LocalMediaStorage validates actual JPEG/PNG/WebP, <= 8 MiB
+  -> normalize/re-encode and strip metadata under MEDIA_ROOT
+  -> HuggingFaceVisionClient returns suggestion only
+  -> user edits and explicitly confirms
+  -> search_services revalidates one canonical service
+  -> confirmed image_path + structured analysis enter case on dispatch
+```
+
+圖片分析失敗會清除本次新檔並回錯；不會 fallback 到 Mock。未確認的建議不會設定
+服務、產生表單、媒合或派單。Browser response 只有 `has_image` 與受控圖片 endpoint，
+不會取得伺服器 `image_path`。
+
 ### 派單與接單
 
 ```text
@@ -123,6 +145,10 @@ Provider explicit decision
 | `GET` | `/api/health` | 模式與服務健康狀態 |
 | `POST` | `/api/sessions` | 建立消費者 session |
 | `GET` | `/api/sessions/{id}` | 取得最新 session／案件狀態 |
+| `POST` | `/api/sessions/{id}/image` | 明確同意後上傳並執行 HF 圖片分析 |
+| `GET` | `/api/sessions/{id}/image` | 讀取目前 session 圖片預覽 |
+| `DELETE` | `/api/sessions/{id}/image` | 未建案前移除圖片與未套用建議 |
+| `POST` | `/api/sessions/{id}/image/confirm` | 人工確認／更正並重新驗證服務 |
 | `POST` | `/api/sessions/{id}/messages` | 傳送自然語言需求 |
 | `POST` | `/api/sessions/{id}/form` | 驗證表單並媒合 |
 | `POST` | `/api/sessions/{id}/dispatch` | 明確確認派單 |
@@ -131,6 +157,7 @@ Provider explicit decision
 | `GET` | `/api/provider/identities` | 列出 synthetic Demo 身分 |
 | `GET` | `/api/provider/cases` | 列出目前指派案件 |
 | `GET` | `/api/provider/cases/{case_id}` | 取得分級案件詳情 |
+| `GET` | `/api/provider/cases/{case_id}/image` | 指派且非 rejected 廠商讀取圖片 |
 | `POST` | `/api/provider/cases/{case_id}/decision` | 確認接受或拒絕 |
 
 廠商 API 以 `X-Demo-Provider-Id` 傳入模擬身分。正式環境不得沿用這個 header
@@ -154,6 +181,10 @@ Provider explicit decision
   不呼叫同步 `psycopg.connect`。
 - 已建立 audit 的 session 不能用 reset 擦除。
 - API response 使用 `Cache-Control: no-store`；頁面加 CSP 等安全 headers。
+- 圖片只保存 server-relative path；binary 不進資料庫、audit 或 log。檔名／副檔名
+  由伺服器生成，拒絕 traversal、symlink、偽 MIME、損壞檔與超過 8 MiB。
+- 廠商圖片 endpoint 同樣需要 `X-Demo-Provider-Id`；pending／accepted 可讀，
+  rejected 與未指派回 404。Browser 不會收到內部 `image_path`。
 - 前端只用 `textContent` 呈現 Agent 與 Tool 文字。
 - 瀏覽器不直接連 Hugging Face、MCP 或資料庫。
 - FastAPI route 不含 SQL；SQL 只在 PostgreSQL Repository。
@@ -198,10 +229,16 @@ Linux／AWS 不受此限制。
 | `WEB_HOST` | `127.0.0.1` | Web bind host |
 | `WEB_PORT` | `8080` | Web port |
 | `HF_TOKEN` 等 | 見 `.env.example` | Hugging Face 模式 |
+| `HF_VL_MODEL_ID` | `Qwen/Qwen3-VL-30B-A3B-Instruct` | 圖片分析模型；已用 synthetic 圖片完成 live smoke |
+| `HF_VL_PROVIDER` | `auto` | 圖片模型的 Inference Provider |
+| `MEDIA_ROOT` | `var/media` | 私有本機圖片根目錄；不進 Git |
 
 `WEB_MODEL_PROVIDER=huggingface` 會把對話與 Tool schema 傳到外部 hosted API；
 沒有 `HF_TOKEN` 時啟動會直接失敗，不會靜默切回 Mock。HF 不影響派單與廠商
 狀態機，這些規則仍由本機 Service Layer 執行。
+
+同一模式下，使用者勾選外部處理同意並上傳圖片時，正規化後的圖片 bytes 也會送到
+所選 HF VLM provider。請勿上傳真實姓名、門牌、文件、臉孔或其他住家個資。
 
 ## 7. 測試與實際結果
 
@@ -210,7 +247,11 @@ python -m pytest -q `
   tests/test_case_workflow.py `
   tests/test_web_app.py `
   tests/test_postgres_case_repository.py `
-  tests/test_consumer_accessibility.py
+  tests/test_consumer_accessibility.py `
+  tests/test_media_web.py `
+  tests/test_media_storage.py `
+  tests/test_huggingface_vision.py `
+  tests/test_media_frontend.py
 ```
 
 2026-07-30 PR #13 race review 修正後，無資料庫聚焦結果：
@@ -229,6 +270,14 @@ Node regression 刻意讓兩個 checklist PUT 反序完成，並驗證舊回應�
 Reset／新 session；CI 會直接執行該測試。
 另在 Windows 以專案入口實際啟動 async Web + PostgreSQL，走完 session、需求、
 表單、媒合與 `dispatch_pending` 建案 smoke。
+
+2026-07-31 MEDIA-001 整合後，本機完整 suite（未提供測試 PostgreSQL）為
+`134 passed, 18 skipped, 52 subtests passed`；圖片 Web／a11y focused 為
+`40 passed`。compileall、兩支 JavaScript syntax、所有本輪異動 Python Ruff 與
+`git diff --check` 通過。17 個 skip 含 PostgreSQL integration，migration 003 仍須
+由有 `TEST_DATABASE_URL` 的 CI 複驗。本輪未以真實 token／圖片呼叫 HF VLM。
+瀏覽器另以 `1280x720`／`390x844` 驗證圖片區塊無水平 overflow／console error、
+同意列具 44px 觸控範圍，廠商工作台以授權 fetch 讀圖並限制預覽尺寸。
 
 `.github/workflows/postgresql-ci.yml` 會在 PR、`main` push 或手動
 `workflow_dispatch` 時建立乾淨 PostgreSQL 16.14 service，重跑靜態檢查與完整

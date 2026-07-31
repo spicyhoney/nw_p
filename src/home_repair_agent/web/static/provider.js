@@ -9,6 +9,7 @@ const providerStore = {
   decision: "",
   alertTimer: null,
   pollTimer: null,
+  imageObjectUrl: "",
 };
 
 const providerElements = {};
@@ -42,6 +43,8 @@ function bindProviderElements() {
   providerElements.detailWindow = document.querySelector("#detail-window");
   providerElements.detailSummary = document.querySelector("#detail-summary");
   providerElements.answerList = document.querySelector("#answer-list");
+  providerElements.imageSection = document.querySelector("#provider-image-section");
+  providerElements.caseImage = document.querySelector("#provider-case-image");
   providerElements.contactSection = document.querySelector("#contact-section");
   providerElements.contactAccess = document.querySelector("#contact-access");
   providerElements.contactList = document.querySelector("#contact-list");
@@ -63,6 +66,7 @@ function bindProviderElements() {
 
 function bindProviderEvents() {
   providerElements.identity.addEventListener("change", async () => {
+    clearProviderImage();
     providerStore.providerId = providerElements.identity.value;
     providerStore.selectedCaseId = "";
     providerStore.detail = null;
@@ -89,6 +93,7 @@ function bindProviderEvents() {
   );
   window.addEventListener("beforeunload", () => {
     window.clearInterval(providerStore.pollTimer);
+    clearProviderImage();
   });
 }
 
@@ -331,6 +336,7 @@ function renderProviderDetail() {
       definition(answerLabel(key), answerValue(value)),
     ),
   );
+  renderProviderCaseImage(detail);
 
   providerElements.contactSection.dataset.access = detail.contact.access;
   providerElements.contactAccess.className =
@@ -366,6 +372,47 @@ function renderProviderDetail() {
   );
   providerElements.decisionActions.hidden =
     detail.status !== "pending_provider";
+}
+
+async function renderProviderCaseImage(detail) {
+  clearProviderImage();
+  const hasImage = detail.has_image === true && detail.status !== "rejected";
+  providerElements.imageSection.hidden = !hasImage;
+  if (!hasImage) {
+    return;
+  }
+  const expectedCaseId = detail.case_id;
+  const expectedProviderId = providerStore.providerId;
+  try {
+    const response = await fetch(
+      `/api/provider/cases/${encodeURIComponent(expectedCaseId)}/image`,
+      { headers: { "X-Demo-Provider-Id": expectedProviderId } },
+    );
+    if (!response.ok) {
+      throw new Error("目前無法載入這張案件圖片。");
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    if (
+      providerStore.detail?.case_id !== expectedCaseId ||
+      providerStore.providerId !== expectedProviderId
+    ) {
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+    providerStore.imageObjectUrl = objectUrl;
+    providerElements.caseImage.src = objectUrl;
+  } catch (error) {
+    providerElements.imageSection.hidden = true;
+    showProviderAlert(error.message);
+  }
+}
+
+function clearProviderImage() {
+  providerElements.caseImage?.removeAttribute("src");
+  if (providerStore.imageObjectUrl) {
+    URL.revokeObjectURL(providerStore.imageObjectUrl);
+    providerStore.imageObjectUrl = "";
+  }
 }
 
 function definition(labelText, valueText) {

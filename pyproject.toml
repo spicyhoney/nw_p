@@ -23,6 +23,8 @@ app = [
     "fastapi",
     "huggingface_hub>=1.24,<2",
     "mcp>=1.27,<2",
+    "Pillow>=10,<13",
+    "python-multipart>=0.0.20,<1",
     "uvicorn",
 ]
 dev = [

@@ -9,8 +9,8 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.3.0" />
-    <script src="/static/app.js?v=0.3.0" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.4.0" />
+    <script src="/static/app.js?v=0.4.0" defer></script>
   </head>
   <body data-mobile-view="conversation">
     <a class="skip-link" href="#conversation-pane">跳到主要對話</a>
@@ -155,6 +155,77 @@
           aria-live="polite"
           aria-relevant="additions"
         ></div>
+
+        <section
+          id="media-section"
+          class="media-section"
+          aria-labelledby="media-title"
+        >
+          <div class="media-heading">
+            <div>
+              <p class="eyebrow">選填 · 圖片協助</p>
+              <h2 id="media-title">上傳一張修繕照片</h2>
+            </div>
+            <span id="media-mode" class="media-mode">確認模式中</span>
+          </div>
+          <p class="media-notice">
+            僅限 synthetic 或公開授權測試圖片。HF 模式會將去除 metadata
+            後的圖片傳至外部 Hugging Face 模型；分析只是建議，確認前不會影響媒合或派單。
+          </p>
+          <form id="media-upload-form" enctype="multipart/form-data">
+            <label class="file-picker" for="media-file">
+              <span>JPEG、PNG 或 WebP，最多 8 MB</span>
+              <input
+                id="media-file"
+                name="file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+              />
+            </label>
+            <label class="media-consent" for="media-external-consent">
+              <input id="media-external-consent" type="checkbox" />
+              <span>我了解這張測試圖片會傳送至外部 Hugging Face 模型分析。</span>
+            </label>
+            <button id="media-upload-button" class="secondary-button" type="submit">
+              上傳並分析
+            </button>
+          </form>
+          <p id="media-status" class="media-status" role="status" aria-live="polite"></p>
+
+          <div id="media-preview-panel" class="media-preview-panel" hidden>
+            <img id="media-preview" alt="已上傳的修繕測試圖片預覽" />
+            <button id="media-remove-button" class="secondary-button" type="button">
+              移除圖片
+            </button>
+          </div>
+
+          <form
+            id="media-analysis-form"
+            class="media-analysis-form"
+            aria-describedby="media-analysis-guidance"
+            hidden
+          >
+            <div class="media-analysis-heading">
+              <div>
+                <p class="eyebrow">模型建議 · 必須人工確認</p>
+                <h3>核對或修改辨識結果</h3>
+              </div>
+              <span id="media-confidence" class="media-confidence"></span>
+            </div>
+            <p id="media-analysis-guidance">
+              請修正錯誤內容；只有按下確認後，文字 Agent 才能使用這份結果。
+            </p>
+            <label for="media-service-query">建議服務類別</label>
+            <input id="media-service-query" maxlength="120" required />
+            <label for="media-problem-summary">問題摘要</label>
+            <textarea id="media-problem-summary" rows="3" maxlength="1000" required></textarea>
+            <label for="media-safety-warnings">可能的安全提醒（每行一項）</label>
+            <textarea id="media-safety-warnings" rows="3" maxlength="1000"></textarea>
+            <button id="media-confirm-button" class="primary-button" type="submit">
+              確認並套用辨識結果
+            </button>
+          </form>
+        </section>
 
         <section
           id="form-section"

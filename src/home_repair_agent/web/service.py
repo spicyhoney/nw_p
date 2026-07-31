@@ -4,18 +4,33 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal
+from pathlib import PurePosixPath
+from typing import Literal, Protocol
 from uuid import uuid4
 
+from home_repair_agent.agent.huggingface_vision import (
+    HuggingFaceVisionError,
+    VisionAnalysisResult,
+)
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.models import ConversationSession, ToolTraceEntry
 from home_repair_agent.agent.ports import ToolClient
 from home_repair_agent.backend.case_models import (
+    CaseImageAnalysis,
     CaseSubmissionCommand,
     ConsumerCaseView,
     SyntheticContact,
 )
-from home_repair_agent.backend.case_services import CaseWorkflowService
+from home_repair_agent.backend.case_services import (
+    CaseWorkflowNotFoundError,
+    CaseWorkflowService,
+)
+from home_repair_agent.backend.media_storage import (
+    MediaRead,
+    MediaStorage,
+    MediaStorageError,
+    StoredMedia,
+)
 from home_repair_agent.backend.models import (
     ConsultationForm,
     FormTopic,
@@ -32,8 +47,11 @@ from home_repair_agent.web.models import (
     ChecklistKey,
     DispatchRequest,
     FormSubmitRequest,
+    ImageAnalysisConfirmRequest,
+    ImageAnalysisView,
     ProgressStepView,
     ProviderView,
+    SessionMediaView,
     SessionState,
     SessionView,
     ToolTraceView,
@@ -84,6 +102,14 @@ class WebSessionNotFoundError(WebSessionError):
         )
 
 
+class WebSessionMediaNotFoundError(WebSessionError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="MEDIA_NOT_FOUND",
+            message="找不到這張圖片，可能已移除或尚未上傳。",
+        )
+
+
 class WebSessionConflictError(WebSessionError):
     pass
 
@@ -94,6 +120,16 @@ class WebSessionInputError(WebSessionError):
 
 class WebSessionUpstreamError(WebSessionError):
     pass
+
+
+class VisionAnalysisClient(Protocol):
+    async def analyze(
+        self,
+        *,
+        image_bytes: bytes,
+        mime_type: str,
+        context: str | None = None,
+    ) -> VisionAnalysisResult: ...
 
 
 @dataclass
@@ -109,6 +145,8 @@ class _SessionRecord:
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
     candidates: list[ProviderMatchCandidate] = field(default_factory=list)
+    media: StoredMedia | None = None
+    image_analysis: ImageAnalysisView | None = None
     checklist: dict[ChecklistKey, bool] = field(
         default_factory=lambda: {key: False for key, _label in CHECKLIST_ITEMS}
     )
@@ -127,6 +165,8 @@ class WebSessionService:
         case_workflow: CaseWorkflowService,
         provider: ProviderView,
         now: Callable[[], datetime],
+        media_storage: MediaStorage | None = None,
+        vision_client: VisionAnalysisClient | None = None,
         max_sessions: int = 200,
     ) -> None:
         self._runner = runner
@@ -134,6 +174,8 @@ class WebSessionService:
         self._case_workflow = case_workflow
         self._provider = provider
         self._now = now
+        self._media_storage = media_storage
+        self._vision_client = vision_client
         self._max_sessions = max_sessions
         self._sessions: dict[str, _SessionRecord] = {}
         self._sessions_lock = asyncio.Lock()
@@ -142,6 +184,14 @@ class WebSessionService:
     @property
     def case_workflow(self) -> CaseWorkflowService:
         return self._case_workflow
+
+    @property
+    def image_analysis_available(self) -> bool:
+        return self._media_storage is not None and self._vision_client is not None
+
+    @property
+    def provider(self) -> ProviderView:
+        return self._provider
 
     async def create_session(self) -> SessionView:
         async with self._sessions_lock:
@@ -160,9 +210,204 @@ class WebSessionService:
         async with record.lock:
             return await self._to_view(record)
 
+    async def upload_image(
+        self,
+        session_id: str,
+        *,
+        content: bytes,
+        declared_content_type: str | None,
+        original_filename: str | None,
+        external_processing_confirmed: bool,
+    ) -> SessionView:
+        """Validate, normalize and analyze one session image without applying it yet."""
+
+        record = await self._get_record(session_id)
+        async with record.lock:
+            self._require_media_dependencies()
+            if self._provider.key != "huggingface":
+                raise WebSessionConflictError(
+                    code="IMAGE_ANALYSIS_UNAVAILABLE",
+                    message="圖片分析只在 Hugging Face AI 模式提供；目前不會自動降級或模擬。",
+                )
+            if external_processing_confirmed is not True:
+                raise WebSessionInputError(
+                    code="EXTERNAL_PROCESSING_CONFIRMATION_REQUIRED",
+                    message="圖片會送往 Hugging Face 外部服務，請先明確同意。",
+                    fields={"external_processing_confirmed": "請勾選外部處理同意。"},
+                )
+            self._require_media_flow_open(record)
+            storage = self._require_media_storage()
+            vision = self._require_vision_client()
+
+            try:
+                new_media = storage.store_session_image(
+                    session_id=session_id,
+                    content=content,
+                    declared_content_type=declared_content_type,
+                    original_filename=original_filename,
+                )
+                normalized = storage.read_image(new_media)
+            except MediaStorageError as error:
+                raise _media_storage_web_error(error) from error
+
+            try:
+                result = await vision.analyze(
+                    image_bytes=normalized.content,
+                    mime_type=normalized.content_type,
+                )
+            except HuggingFaceVisionError as error:
+                _delete_media_quietly(storage, new_media)
+                raise WebSessionUpstreamError(
+                    code="IMAGE_ANALYSIS_FAILED",
+                    message="圖片已安全移除，但 Hugging Face 目前無法產生可靠分析，請稍後重試。",
+                ) from error
+            except Exception as error:
+                _delete_media_quietly(storage, new_media)
+                raise WebSessionUpstreamError(
+                    code="IMAGE_ANALYSIS_FAILED",
+                    message="圖片已安全移除，但圖片分析發生非預期錯誤，請稍後重試。",
+                ) from error
+
+            previous_media = record.media
+            if previous_media is not None:
+                try:
+                    receipt = storage.stage_delete(media=previous_media)
+                except MediaStorageError as error:
+                    _delete_media_quietly(storage, new_media)
+                    raise _media_storage_web_error(error) from error
+            else:
+                receipt = None
+
+            if receipt is not None:
+                try:
+                    storage.commit_delete(receipt)
+                except MediaStorageError as error:
+                    try:
+                        storage.rollback_delete(receipt)
+                    finally:
+                        _delete_media_quietly(storage, new_media)
+                    raise _media_storage_web_error(error) from error
+            record.media = new_media
+            record.image_analysis = ImageAnalysisView(
+                **result.model_dump(),
+                confirmed=False,
+                correction=None,
+            )
+            return await self._to_view(record)
+
+    async def get_session_image(self, session_id: str) -> MediaRead:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            if record.media is None:
+                raise WebSessionMediaNotFoundError()
+            try:
+                return self._require_media_storage().read_image(record.media)
+            except MediaStorageError as error:
+                if error.code == "MEDIA_NOT_FOUND":
+                    raise WebSessionMediaNotFoundError() from error
+                raise _media_storage_web_error(error) from error
+
+    async def remove_image(self, session_id: str) -> SessionView:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            if record.media is None:
+                raise WebSessionMediaNotFoundError()
+            if await self._case_workflow.has_session_cases(session_id):
+                raise WebSessionConflictError(
+                    code="CASE_ALREADY_SUBMITTED",
+                    message="案件已送出，圖片必須保留供已指派廠商查看。",
+                )
+            storage = self._require_media_storage()
+            try:
+                _delete_media(storage, record.media)
+            except MediaStorageError as error:
+                raise _media_storage_web_error(error) from error
+            record.media = None
+            record.image_analysis = None
+            return await self._to_view(record)
+
+    async def confirm_image_analysis(
+        self,
+        session_id: str,
+        confirmation: ImageAnalysisConfirmRequest,
+    ) -> SessionView:
+        """Revalidate a user-edited suggestion through the read tool before applying it."""
+
+        record = await self._get_record(session_id)
+        async with record.lock:
+            self._require_media_flow_open(record)
+            if record.media is None or record.image_analysis is None:
+                raise WebSessionMediaNotFoundError()
+
+            async with self._tool_client_lock:
+                execution = await self._tool_client.call_tool(
+                    name="search_services",
+                    arguments={"query": confirmation.service_query, "limit": 5},
+                )
+            payload = execution.payload
+            if execution.mcp_is_error or payload.get("ok") is not True:
+                raise WebSessionUpstreamError(
+                    code="SERVICE_REVALIDATION_FAILED",
+                    message="目前無法用服務目錄重新驗證圖片建議，尚未套用。",
+                )
+            try:
+                result = ServiceSearchResult.model_validate(payload.get("data"))
+            except Exception as error:
+                raise WebSessionUpstreamError(
+                    code="INVALID_SERVICE_RESPONSE",
+                    message="服務目錄回應格式異常，圖片建議尚未套用。",
+                ) from error
+            if result.count != 1:
+                raise WebSessionInputError(
+                    code="SERVICE_REVALIDATION_AMBIGUOUS",
+                    message="這個圖片建議無法唯一對應服務，請把服務描述修得更具體後再確認。",
+                    fields={"service_query": "必須唯一對應專案服務目錄中的一項服務。"},
+                )
+
+            previous = record.image_analysis
+            changed = (
+                confirmation.service_query != previous.service_query
+                or confirmation.problem_summary != previous.problem_summary
+                or confirmation.safety_warnings != previous.safety_warnings
+            )
+            record.image_analysis = ImageAnalysisView(
+                service_query=confirmation.service_query,
+                problem_summary=confirmation.problem_summary,
+                safety_warnings=confirmation.safety_warnings,
+                confidence=previous.confidence,
+                uncertain=previous.uncertain,
+                confirmed=True,
+                correction="使用者已修正模型建議。" if changed else None,
+            )
+            record.service = result.services[0]
+            record.consultation_form = None
+            record.tool_trace = [
+                *record.tool_trace,
+                ToolTraceView(
+                    name="search_services",
+                    label=TOOL_LABELS["search_services"],
+                    ok=True,
+                ),
+            ][-8:]
+            record.messages.extend(
+                [
+                    self._message("user", "已確認並套用圖片分析建議。"),
+                    self._message(
+                        "assistant",
+                        (
+                            f"已用服務目錄確認為「{record.service.name}」。"
+                            "圖片仍只是輔助資訊；請再告訴我服務地點。"
+                        ),
+                    ),
+                ]
+            )
+            record.state = self._derive_state(record)
+            return await self._to_view(record)
+
     async def send_message(self, session_id: str, user_text: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            self._require_confirmed_media(record)
             if record.state in {"matched", "no_candidates"}:
                 raise WebSessionConflictError(
                     code="MATCH_ALREADY_COMPLETED",
@@ -195,6 +440,7 @@ class WebSessionService:
     ) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            self._require_confirmed_media(record)
             if record.state in {"matched", "no_candidates"}:
                 raise WebSessionConflictError(
                     code="MATCH_ALREADY_COMPLETED",
@@ -296,6 +542,7 @@ class WebSessionService:
     ) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            self._require_confirmed_media(record)
             if (
                 record.service is None
                 or record.location is None
@@ -335,6 +582,12 @@ class WebSessionService:
                     location_id=record.location.location_id,
                     location_name=record.location.full_name,
                     problem_summary=_problem_summary(record),
+                    image_path=record.media.relative_path if record.media is not None else None,
+                    image_analysis=(
+                        CaseImageAnalysis.model_validate(record.image_analysis.model_dump())
+                        if record.image_analysis is not None
+                        else None
+                    ),
                     answers=dict(record.answers),
                     preferred_start=record.preferred_start,
                     preferred_end=record.preferred_end,
@@ -372,6 +625,12 @@ class WebSessionService:
                     code="CASE_ALREADY_SUBMITTED",
                     message="這次諮詢已有派單紀錄；請建立新諮詢，保留原案件稽核資料。",
                 )
+            if record.media is not None:
+                storage = self._require_media_storage()
+                try:
+                    _delete_media(storage, record.media)
+                except MediaStorageError as error:
+                    raise _media_storage_web_error(error) from error
             replacement = self._new_record(session_id)
             record.conversation = replacement.conversation
             record.messages = replacement.messages
@@ -383,9 +642,31 @@ class WebSessionService:
             record.preferred_start = None
             record.preferred_end = None
             record.candidates.clear()
+            record.media = None
+            record.image_analysis = None
             record.checklist = dict(replacement.checklist)
             record.tool_trace.clear()
             return await self._to_view(record)
+
+    async def get_provider_case_image(
+        self,
+        *,
+        provider_id: str,
+        case_id: str,
+    ) -> MediaRead:
+        detail = await self._case_workflow.get_provider_case(
+            provider_id=provider_id,
+            case_id=case_id,
+        )
+        if detail.status == "rejected" or detail.image_path is None:
+            raise CaseWorkflowNotFoundError()
+        media = _stored_media_from_case_path(detail.image_path)
+        try:
+            return self._require_media_storage().read_image(media)
+        except MediaStorageError as error:
+            if error.code == "MEDIA_NOT_FOUND":
+                raise CaseWorkflowNotFoundError() from error
+            raise _media_storage_web_error(error) from error
 
     async def _get_record(self, session_id: str) -> _SessionRecord:
         async with self._sessions_lock:
@@ -400,6 +681,52 @@ class WebSessionService:
             conversation=ConversationSession(session_id=session_id),
             messages=[self._message("assistant", GREETING)],
         )
+
+    def _require_media_flow_open(self, record: _SessionRecord) -> None:
+        if record.consultation_form is not None or record.state in {
+            "matched",
+            "no_candidates",
+            "dispatch_pending",
+            "provider_accepted",
+            "provider_rejected",
+        }:
+            raise WebSessionConflictError(
+                code="MEDIA_FLOW_LOCKED",
+                message="諮詢表單或案件流程已開始；請重新開始後再更換圖片。",
+            )
+
+    @staticmethod
+    def _require_confirmed_media(record: _SessionRecord) -> None:
+        if record.media is not None and (
+            record.image_analysis is None or not record.image_analysis.confirmed
+        ):
+            raise WebSessionConflictError(
+                code="IMAGE_CONFIRMATION_REQUIRED",
+                message="請先確認或移除圖片分析建議，再繼續諮詢與媒合。",
+            )
+
+    def _require_media_dependencies(self) -> None:
+        if not self.image_analysis_available:
+            raise WebSessionConflictError(
+                code="IMAGE_ANALYSIS_UNAVAILABLE",
+                message="目前未設定圖片分析服務；系統不會靜默改用模擬結果。",
+            )
+
+    def _require_media_storage(self) -> MediaStorage:
+        if self._media_storage is None:
+            raise WebSessionConflictError(
+                code="IMAGE_STORAGE_UNAVAILABLE",
+                message="目前未設定安全圖片儲存，無法處理圖片。",
+            )
+        return self._media_storage
+
+    def _require_vision_client(self) -> VisionAnalysisClient:
+        if self._vision_client is None:
+            raise WebSessionConflictError(
+                code="IMAGE_ANALYSIS_UNAVAILABLE",
+                message="目前未設定圖片分析服務；系統不會靜默改用模擬結果。",
+            )
+        return self._vision_client
 
     def _message(
         self,
@@ -487,6 +814,9 @@ class WebSessionService:
                 )
             )
         )
+        media_confirmed = record.media is None or (
+            record.image_analysis is not None and record.image_analysis.confirmed
+        )
         progress = _build_progress(record, dispatch=dispatch)
         return SessionView(
             session_id=record.session_id,
@@ -501,16 +831,27 @@ class WebSessionService:
             preferred_end=record.preferred_end,
             candidates=list(record.candidates),
             dispatch=dispatch,
+            media=(
+                SessionMediaView(
+                    media_id=record.media.media_id,
+                    content_type=record.media.content_type,
+                    analysis=record.image_analysis,
+                )
+                if record.media is not None and record.image_analysis is not None
+                else None
+            ),
             progress=progress,
             checklist=_build_checklist(record),
             tool_trace=list(record.tool_trace),
-            can_send_message=record.consultation_form is None
+            can_send_message=media_confirmed
+            and record.consultation_form is None
             and record.state not in {"matched", "no_candidates"},
-            can_submit_form=record.state == "awaiting_form"
+            can_submit_form=media_confirmed
+            and record.state == "awaiting_form"
             and record.consultation_form is not None
             and record.service is not None
             and record.location is not None,
-            can_dispatch=can_dispatch,
+            can_dispatch=media_confirmed and can_dispatch,
         )
 
 
@@ -685,3 +1026,56 @@ def _dispatch_status_message(dispatch: ConsumerCaseView) -> str:
     if dispatch.status == "accepted":
         return f"{dispatch.provider_name} 已接單，Demo 訂單編號為 {dispatch.order_no}。"
     return f"{dispatch.provider_name} 已拒絕本次案件，你可以改選其他尚未拒絕的候選廠商。"
+
+
+def _media_storage_web_error(error: MediaStorageError) -> WebSessionError:
+    if error.code in {
+        "INVALID_MEDIA_CONTENT",
+        "INVALID_IMAGE",
+        "UNSUPPORTED_IMAGE_TYPE",
+        "MEDIA_TOO_LARGE",
+        "IMAGE_NORMALIZATION_FAILED",
+    }:
+        return WebSessionInputError(code=error.code, message=error.message)
+    if error.code == "MEDIA_NOT_FOUND":
+        return WebSessionMediaNotFoundError()
+    return WebSessionUpstreamError(
+        code="MEDIA_STORAGE_UNAVAILABLE",
+        message="圖片儲存目前無法安全完成操作，請稍後重試。",
+    )
+
+
+def _delete_media_quietly(storage: MediaStorage, media: StoredMedia) -> None:
+    try:
+        _delete_media(storage, media)
+    except MediaStorageError:
+        # The original provider/storage exception remains the public failure.
+        # No path or image bytes are included in either error.
+        return
+
+
+def _delete_media(storage: MediaStorage, media: StoredMedia) -> None:
+    receipt = storage.stage_delete(media=media)
+    try:
+        storage.commit_delete(receipt)
+    except MediaStorageError:
+        storage.rollback_delete(receipt)
+        raise
+
+
+def _stored_media_from_case_path(image_path: str) -> StoredMedia:
+    path = PurePosixPath(image_path)
+    content_types = {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
+    content_type = content_types.get(path.suffix.lower())
+    if content_type is None or not path.stem:
+        raise CaseWorkflowNotFoundError()
+    return StoredMedia(
+        media_id=path.stem,
+        relative_path=image_path,
+        content_type=content_type,
+        byte_size=0,
+    )

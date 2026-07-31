@@ -28,3 +28,8 @@ Migration 同時使用 PostgreSQL `COMMENT ON` 記錄 schema、table、重要 co
 清洗命令若取得 `DATABASE_URL`，會依檔名順序套用所有 migration，再執行可
 重複的 upsert。MCP Tools 與 FastAPI 應查詢 `agent` views 或由 Service Layer
 存取指定表格，不提供任意 SQL 給模型。
+
+`migrations/003_case_media_contract.sql` 為 `workflow.service_case` 新增 nullable
+`image_path` 與 `image_analysis`；資料庫只保存 server-relative path 和已確認的
+結構化分析，不保存圖片 bytes。constraints 拒絕絕對／traversal path，並驗證分析
+JSON 的欄位型別與 confidence 範圍。

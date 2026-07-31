@@ -51,6 +51,9 @@ const store = {
   checklistSyncing: false,
   checklistNeedsRecovery: false,
   lastDispatchSignature: "",
+  mediaProvider: "unknown",
+  mediaBusy: false,
+  previewObjectUrl: "",
 };
 
 const elements = {};
@@ -115,6 +118,22 @@ function bindElements() {
   elements.appAlert = document.querySelector("#app-alert");
   elements.appStatus = document.querySelector("#app-status");
   elements.mobileTabs = [...document.querySelectorAll("[data-mobile-target]")];
+  elements.mediaSection = document.querySelector("#media-section");
+  elements.mediaMode = document.querySelector("#media-mode");
+  elements.mediaUploadForm = document.querySelector("#media-upload-form");
+  elements.mediaFile = document.querySelector("#media-file");
+  elements.mediaConsent = document.querySelector("#media-external-consent");
+  elements.mediaUploadButton = document.querySelector("#media-upload-button");
+  elements.mediaStatus = document.querySelector("#media-status");
+  elements.mediaPreviewPanel = document.querySelector("#media-preview-panel");
+  elements.mediaPreview = document.querySelector("#media-preview");
+  elements.mediaRemoveButton = document.querySelector("#media-remove-button");
+  elements.mediaAnalysisForm = document.querySelector("#media-analysis-form");
+  elements.mediaServiceQuery = document.querySelector("#media-service-query");
+  elements.mediaProblemSummary = document.querySelector("#media-problem-summary");
+  elements.mediaSafetyWarnings = document.querySelector("#media-safety-warnings");
+  elements.mediaConfidence = document.querySelector("#media-confidence");
+  elements.mediaConfirmButton = document.querySelector("#media-confirm-button");
 }
 
 function bindEvents() {
@@ -124,6 +143,10 @@ function bindEvents() {
   elements.cancelDispatch.addEventListener("click", cancelDispatch);
   elements.confirmDispatch.addEventListener("click", confirmDispatch);
   elements.messageInput.addEventListener("input", resizeMessageInput);
+  elements.mediaUploadForm.addEventListener("submit", handleMediaUpload);
+  elements.mediaFile.addEventListener("change", handleMediaFileChange);
+  elements.mediaRemoveButton.addEventListener("click", removeMedia);
+  elements.mediaAnalysisForm.addEventListener("submit", confirmMediaAnalysis);
   elements.messageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -156,6 +179,7 @@ async function createSession() {
       return;
     }
     renderSession();
+    loadMediaProvider();
     announce("新諮詢已建立，可以開始描述修繕需求。");
   } catch (error) {
     showAlert(error.message);
@@ -477,13 +501,268 @@ async function refreshSession() {
   }
 }
 
+const MEDIA_ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const MEDIA_MAX_BYTES = 8 * 1024 * 1024;
+
+async function loadMediaProvider() {
+  if (store.session?.provider?.key) {
+    store.mediaProvider = store.session.provider.key;
+  }
+  try {
+    const health = await api("/api/health");
+    store.mediaProvider = health.model_provider || store.mediaProvider || "unknown";
+  } catch {
+    // Treat an unavailable health contract as unavailable image processing; never fall back to mock.
+    store.mediaProvider = "unknown";
+  }
+  renderMedia();
+}
+
+function isHuggingFaceMediaAvailable() {
+  return store.mediaProvider === "huggingface";
+}
+
+function currentMedia() {
+  return store.session?.media || null;
+}
+
+function mediaImagePath(sessionId = store.session?.session_id) {
+  return `/api/sessions/${encodeURIComponent(sessionId)}/image`;
+}
+
+function setMediaStatus(message) {
+  elements.mediaStatus.textContent = message;
+}
+
+function clearPreviewObjectUrl() {
+  if (store.previewObjectUrl) {
+    URL.revokeObjectURL(store.previewObjectUrl);
+    store.previewObjectUrl = "";
+  }
+}
+
+function handleMediaFileChange() {
+  const file = elements.mediaFile.files?.[0];
+  clearPreviewObjectUrl();
+  if (!file) {
+    renderMedia();
+    return;
+  }
+  const error = validateMediaFile(file);
+  if (error) {
+    elements.mediaFile.value = "";
+    setMediaStatus(error);
+    renderMedia();
+    return;
+  }
+  store.previewObjectUrl = URL.createObjectURL(file);
+  elements.mediaPreview.src = store.previewObjectUrl;
+  elements.mediaPreviewPanel.hidden = false;
+  setMediaStatus(`已選取 ${file.name}，尚未上傳。`);
+}
+
+function validateMediaFile(file) {
+  if (!MEDIA_ALLOWED_TYPES.has(file.type)) {
+    return "請選擇 JPEG、PNG 或 WebP 圖片。";
+  }
+  if (file.size > MEDIA_MAX_BYTES) {
+    return "圖片大小不可超過 8 MB。";
+  }
+  return "";
+}
+
+async function handleMediaUpload(event) {
+  event.preventDefault();
+  if (!store.session || store.mediaBusy || !isHuggingFaceMediaAvailable()) {
+    return;
+  }
+  const file = elements.mediaFile.files?.[0];
+  const error = file ? validateMediaFile(file) : "請先選擇一張圖片。";
+  if (error) {
+    setMediaStatus(error);
+    elements.mediaFile.focus();
+    return;
+  }
+  if (!elements.mediaConsent.checked) {
+    setMediaStatus("請先明確勾選同意將圖片送至外部 Hugging Face 處理。");
+    elements.mediaConsent.focus();
+    return;
+  }
+
+  const body = new FormData();
+  body.append("file", file);
+  body.append("external_processing_confirmed", "true");
+  setMediaBusy(true, "正在上傳圖片並等待 Hugging Face 分析結果…");
+  try {
+    const response = await api(mediaImagePath(), { method: "POST", body });
+    await applyMediaResponse(response);
+    elements.mediaFile.value = "";
+    elements.mediaConsent.checked = false;
+    clearPreviewObjectUrl();
+    setMediaStatus("圖片分析完成。請先核對或更正建議，再確認套用。");
+    announce("圖片分析完成，請核對或更正結果。");
+  } catch (uploadError) {
+    setMediaStatus(uploadError.message);
+  } finally {
+    setMediaBusy(false);
+  }
+}
+
+async function removeMedia() {
+  if (!store.session || store.mediaBusy || !currentMedia()) {
+    return;
+  }
+  const wasConfirmed = currentMedia().analysis?.confirmed === true;
+  setMediaBusy(true, "正在移除圖片…");
+  try {
+    const response = await api(mediaImagePath(), { method: "DELETE" });
+    await applyMediaResponse(response);
+    elements.mediaFile.value = "";
+    elements.mediaConsent.checked = false;
+    clearPreviewObjectUrl();
+    setMediaStatus(
+      wasConfirmed
+        ? "圖片已移除；先前已確認的服務仍保留，如需更正請重新開始。"
+        : "圖片已移除，辨識建議未套用。",
+    );
+    announce("圖片已移除。");
+  } catch (removeError) {
+    setMediaStatus(removeError.message);
+  } finally {
+    setMediaBusy(false);
+  }
+}
+
+async function confirmMediaAnalysis(event) {
+  event.preventDefault();
+  const media = currentMedia();
+  if (!store.session || !media || store.mediaBusy) {
+    return;
+  }
+  const payload = {
+    service_query: elements.mediaServiceQuery.value.trim(),
+    problem_summary: elements.mediaProblemSummary.value.trim(),
+    safety_warnings: elements.mediaSafetyWarnings.value
+      .split("\n")
+      .map((warning) => warning.trim())
+      .filter(Boolean),
+  };
+  if (!payload.service_query || !payload.problem_summary) {
+    setMediaStatus("請填寫建議服務類別與問題摘要後再確認。");
+    return;
+  }
+  setMediaBusy(true, "正在確認圖片辨識結果…");
+  try {
+    const response = await api(`${mediaImagePath()}/confirm`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    await applyMediaResponse(response);
+    setMediaStatus("辨識結果已確認並套用到後續流程。");
+    announce("圖片辨識結果已確認並套用。");
+  } catch (confirmError) {
+    setMediaStatus(confirmError.message);
+  } finally {
+    setMediaBusy(false);
+  }
+}
+
+async function applyMediaResponse(response) {
+  // Keep the provisional endpoint response shape isolated while the backend contract lands.
+  const session = response?.session || response?.session_view || response;
+  if (session?.session_id) {
+    store.session = session;
+    renderSession();
+    return;
+  }
+  const latest = await api(`/api/sessions/${encodeURIComponent(store.session.session_id)}`);
+  store.session = latest;
+  renderSession();
+}
+
+function renderMedia() {
+  if (!elements.mediaSection || !store.session) {
+    return;
+  }
+  const media = currentMedia();
+  const analysis = media?.analysis || null;
+  const available = isHuggingFaceMediaAvailable();
+  const blocked = store.mediaBusy || isSessionMutationBlocked();
+  const selectedFile = elements.mediaFile.files?.[0];
+
+  elements.mediaMode.textContent = available
+    ? "Hugging Face 外部分析"
+    : "圖片分析目前不可用（Mock／未設定）";
+  elements.mediaMode.classList.toggle("media-mode--unavailable", !available);
+  elements.mediaUploadForm.hidden = Boolean(media);
+  elements.mediaFile.disabled = blocked || !available;
+  elements.mediaConsent.disabled = blocked || !available;
+  elements.mediaUploadButton.disabled = blocked || !available;
+  elements.mediaUploadButton.textContent = store.mediaBusy ? "處理中…" : "上傳並分析";
+  if (!available && !media && !store.mediaBusy) {
+    setMediaStatus("此 session 使用 Mock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
+  }
+
+  const previewSource = media ? mediaImagePath() : store.previewObjectUrl;
+  elements.mediaPreviewPanel.hidden = !previewSource;
+  if (previewSource) {
+    elements.mediaPreview.src = previewSource;
+  } else {
+    elements.mediaPreview.removeAttribute("src");
+  }
+  elements.mediaRemoveButton.disabled = blocked || !media;
+
+  elements.mediaAnalysisForm.hidden = !analysis;
+  if (!analysis) {
+    return;
+  }
+  const active = document.activeElement;
+  if (active !== elements.mediaServiceQuery) {
+    elements.mediaServiceQuery.value = analysis.service_query || "";
+  }
+  if (active !== elements.mediaProblemSummary) {
+    elements.mediaProblemSummary.value = analysis.problem_summary || "";
+  }
+  if (active !== elements.mediaSafetyWarnings) {
+    elements.mediaSafetyWarnings.value = Array.isArray(analysis.safety_warnings)
+      ? analysis.safety_warnings.join("\n")
+      : analysis.safety_warnings || "";
+  }
+  const confidence = Number(analysis.confidence);
+  elements.mediaConfidence.textContent = Number.isFinite(confidence)
+    ? `信心 ${Math.round(confidence * 100)}%${analysis.uncertain ? " · 需要確認" : ""}`
+    : analysis.uncertain
+      ? "需要確認"
+      : "待確認";
+  elements.mediaConfirmButton.disabled = blocked || Boolean(analysis.confirmed);
+  elements.mediaConfirmButton.textContent = analysis.confirmed
+    ? "辨識結果已確認"
+    : store.mediaBusy
+      ? "確認中…"
+      : "確認並套用辨識結果";
+}
+
+function setMediaBusy(value, message = "") {
+  store.mediaBusy = value;
+  if (message) {
+    setMediaStatus(message);
+  }
+  updateControls();
+}
+
 async function api(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
+  const headers = { ...(options.headers || {}) };
+  if (!isFormData && options.body !== undefined && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
   const response = await fetch(path, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
   });
   let payload = null;
   try {
@@ -522,6 +801,7 @@ function renderSession() {
   renderProgress();
   renderChecklist();
   renderMessages();
+  renderMedia();
   renderForm();
   renderDispatch();
   renderCandidates();
@@ -1086,7 +1366,7 @@ function hasChecklistMutation() {
 }
 
 function isSessionMutationBlocked() {
-  return store.busy || hasChecklistMutation();
+  return store.busy || store.mediaBusy || hasChecklistMutation();
 }
 
 function updateControls() {
@@ -1121,6 +1401,7 @@ function updateControls() {
       ? "處理中…"
       : "查看媒合結果 →";
   }
+  renderMedia();
 }
 
 function setBusy(value, message = "") {

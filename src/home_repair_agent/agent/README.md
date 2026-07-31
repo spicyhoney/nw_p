@@ -18,6 +18,7 @@
 | `RuleBasedRepairMockModel` | `mock_model.py` | 無 AWS 時可重現的修繕流程替身 |
 | `ScriptedModelClient` | `mock_model.py` | 精確控制 Tool Call 的測試替身 |
 | `HuggingFaceModelClient` | `huggingface_model.py` | 將對話與工具轉成 Hugging Face chat completion/function calling |
+| `HuggingFaceVisionClient` | `huggingface_vision.py` | 將已驗證圖片送到 HF VLM，只回傳待人工確認的結構化建議 |
 | 本機終端 Demo | `demo.py` | 互動或腳本化展示 Agent、MCP 與 Service Layer 閉環 |
 
 它已能保存同一個 session 的多輪訊息、呼叫四個唯讀 MCP Tools、把結果交回
@@ -103,6 +104,22 @@ provider 錯誤與不合法回覆會轉成固定 adapter error，再由 `AgentRu
 設定時 Hugging Face mode 會 fail fast，不會偷偷 fallback；外部服務未回覆時
 也會在設定的 timeout 後停止。預設 open model 與 provider 可替換，模型品質
 仍需用固定 eval cases 實測，不能以 adapter 單元測試代替。
+
+### Hugging Face 圖片分析
+
+Web 的可選圖片流程使用 `HuggingFaceVisionClient`，預設
+`Qwen/Qwen3-VL-30B-A3B-Instruct` 與 `HF_VL_PROVIDER=auto`。這個組合已用無個資的
+synthetic 水漬圖片完成一次 live smoke。它只輸出
+`service_query`、問題摘要、安全提醒、confidence 與 uncertain；不得產生
+`service_id`、建案或派單。使用者可先修改結果，明確確認後 Web 才會透過既有
+`search_services` 唯讀 Tool 重新驗證服務類別。Mock 模式沒有圖片假結果，也不會
+在 HF 失敗時 fallback。
+
+圖片會送往 Hugging Face Inference Provider；UI 必須先取得該次外部處理同意，
+且 Demo 只允許 synthetic／公開測試圖片。設定使用 `HF_TOKEN`、
+`HF_VL_MODEL_ID`、`HF_VL_PROVIDER`、`HF_VL_MAX_TOKENS`、
+`HF_VL_TIMEOUT_SECONDS`。provider 可用性仍會改變，部署環境應重跑有效 token 與
+synthetic 圖片 smoke；adapter contract test 不等於 provider 可用性保證。
 
 參考：[Hugging Face function calling 指南](https://huggingface.co/docs/inference-providers/guides/function-calling)、
 [InferenceClient API](https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client)、

@@ -19,6 +19,7 @@ if sys.platform == "win32":
 
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
 from home_repair_agent.backend.case_models import (
+    CaseImageAnalysis,
     CaseSubmissionCommand,
     ProviderDecisionCommand,
     SyntheticContact,
@@ -82,7 +83,7 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
             now=lambda: REFERENCE_TIME,
         )
 
-    def _submission(self) -> CaseSubmissionCommand:
+    def _submission(self, *, with_image: bool = False) -> CaseSubmissionCommand:
         return CaseSubmissionCommand(
             session_id="postgres-session-001",
             service_id=17,
@@ -107,6 +108,24 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
             ),
             confirmed=True,
             idempotency_key="submit:postgres-session-001",
+            image_path=(
+                "sessions/postgres-session-001/faucet-leak.webp" if with_image else None
+            ),
+            image_analysis=(
+                CaseImageAnalysis(
+                    service_query="leaking faucet repair",
+                    problem_summary="Water is leaking from the faucet base.",
+                    safety_warnings=[
+                        "Turn off the local water supply before inspection."
+                    ],
+                    confidence=0.88,
+                    uncertain=False,
+                    confirmed=True,
+                    correction=None,
+                )
+                if with_image
+                else None
+            ),
         )
 
     def _scalar(self, statement: str) -> object:
@@ -115,10 +134,14 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_migrations_and_case_state_survive_repository_recreation(self) -> None:
         self.assertEqual(
-            ["001_b_plus_schema.sql", "002_case_workflow.sql"],
+            [
+                "001_b_plus_schema.sql",
+                "002_case_workflow.sql",
+                "003_case_media_contract.sql",
+            ],
             self.applied_migrations,
         )
-        submitted = await self._service().submit_case(self._submission())
+        submitted = await self._service().submit_case(self._submission(with_image=True))
 
         reloaded = await self._service().get_provider_case(
             provider_id="SYN-PROVIDER-001",
@@ -140,9 +163,17 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual("masked", reloaded.contact.access)
+        self.assertEqual(
+            "sessions/postgres-session-001/faucet-leak.webp",
+            reloaded.image_path,
+        )
+        self.assertEqual("leaking faucet repair", reloaded.image_analysis.service_query)
+        self.assertEqual(0.88, reloaded.image_analysis.confidence)
         self.assertEqual("accepted", accepted.status)
         self.assertEqual("accepted", consumer.status)
         self.assertEqual(accepted.order_no, consumer.order_no)
+        self.assertEqual(reloaded.image_path, persisted.image_path)
+        self.assertEqual(reloaded.image_analysis, persisted.image_analysis)
         self.assertEqual(
             ["case_submitted", "provider_accepted", "contact_revealed"],
             [event.event_type for event in persisted.audit_events],
@@ -254,6 +285,29 @@ class PostgresCaseWorkflowRepositoryTests(unittest.IsolatedAsyncioTestCase):
             int(successes[0].status == "accepted"),
             self._scalar("SELECT count(*) FROM workflow.service_order"),
         )
+
+    async def test_database_rejects_unpaired_or_unconfirmed_image_metadata(self) -> None:
+        submitted = await self._service().submit_case(self._submission(with_image=True))
+
+        with psycopg.connect(DATABASE_URL) as connection, self.assertRaises(
+            psycopg.errors.CheckViolation
+        ):
+            connection.execute(
+                "UPDATE workflow.service_case SET image_analysis = NULL WHERE case_id = %s",
+                (submitted.case_id,),
+            )
+
+        with psycopg.connect(DATABASE_URL) as connection, self.assertRaises(
+            psycopg.errors.CheckViolation
+        ):
+            connection.execute(
+                """
+                UPDATE workflow.service_case
+                SET image_analysis = jsonb_set(image_analysis, '{confirmed}', 'false')
+                WHERE case_id = %s
+                """,
+                (submitted.case_id,),
+            )
 
 
 if __name__ == "__main__":

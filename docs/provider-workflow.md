@@ -1,6 +1,6 @@
 # 服務廠商派單／接單 P0
 
-最後更新：2026-07-30
+最後更新：2026-07-31
 
 ## 1. 做了什麼
 
@@ -14,6 +14,7 @@
 6. 廠商再次確認接受或拒絕。
 7. 接受時建立 synthetic Demo 訂單並揭露完整 synthetic 聯絡資料；拒絕時不揭露。
 8. 消費者頁輪詢案件狀態，顯示接單結果與 Demo 訂單編號。
+9. 若案件含已確認測試圖片，指派廠商可在 pending／accepted 查看；rejected 後撤銷。
 
 新增的核心模組：
 
@@ -25,6 +26,8 @@
 - `sql/migrations/002_case_workflow.sql`：案件、訂單、冪等與 audit schema。
 - `web/app.py`：消費者派單與廠商案件 HTTP API。
 - `web/static/provider.*`：廠商工作台。
+- `backend/media_storage.py`、`sql/migrations/003_case_media_contract.sql`：私有圖片
+  檔案與案件相對路徑／結構化分析持久化。
 
 刻意沒做：
 
@@ -32,7 +35,8 @@
 - 尚未建立或連接 AWS RDS。
 - 沒有建立寫入 MCP Tool；目前四個 MCP Tools 仍全部唯讀。
 - 沒有正式登入、JWT、Cognito、RBAC、廠商帳號或多租戶隔離。
-- 沒有真的保留師傅時段、付款、通知、照片或正式個資。
+- 沒有真的保留師傅時段、付款、通知或正式個資；圖片 Demo 只接受
+  synthetic／公開測試素材。
 - 沒有宣稱 synthetic 廠商、聯絡資料、案件或訂單是真實資料。
 
 ## 2. 五項產品與安全規則
@@ -44,6 +48,8 @@
 3. **待回覆時聯絡資料遮罩**：顯示 `林○安`、`0912***678` 與行政區，不顯示詳細地址。
 4. **接單後才揭露，拒絕永不揭露**：接受會建立 Demo 訂單並寫入揭露 audit；拒絕後可改派其他未拒絕候選。
 5. **寫入具確認、冪等、稽核與原子狀態轉換**：重複請求不建立第二案；相同 key 不得搭配不同 payload；並行接受／拒絕只能有一個成功。
+6. **圖片權限跟隨案件指派與狀態**：未指派與 rejected 回 404；pending／accepted
+   才能透過受控 endpoint 讀取，Browser 永遠不取得內部 `image_path`。
 
 ## 3. 狀態機
 
@@ -93,6 +99,11 @@ POST /api/provider/cases/{case_id}/decision
   -> CaseWorkflowService 驗證指派廠商、狀態與冪等
   -> accept: accepted + SYN-ORDER-* + contact_revealed audit
   -> reject: rejected，不建立訂單、不揭露 contact
+
+GET /api/provider/cases/{case_id}/image + X-Demo-Provider-Id
+  -> CaseWorkflowService 先驗證 assigned provider
+  -> pending / accepted: LocalMediaStorage 讀取並以 no-store 回應
+  -> rejected / unassigned / missing: 404
 ```
 
 ### 消費者取得結果
@@ -112,6 +123,7 @@ GET /api/sessions/{session_id}
 | `GET` | `/api/provider/identities` | 取得兩個 synthetic Demo 廠商身分 |
 | `GET` | `/api/provider/cases` | 列出目前 Demo 廠商被指派的案件 |
 | `GET` | `/api/provider/cases/{case_id}` | 取得依狀態分級的案件詳情 |
+| `GET` | `/api/provider/cases/{case_id}/image` | 指派且非 rejected 廠商查看圖片 |
 | `POST` | `/api/provider/cases/{case_id}/decision` | 指派廠商接受或拒絕 |
 
 `X-Demo-Provider-Id` 只用於 Demo 身分切換。它讓權限規則可被操作與測試，但任何人
@@ -130,6 +142,8 @@ GET /api/sessions/{session_id}
 - PostgreSQL 模式保存 synthetic contact；pending 仍只能取得遮罩 view。
 - Agent 目前不能呼叫這些寫入 API；四個 MCP Tools 保持唯讀。
 - API response 使用 `Cache-Control: no-store`；前端以 `textContent` 呈現資料。
+- 案件資料庫只存 server-relative `image_path` 與已確認結構化分析；圖片 bytes 不進
+  PostgreSQL、audit 或 log。API 以 `has_image` 取代 path 揭露。
 
 ## 7. 驗證
 
@@ -157,6 +171,8 @@ python -m pytest -q `
 - Service Layer 會重驗 `+08:00`、時間順序與 12 小時上限。
 - App factory 不允許消費者與 provider API 使用不同 workflow。
 - filter 排除目前案件時，右側詳情與決策按鈕同步清除或切換。
+- 圖片 endpoint 對未指派／rejected 回 404，pending／accepted 可讀，且 response
+  為正確 MIME、`Content-Disposition: inline`、`Cache-Control: no-store`。
 
 2026-07-30 無資料庫聚焦結果：`33 passed, 6 skipped, 3 subtests passed`；
 真實 PostgreSQL 新舊 integration 合跑 `15 passed`，完整 suite（提供測試資料庫）
@@ -165,6 +181,11 @@ python -m pytest -q `
 接單、聯絡資料解鎖、消費者狀態回寫與未指派廠商隔離；桌機 `1280x720`、
 手機 `390x844` 無水平 overflow 或 console error。本輪另驗證 filter 切換不會
 保留被排除案件的詳情與操作按鈕。
+
+2026-07-31 圖片契約新增後，本機完整 suite 為
+`134 passed, 18 skipped, 52 subtests passed`；provider image tests 覆蓋 pending、
+accepted、rejected、未指派、path 不外洩及 response headers。PostgreSQL migration
+003 的 live integration 因未設 `TEST_DATABASE_URL` 待 CI 複驗。
 
 ## 8. 下一階段
 

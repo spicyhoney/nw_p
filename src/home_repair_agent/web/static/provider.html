@@ -9,8 +9,8 @@
       content="修繕小隊長 synthetic 服務廠商工作台"
     />
     <title>廠商工作台｜修繕小隊長</title>
-    <link rel="stylesheet" href="/static/provider.css?v=0.2.2" />
-    <script src="/static/provider.js?v=0.2.2" defer></script>
+    <link rel="stylesheet" href="/static/provider.css?v=0.3.0" />
+    <script src="/static/provider.js?v=0.3.0" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#case-detail">跳到案件詳情</a>
@@ -119,6 +119,17 @@
             <h3 id="summary-title">需求摘要</h3>
             <p id="detail-summary" class="problem-summary"></p>
             <dl id="answer-list" class="answer-list"></dl>
+          </section>
+
+          <section
+            id="provider-image-section"
+            class="detail-section"
+            aria-labelledby="provider-image-title"
+            hidden
+          >
+            <h3 id="provider-image-title">案件圖片</h3>
+            <p>由消費者提供的案件現場圖片。</p>
+            <img id="provider-case-image" alt="案件現場圖片" />
           </section>
 
           <section

@@ -7,6 +7,8 @@
 本階段將既有 `CaseWorkflowRepository` 實作為可切換的 PostgreSQL 寫入層：
 
 - `sql/migrations/002_case_workflow.sql` 建立 `workflow` schema。
+- `sql/migrations/003_case_media_contract.sql` 新增可選的相對圖片路徑與結構化
+  VLM 分析欄位；圖片 binary 留在 private media storage。
 - `PostgresCaseWorkflowRepository` 保存案件、訂單、冪等紀錄與 audit。
 - `CaseWorkflowService` 讓一次命令的檢查與寫入共用同一 transaction。
 - Repository 契約與 Service 呼叫全面 async，PostgreSQL 使用

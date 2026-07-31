@@ -134,6 +134,8 @@ class CaseWorkflowService:
                 location_id=command.location_id,
                 location_name=command.location_name,
                 problem_summary=command.problem_summary,
+                image_path=command.image_path,
+                image_analysis=command.image_analysis,
                 answers=command.answers,
                 preferred_start=command.preferred_start,
                 preferred_end=command.preferred_end,
@@ -352,6 +354,8 @@ class CaseWorkflowService:
             provider_name=case.provider_name,
             status=case.status,
             order_no=case.order_no,
+            image_path=case.image_path,
+            image_analysis=case.image_analysis,
             preferred_start=case.preferred_start,
             preferred_end=case.preferred_end,
             rejected_provider_ids=rejected_provider_ids,
@@ -359,12 +363,15 @@ class CaseWorkflowService:
         )
 
     def _provider_summary(self, case: WorkflowCase) -> ProviderCaseSummary:
+        can_view_image = case.status != "rejected"
         return ProviderCaseSummary(
             case_id=case.case_id,
             status=case.status,
             service_name=case.service_name,
             location_name=case.location_name,
             problem_summary=case.problem_summary,
+            image_path=case.image_path if can_view_image else None,
+            image_analysis=case.image_analysis if can_view_image else None,
             preferred_start=case.preferred_start,
             preferred_end=case.preferred_end,
             contact_name_masked=_mask_name(case.contact.name),
@@ -374,12 +381,15 @@ class CaseWorkflowService:
         )
 
     def _provider_detail(self, case: WorkflowCase) -> ProviderCaseDetail:
+        can_view_image = case.status != "rejected"
         return ProviderCaseDetail(
             case_id=case.case_id,
             status=case.status,
             service_name=case.service_name,
             location_name=case.location_name,
             problem_summary=case.problem_summary,
+            image_path=case.image_path if can_view_image else None,
+            image_analysis=case.image_analysis if can_view_image else None,
             answers=case.answers,
             preferred_start=case.preferred_start,
             preferred_end=case.preferred_end,

@@ -4,8 +4,11 @@ import asyncio
 import unittest
 from datetime import UTC, datetime, timedelta
 
+from pydantic import ValidationError
+
 from home_repair_agent.agent.demo import TAIPEI_TIMEZONE
 from home_repair_agent.backend.case_models import (
+    CaseImageAnalysis,
     CaseSubmissionCommand,
     ProviderDecisionCommand,
     SyntheticContact,
@@ -66,6 +69,17 @@ class CaseWorkflowTests(unittest.IsolatedAsyncioTestCase):
             idempotency_key=idempotency_key,
         )
 
+    def image_analysis(self) -> CaseImageAnalysis:
+        return CaseImageAnalysis(
+            service_query="leaking faucet repair",
+            problem_summary="Water is leaking from the faucet base.",
+            safety_warnings=["Turn off the local water supply before inspection."],
+            confidence=0.88,
+            uncertain=False,
+            confirmed=True,
+            correction=None,
+        )
+
     async def test_submission_requires_explicit_confirmation(self) -> None:
         with self.assertRaises(CaseWorkflowInputError) as context:
             await self.service.submit_case(self.submission(confirmed=False))
@@ -109,6 +123,66 @@ class CaseWorkflowTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(first.case_id, second.case_id)
         self.assertEqual("pending_provider", second.status)
+        self.assertIsNone(second.image_path)
+        self.assertIsNone(second.image_analysis)
+
+    async def test_case_image_contract_is_preserved_in_memory_views(self) -> None:
+        command = self.submission().model_copy(
+            update={
+                "image_path": "sessions/session-001/faucet-leak.webp",
+                "image_analysis": self.image_analysis(),
+            }
+        )
+        consumer = await self.service.submit_case(command)
+        retried = await self.service.submit_case(command)
+        detail = await self.service.get_provider_case(
+            provider_id="SYN-PROVIDER-001",
+            case_id=consumer.case_id,
+        )
+        summaries = await self.service.list_provider_cases(
+            provider_id="SYN-PROVIDER-001",
+        )
+
+        self.assertEqual("sessions/session-001/faucet-leak.webp", consumer.image_path)
+        self.assertEqual(consumer.case_id, retried.case_id)
+        self.assertEqual(self.image_analysis(), consumer.image_analysis)
+        self.assertEqual(consumer.image_path, detail.image_path)
+        self.assertEqual(consumer.image_analysis, detail.image_analysis)
+        self.assertEqual(consumer.image_path, summaries[0].image_path)
+        self.assertEqual(consumer.image_analysis, summaries[0].image_analysis)
+
+    def test_image_path_rejects_absolute_and_traversal_values(self) -> None:
+        payload = self.submission().model_dump(mode="python")
+        invalid_paths = [
+            "/var/media/cases/image.webp",
+            "C:/var/media/cases/image.webp",
+            "sessions/session-001/../image.webp",
+            "sessions\\session-001\\image.webp",
+        ]
+
+        for image_path in invalid_paths:
+            with self.subTest(image_path=image_path), self.assertRaises(ValidationError):
+                CaseSubmissionCommand.model_validate({**payload, "image_path": image_path})
+
+    def test_case_image_path_and_confirmed_analysis_are_required_as_a_pair(self) -> None:
+        payload = self.submission().model_dump(mode="python")
+        with self.assertRaises(ValidationError):
+            CaseSubmissionCommand.model_validate(
+                {**payload, "image_path": "sessions/session-001/photo.webp"}
+            )
+        with self.assertRaises(ValidationError):
+            CaseSubmissionCommand.model_validate(
+                {**payload, "image_analysis": self.image_analysis()}
+            )
+        unconfirmed = self.image_analysis().model_copy(update={"confirmed": False})
+        with self.assertRaises(ValidationError):
+            CaseSubmissionCommand.model_validate(
+                {
+                    **payload,
+                    "image_path": "sessions/session-001/photo.webp",
+                    "image_analysis": unconfirmed,
+                }
+            )
 
     async def test_reused_idempotency_key_rejects_a_different_payload(self) -> None:
         await self.service.submit_case(self.submission())

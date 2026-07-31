@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import uvicorn
-from fastapi import FastAPI, Header, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, File, Form, Header, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from mcp.shared.memory import create_connected_server_and_client_session
 
@@ -25,6 +25,7 @@ from home_repair_agent.agent.demo import (
     DemoReadRepository,
     _resolve_model_client,
 )
+from home_repair_agent.agent.huggingface_vision import HuggingFaceVisionClient
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.backend.case_models import (
@@ -41,6 +42,7 @@ from home_repair_agent.backend.case_services import (
     CaseWorkflowNotFoundError,
     CaseWorkflowService,
 )
+from home_repair_agent.backend.media_storage import MAX_UPLOAD_BYTES, LocalMediaStorage
 from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.mcp_server.server import create_mcp_server
 from home_repair_agent.web.demo_case_repository import DemoCaseWorkflowRepository
@@ -53,6 +55,7 @@ from home_repair_agent.web.models import (
     DispatchRequest,
     FormSubmitRequest,
     HealthView,
+    ImageAnalysisConfirmRequest,
     MessageRequest,
     ProviderCaseListView,
     ProviderDecisionRequest,
@@ -64,6 +67,7 @@ from home_repair_agent.web.service import (
     WebSessionConflictError,
     WebSessionError,
     WebSessionInputError,
+    WebSessionMediaNotFoundError,
     WebSessionNotFoundError,
     WebSessionService,
     WebSessionUpstreamError,
@@ -134,6 +138,12 @@ def create_app(
             os.getenv("MODEL_PROVIDER", "mock"),
         ).strip()
         model_client, provider_label = _resolve_model_client(provider_key)
+        media_storage = LocalMediaStorage()
+        vision_client = (
+            HuggingFaceVisionClient.from_environment()
+            if provider_key == "huggingface"
+            else None
+        )
         repository = DemoReadRepository(reference_time=reference_time)
         workflow = (
             case_workflow
@@ -163,6 +173,8 @@ def create_app(
                     is_external=provider_key == "huggingface",
                 ),
                 now=now,
+                media_storage=media_storage,
+                vision_client=vision_client,
             )
             app.state.case_workflow = workflow
             yield
@@ -180,6 +192,13 @@ def create_app(
     async def handle_not_found(
         _request: Request,
         error: WebSessionNotFoundError,
+    ) -> JSONResponse:
+        return _error_response(error, status_code=404)
+
+    @app.exception_handler(WebSessionMediaNotFoundError)
+    async def handle_media_not_found(
+        _request: Request,
+        error: WebSessionMediaNotFoundError,
     ) -> JSONResponse:
         return _error_response(error, status_code=404)
 
@@ -255,8 +274,8 @@ def create_app(
         return FileResponse(STATIC_DIR / "provider.html")
 
     @app.get("/api/health", response_model=HealthView)
-    async def health() -> HealthView:
-        return HealthView()
+    async def health(request: Request) -> HealthView:
+        return HealthView(model_provider=_session_service(request).provider.key)
 
     @app.post(
         "/api/sessions",
@@ -269,6 +288,54 @@ def create_app(
     @app.get("/api/sessions/{session_id}", response_model=SessionView)
     async def get_session(session_id: str, request: Request) -> SessionView:
         return await _session_service(request).get_session(session_id)
+
+    @app.post(
+        "/api/sessions/{session_id}/image",
+        response_model=SessionView,
+    )
+    async def upload_session_image(
+        session_id: str,
+        request: Request,
+        file: Annotated[UploadFile, File()],
+        external_processing_confirmed: Annotated[bool, Form()],
+    ) -> SessionView:
+        try:
+            content = await file.read(MAX_UPLOAD_BYTES + 1)
+        finally:
+            await file.close()
+        return await _session_service(request).upload_image(
+            session_id,
+            content=content,
+            declared_content_type=file.content_type,
+            original_filename=file.filename,
+            external_processing_confirmed=external_processing_confirmed,
+        )
+
+    @app.get("/api/sessions/{session_id}/image")
+    async def get_session_image(session_id: str, request: Request) -> Response:
+        media = await _session_service(request).get_session_image(session_id)
+        return _image_response(media.content, media.content_type)
+
+    @app.delete(
+        "/api/sessions/{session_id}/image",
+        response_model=SessionView,
+    )
+    async def remove_session_image(session_id: str, request: Request) -> SessionView:
+        return await _session_service(request).remove_image(session_id)
+
+    @app.post(
+        "/api/sessions/{session_id}/image/confirm",
+        response_model=SessionView,
+    )
+    async def confirm_session_image(
+        session_id: str,
+        payload: ImageAnalysisConfirmRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).confirm_image_analysis(
+            session_id,
+            payload,
+        )
 
     @app.post(
         "/api/sessions/{session_id}/messages",
@@ -371,6 +438,19 @@ def create_app(
             case_id=case_id,
         )
 
+    @app.get("/api/provider/cases/{case_id}/image")
+    async def get_provider_case_image(
+        case_id: str,
+        request: Request,
+        provider_header: DemoProviderHeader,
+    ) -> Response:
+        provider_id = _validate_demo_provider(provider_header)
+        media = await _session_service(request).get_provider_case_image(
+            provider_id=provider_id,
+            case_id=case_id,
+        )
+        return _image_response(media.content, media.content_type)
+
     @app.post(
         "/api/provider/cases/{case_id}/decision",
         response_model=ProviderCaseDetail,
@@ -433,6 +513,29 @@ def _case_error_response(
     return JSONResponse(
         status_code=status_code,
         content=payload.model_dump(mode="json"),
+    )
+
+
+def _image_response(content: bytes, content_type: str) -> Response:
+    extensions = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+    }
+    extension = extensions.get(content_type)
+    if extension is None:
+        raise WebSessionUpstreamError(
+            code="INVALID_STORED_MEDIA",
+            message="儲存的圖片格式無法安全提供。",
+        )
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'inline; filename="case-image.{extension}"',
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

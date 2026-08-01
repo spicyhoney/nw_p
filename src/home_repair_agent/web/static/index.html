@@ -9,8 +9,8 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.5.2" />
-    <script src="/static/app.js?v=0.5.2" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.6.0" />
+    <script src="/static/app.js?v=0.6.0" defer></script>
   </head>
   <body data-mobile-view="conversation">
     <a class="skip-link" href="#conversation-pane">跳到主要對話</a>
@@ -240,6 +240,48 @@
             </button>
           </div>
 
+          <article
+            id="media-confirmed-card"
+            class="media-confirmed-card"
+            aria-labelledby="media-confirmed-title"
+            hidden
+          >
+            <img id="media-confirmed-preview" alt="已確認的修繕測試圖片縮圖" />
+            <div class="media-confirmed-card__content">
+              <p class="eyebrow">已人工確認 · 服務目錄已重驗</p>
+              <h3 id="media-confirmed-title" tabindex="-1">圖片分析摘要</h3>
+              <dl class="media-confirmed-details">
+                <div>
+                  <dt>已確認服務</dt>
+                  <dd id="media-confirmed-service"></dd>
+                </div>
+                <div>
+                  <dt>已確認問題</dt>
+                  <dd id="media-confirmed-summary"></dd>
+                </div>
+              </dl>
+              <p id="media-confirmed-next-step" class="media-next-step"></p>
+              <div class="media-confirmed-actions">
+                <button
+                  id="media-edit-toggle"
+                  class="secondary-button"
+                  type="button"
+                  aria-controls="media-analysis-form"
+                  aria-expanded="false"
+                >
+                  展開編輯並重新確認
+                </button>
+                <button
+                  id="media-confirmed-remove"
+                  class="secondary-button secondary-button--danger"
+                  type="button"
+                >
+                  移除圖片
+                </button>
+              </div>
+            </div>
+          </article>
+
           <form
             id="media-analysis-form"
             class="media-analysis-form"
@@ -277,11 +319,14 @@
           <div class="form-heading">
             <div>
               <p class="eyebrow">諮詢單</p>
-              <h2 id="form-title">補充修繕資訊</h2>
+              <h2 id="form-title" tabindex="-1">補充修繕資訊</h2>
             </div>
             <span class="required-note">＊ 必填</span>
           </div>
           <p id="form-description" class="form-description"></p>
+          <p id="form-next-step" class="form-next-step">
+            下一步：填完必填欄位與希望服務時段，再儲存產生可修改摘要。
+          </p>
           <form id="consultation-form" aria-describedby="form-error" novalidate>
             <div id="form-fields" class="form-fields"></div>
             <p

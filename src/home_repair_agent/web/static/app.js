@@ -55,6 +55,9 @@ const store = {
   mediaBusy: false,
   previewObjectUrl: "",
   lastMessageSignature: "",
+  mediaEditorExpanded: false,
+  formSignature: "",
+  visibleFormSignature: "",
 };
 
 const elements = {};
@@ -153,6 +156,26 @@ function bindElements() {
   elements.mediaSafetyWarnings = document.querySelector("#media-safety-warnings");
   elements.mediaConfidence = document.querySelector("#media-confidence");
   elements.mediaConfirmButton = document.querySelector("#media-confirm-button");
+  elements.mediaConfirmedCard = document.querySelector("#media-confirmed-card");
+  elements.mediaConfirmedPreview = document.querySelector(
+    "#media-confirmed-preview",
+  );
+  elements.mediaConfirmedTitle = document.querySelector(
+    "#media-confirmed-title",
+  );
+  elements.mediaConfirmedService = document.querySelector(
+    "#media-confirmed-service",
+  );
+  elements.mediaConfirmedSummary = document.querySelector(
+    "#media-confirmed-summary",
+  );
+  elements.mediaConfirmedNextStep = document.querySelector(
+    "#media-confirmed-next-step",
+  );
+  elements.mediaEditToggle = document.querySelector("#media-edit-toggle");
+  elements.mediaConfirmedRemove = document.querySelector(
+    "#media-confirmed-remove",
+  );
 }
 
 function bindEvents() {
@@ -167,7 +190,9 @@ function bindEvents() {
   elements.mediaUploadForm.addEventListener("submit", handleMediaUpload);
   elements.mediaFile.addEventListener("change", handleMediaFileChange);
   elements.mediaRemoveButton.addEventListener("click", removeMedia);
+  elements.mediaConfirmedRemove.addEventListener("click", removeMedia);
   elements.mediaAnalysisForm.addEventListener("submit", confirmMediaAnalysis);
+  elements.mediaEditToggle.addEventListener("click", toggleMediaEditor);
   elements.messageInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -195,6 +220,7 @@ async function createSession() {
     store.checklistSyncing = false;
     store.checklistNeedsRecovery = false;
     store.lastDispatchSignature = "";
+    resetTransientConversationUi();
     const response = await api("/api/sessions", { method: "POST" });
     if (!sessionResponses.apply(store, request, response)) {
       return;
@@ -380,6 +406,7 @@ async function resetSession() {
     if (!sessionResponses.apply(store, request, response)) {
       return;
     }
+    resetTransientConversationUi();
     renderSession();
     announce("諮詢已重設，人工核對清單也已清除。");
     setMobileView("conversation", { focusHeading: true });
@@ -641,6 +668,7 @@ function clearPreviewObjectUrl() {
 function handleMediaFileChange() {
   const file = elements.mediaFile.files?.[0];
   clearPreviewObjectUrl();
+  store.mediaEditorExpanded = false;
   if (!file) {
     renderMedia();
     return;
@@ -696,12 +724,17 @@ async function handleMediaUpload(event) {
   setMediaBusy(true, "正在上傳圖片並等待 Hugging Face 分析結果…");
   try {
     const response = await api(mediaImagePath(), { method: "POST", body });
+    store.mediaEditorExpanded = true;
     await applyMediaResponse(response);
     elements.mediaFile.value = "";
     elements.mediaConsent.checked = false;
     clearPreviewObjectUrl();
     setMediaStatus("圖片分析完成。請先核對或更正建議，再確認套用。");
     announce("圖片分析完成，請核對或更正結果。");
+    revealConversationSection(
+      elements.mediaAnalysisForm,
+      elements.mediaServiceQuery,
+    );
   } catch (uploadError) {
     setMediaStatus(uploadError.message);
   } finally {
@@ -717,6 +750,7 @@ async function removeMedia() {
   setMediaBusy(true, "正在移除圖片…");
   try {
     const response = await api(mediaImagePath(), { method: "DELETE" });
+    store.mediaEditorExpanded = false;
     await applyMediaResponse(response);
     elements.mediaFile.value = "";
     elements.mediaConsent.checked = false;
@@ -727,6 +761,7 @@ async function removeMedia() {
         : "圖片已移除，辨識建議未套用。",
     );
     announce("圖片已移除。");
+    revealConversationSection(elements.mediaSection, elements.mediaFile);
   } catch (removeError) {
     setMediaStatus(removeError.message);
   } finally {
@@ -745,6 +780,8 @@ async function confirmMediaAnalysis(event) {
     return;
   }
   const payload = {
+    media_id: media.media_id,
+    analysis_revision: media.analysis.analysis_revision,
     service_query: elements.mediaServiceQuery.value.trim(),
     problem_summary: elements.mediaProblemSummary.value.trim(),
     safety_warnings: elements.mediaSafetyWarnings.value
@@ -762,10 +799,45 @@ async function confirmMediaAnalysis(event) {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    store.mediaEditorExpanded = false;
     await applyMediaResponse(response);
     setMediaStatus("辨識結果已確認並套用到後續流程。");
     announce("圖片辨識結果已確認並套用。");
+    revealConversationSection(
+      elements.mediaConfirmedCard,
+      elements.mediaConfirmedTitle,
+    );
   } catch (confirmError) {
+    if (confirmError.code === "IMAGE_CONFIRMATION_STALE") {
+      try {
+        const latest = await api(
+          `/api/sessions/${encodeURIComponent(store.session.session_id)}`,
+        );
+        store.session = latest;
+        const latestAnalysis = currentMedia()?.analysis;
+        store.mediaEditorExpanded = Boolean(latestAnalysis && !latestAnalysis.confirmed);
+        renderSession();
+        setMediaStatus(`${confirmError.message} 已載入最新圖片分析。`);
+        announce("圖片分析已更新，畫面已同步到最新版本。");
+        if (latestAnalysis?.confirmed) {
+          revealConversationSection(
+            elements.mediaConfirmedCard,
+            elements.mediaConfirmedTitle,
+          );
+        } else if (latestAnalysis) {
+          revealConversationSection(
+            elements.mediaAnalysisForm,
+            elements.mediaServiceQuery,
+          );
+        } else {
+          revealConversationSection(elements.mediaSection, elements.mediaFile);
+        }
+        return;
+      } catch (refreshError) {
+        setMediaStatus(`${confirmError.message} ${refreshError.message}`);
+        return;
+      }
+    }
     setMediaStatus(confirmError.message);
   } finally {
     setMediaBusy(false);
@@ -794,7 +866,7 @@ function renderMedia() {
   const available = isHuggingFaceMediaAvailable();
   const branchReady = Boolean(store.session.active_task?.branch);
   const blocked = store.mediaBusy || isSessionMutationBlocked() || !branchReady;
-  const selectedFile = elements.mediaFile.files?.[0];
+  const confirmed = analysis?.confirmed === true;
 
   elements.mediaSection.hidden = !branchReady && !media;
   elements.mediaMode.textContent = available
@@ -813,7 +885,8 @@ function renderMedia() {
   }
 
   const previewSource = media ? mediaImagePath() : store.previewObjectUrl;
-  elements.mediaPreviewPanel.hidden = !previewSource;
+  elements.mediaPreviewPanel.hidden =
+    !previewSource || (confirmed && !store.mediaEditorExpanded);
   if (previewSource) {
     elements.mediaPreview.src = previewSource;
   } else {
@@ -821,7 +894,29 @@ function renderMedia() {
   }
   elements.mediaRemoveButton.disabled = blocked || !media;
 
-  elements.mediaAnalysisForm.hidden = !analysis;
+  elements.mediaConfirmedCard.hidden = !confirmed;
+  if (confirmed) {
+    elements.mediaConfirmedPreview.src = mediaImagePath();
+    elements.mediaConfirmedService.textContent =
+      store.session.service?.name || analysis.service_query || "已驗證服務";
+    elements.mediaConfirmedSummary.textContent = analysis.problem_summary || "—";
+    elements.mediaConfirmedNextStep.textContent = mediaNextStepText();
+    elements.mediaEditToggle.disabled = blocked;
+    elements.mediaEditToggle.setAttribute(
+      "aria-expanded",
+      String(store.mediaEditorExpanded),
+    );
+    elements.mediaEditToggle.textContent = store.mediaEditorExpanded
+      ? "收合編輯區"
+      : "展開編輯並重新確認";
+    elements.mediaConfirmedRemove.disabled = blocked || !media;
+  } else {
+    elements.mediaConfirmedPreview.removeAttribute("src");
+    store.mediaEditorExpanded = false;
+  }
+
+  elements.mediaAnalysisForm.hidden =
+    !analysis || (confirmed && !store.mediaEditorExpanded);
   if (!analysis) {
     return;
   }
@@ -843,12 +938,24 @@ function renderMedia() {
     : analysis.uncertain
       ? "需要確認"
       : "待確認";
-  elements.mediaConfirmButton.disabled = blocked || Boolean(analysis.confirmed);
-  elements.mediaConfirmButton.textContent = analysis.confirmed
-    ? "辨識結果已確認"
+  elements.mediaConfirmButton.disabled = blocked;
+  elements.mediaConfirmButton.textContent = confirmed
+    ? store.mediaBusy
+      ? "重新確認中…"
+      : "重新確認並套用辨識結果"
     : store.mediaBusy
       ? "確認中…"
       : "確認並套用辨識結果";
+}
+
+function mediaNextStepText() {
+  if (store.session?.consultation_form) {
+    return "下一步：填寫下方諮詢單；圖片建議不會自行媒合或派單。";
+  }
+  if (store.session?.location) {
+    return "圖片結果已保存；請繼續在對話中補充需求。";
+  }
+  return "下一步：請在對話中提供完整縣市與行政區，系統不會自行猜測地點。";
 }
 
 function setMediaBusy(value, message = "") {
@@ -882,6 +989,7 @@ async function api(path, options = {}) {
       validationMessage(payload?.detail) ||
       "目前無法完成操作，請稍後再試。";
     const error = new Error(message);
+    error.code = apiError?.code || "";
     error.fields = apiError?.fields || {};
     throw error;
   }
@@ -1116,6 +1224,23 @@ function renderMessages() {
   }
 }
 
+function toggleMediaEditor() {
+  const analysis = currentMedia()?.analysis;
+  if (!analysis?.confirmed || store.mediaBusy) {
+    return;
+  }
+  store.mediaEditorExpanded = !store.mediaEditorExpanded;
+  renderMedia();
+  if (store.mediaEditorExpanded) {
+    requestAnimationFrame(() => {
+      revealConversationSection(
+        elements.mediaAnalysisForm,
+        elements.mediaServiceQuery,
+      );
+    });
+  }
+}
+
 function renderRouting() {
   const routing = store.session?.repair_routing;
   const candidates = routingCandidates();
@@ -1169,17 +1294,48 @@ function renderForm() {
     Boolean(store.session.dispatch);
   if (!form || formLocked) {
     elements.formSection.hidden = true;
-    elements.formFields.replaceChildren();
+    if (store.formSignature) {
+      elements.formFields.replaceChildren();
+    }
+    store.formSignature = "";
+    store.visibleFormSignature = "";
     return;
   }
 
+  const signature = consultationFormSignature(form);
+  const shouldReveal = signature !== store.visibleFormSignature;
   elements.formSection.hidden = false;
   elements.formTitle.textContent = form.name;
   elements.formDescription.textContent = form.description || "";
-  const topics = [...form.topics].sort(
-    (left, right) => left.sort_order - right.sort_order,
-  );
-  elements.formFields.replaceChildren(...topics.map(renderTopic));
+  if (signature !== store.formSignature) {
+    const topics = [...form.topics].sort(
+      (left, right) => left.sort_order - right.sort_order,
+    );
+    elements.formFields.replaceChildren(...topics.map(renderTopic));
+    store.formSignature = signature;
+  }
+  store.visibleFormSignature = signature;
+  if (shouldReveal) {
+    announce("諮詢單已準備完成，請填寫必填欄位。");
+    revealConversationSection(elements.formSection, elements.formTitle);
+  }
+}
+
+function consultationFormSignature(form) {
+  return JSON.stringify({
+    sessionId: store.session?.session_id || "",
+    formKey: form.form_key,
+    formVersion: form.version,
+    branch: store.session?.active_task?.branch || "",
+    topics: [...form.topics]
+      .sort((left, right) => left.sort_order - right.sort_order)
+      .map((topic) => ({
+        key: topic.topic_key,
+        type: topic.input_type,
+        required: topic.is_required,
+        options: (topic.options || []).map((option) => option.value),
+      })),
+  });
 }
 
 function renderTopic(topic) {
@@ -1833,6 +1989,55 @@ function announce(message) {
     return;
   }
   elements.appStatus.textContent = message;
+}
+
+function revealConversationSection(section, focusTarget) {
+  requestAnimationFrame(() => {
+    const scrollRegion = elements.conversationScrollRegion;
+    if (!section || section.hidden || !scrollRegion) {
+      return;
+    }
+    const sectionBounds = section.getBoundingClientRect();
+    const regionBounds = scrollRegion.getBoundingClientRect();
+    let delta = 0;
+    if (sectionBounds.top < regionBounds.top) {
+      delta = sectionBounds.top - regionBounds.top - 12;
+    } else if (sectionBounds.bottom > regionBounds.bottom) {
+      delta = Math.min(
+        sectionBounds.top - regionBounds.top - 12,
+        sectionBounds.bottom - regionBounds.bottom + 12,
+      );
+    }
+    if (delta) {
+      const reducedMotion = window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      scrollRegion.scrollTo({
+        top: Math.max(0, scrollRegion.scrollTop + delta),
+        behavior: reducedMotion ? "auto" : "smooth",
+      });
+    }
+    focusTarget?.focus({ preventScroll: true });
+  });
+}
+
+function resetTransientConversationUi() {
+  clearPreviewObjectUrl();
+  store.mediaEditorExpanded = false;
+  store.formSignature = "";
+  store.visibleFormSignature = "";
+  store.lastMessageSignature = "";
+  if (elements.mediaFile) {
+    elements.mediaFile.value = "";
+  }
+  if (elements.mediaConsent) {
+    elements.mediaConsent.checked = false;
+  }
+  elements.mediaPreview?.removeAttribute("src");
+  elements.mediaConfirmedPreview?.removeAttribute("src");
+  if (elements.mediaStatus) {
+    elements.mediaStatus.textContent = "";
+  }
 }
 
 function resizeMessageInput() {

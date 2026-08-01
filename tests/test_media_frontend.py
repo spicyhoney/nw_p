@@ -48,7 +48,60 @@ class MediaFrontendContractTests(unittest.TestCase):
         self.assertIn("service_query", self.app)
         self.assertIn("problem_summary", self.app)
         self.assertIn("safety_warnings", self.app)
-        self.assertIn("analysis.confirmed", self.app)
+        self.assertIn("analysis_revision: media.analysis.analysis_revision", self.app)
+        self.assertIn("analysis?.confirmed", self.app)
+
+    def test_stale_analysis_confirmation_refreshes_the_latest_session(self) -> None:
+        self.assertIn('error.code = apiError?.code || ""', self.app)
+        self.assertIn(
+            'confirmError.code === "IMAGE_CONFIRMATION_STALE"',
+            self.app,
+        )
+        self.assertIn("已載入最新圖片分析", self.app)
+        self.assertIn("store.session = latest", self.app)
+
+    def test_confirmed_analysis_has_a_safe_summary_and_explicit_reedit_path(self) -> None:
+        for control in (
+            "media-confirmed-card",
+            "media-confirmed-preview",
+            "media-confirmed-service",
+            "media-confirmed-summary",
+            "media-edit-toggle",
+            "media-confirmed-remove",
+        ):
+            self.assertIn(f'id="{control}"', self.index)
+        self.assertIn('aria-controls="media-analysis-form"', self.index)
+        self.assertIn("elements.mediaConfirmedService.textContent", self.app)
+        self.assertIn("elements.mediaConfirmedSummary.textContent", self.app)
+        self.assertIn("store.mediaEditorExpanded", self.app)
+        self.assertNotIn("innerHTML", self.app)
+
+    def test_media_refresh_preserves_an_unchanged_form_draft(self) -> None:
+        self.assertIn("consultationFormSignature", self.app)
+        self.assertIn("formVersion: form.version", self.app)
+        self.assertIn("if (signature !== store.formSignature)", self.app)
+        self.assertIn("elements.formFields.replaceChildren", self.app)
+        self.assertIn(
+            "revealConversationSection(elements.formSection, elements.formTitle)", self.app
+        )
+
+    def test_session_reset_clears_unsubmitted_local_media_state(self) -> None:
+        self.assertIn("resetTransientConversationUi", self.app)
+        self.assertIn("clearPreviewObjectUrl();", self.app)
+        self.assertIn('elements.mediaFile.value = ""', self.app)
+        self.assertIn("elements.mediaConsent.checked = false", self.app)
+        self.assertIn('elements.mediaPreview?.removeAttribute("src")', self.app)
+
+    def test_media_transitions_move_focus_to_the_next_available_control(self) -> None:
+        self.assertIn(
+            "revealConversationSection(\n      elements.mediaAnalysisForm,\n"
+            "      elements.mediaServiceQuery,",
+            self.app,
+        )
+        self.assertIn(
+            "revealConversationSection(elements.mediaSection, elements.mediaFile)",
+            self.app,
+        )
 
     def test_mobile_touch_targets_and_provider_image_contract_are_present(self) -> None:
         self.assertIn("min-height: 44px", self.styles)

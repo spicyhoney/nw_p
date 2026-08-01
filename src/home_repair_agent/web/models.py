@@ -22,6 +22,7 @@ from home_repair_agent.backend.repair_conversation import RepairBranch
 
 AnswerValue = str | list[str]
 ChecklistKey = Literal["service", "location", "consultation"]
+ServiceSource = Literal["text_tool", "image_confirmed"]
 SessionState = Literal[
     "collecting_need",
     "routing_pending",
@@ -188,6 +189,7 @@ class ActiveConsultationTaskView(WebModel):
 
 
 class ImageAnalysisView(WebModel):
+    analysis_revision: str = Field(min_length=16, max_length=128)
     service_query: str = Field(min_length=1, max_length=300)
     problem_summary: str = Field(min_length=1, max_length=1000)
     safety_warnings: list[str] = Field(default_factory=list, max_length=10)
@@ -205,6 +207,8 @@ class SessionMediaView(WebModel):
 
 
 class ImageAnalysisConfirmRequest(WebModel):
+    media_id: str = Field(min_length=1, max_length=128)
+    analysis_revision: str = Field(min_length=16, max_length=128)
     service_query: str = Field(min_length=1, max_length=300)
     problem_summary: str = Field(min_length=1, max_length=1000)
     safety_warnings: list[str] = Field(default_factory=list, max_length=10)
@@ -253,6 +257,7 @@ class SessionView(WebModel):
     repair_routing: RepairRoutingView | None = None
     active_task: ActiveConsultationTaskView | None = None
     service: ServiceSummary | None = None
+    service_source: ServiceSource | None = None
     location: ResolvedLocation | None = None
     consultation_form: ConsultationForm | None = None
     answers: dict[str, AnswerValue] = Field(default_factory=dict)

@@ -957,6 +957,83 @@ a:focus-visible {
   background: #f5f5f2;
 }
 
+.media-confirmed-card {
+  display: grid;
+  grid-template-columns: minmax(96px, 132px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-pale);
+}
+
+.media-confirmed-card > img {
+  width: 100%;
+  height: 104px;
+  object-fit: cover;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: white;
+}
+
+.media-confirmed-card__content {
+  min-width: 0;
+}
+
+.media-confirmed-card h3 {
+  margin: 3px 0 10px;
+  font-size: 17px;
+}
+
+.media-confirmed-details {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.media-confirmed-details div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.media-confirmed-details dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.media-confirmed-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.media-next-step,
+.form-next-step {
+  margin: 12px 0;
+  padding: 9px 10px;
+  border-left: 3px solid var(--teal);
+  background: white;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form-next-step {
+  margin-top: 0;
+  background: var(--teal-pale);
+}
+
+.media-confirmed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .media-analysis-form {
   margin-top: 16px;
   padding-top: 16px;
@@ -1007,7 +1084,7 @@ a:focus-visible {
 
 .message-composer textarea {
   width: 100%;
-  max-height: 128px;
+  max-height: clamp(48px, 18dvh, 128px);
   min-height: 42px;
   padding: 10px 12px;
   border: 1px solid var(--line-strong);
@@ -1707,6 +1784,19 @@ a:focus-visible {
     flex-direction: column;
   }
 
+  .media-confirmed-card {
+    grid-template-columns: 1fr;
+  }
+
+  .media-confirmed-card > img {
+    width: min(100%, 220px);
+  }
+
+  .media-confirmed-details div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
   .media-mode,
   .media-confidence {
     align-self: flex-start;
@@ -1795,6 +1885,20 @@ a:focus-visible {
     padding-block: 16px;
   }
 
+}
+
+@media (max-height: 600px) {
+  .workspace-heading {
+    padding-block: 10px;
+  }
+
+  .message-composer {
+    padding-block: 8px;
+  }
+
+  .message-composer textarea {
+    max-height: clamp(48px, 16dvh, 72px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -87,6 +87,22 @@ class ConsumerAccessibilityContractTests(unittest.TestCase):
             self.javascript,
         )
 
+    def test_form_and_confirmed_media_reveal_inside_the_conversation_region(self) -> None:
+        self.assertIn('id="form-title" tabindex="-1"', self.html)
+        self.assertIn('id="form-next-step"', self.html)
+        self.assertIn('id="media-confirmed-title" tabindex="-1"', self.html)
+        self.assertIn("function revealConversationSection", self.javascript)
+        self.assertIn("scrollRegion.scrollTo", self.javascript)
+        self.assertIn("focus({ preventScroll: true })", self.javascript)
+        self.assertIn('"(prefers-reduced-motion: reduce)"', self.javascript)
+        self.assertNotIn("elements.formSection.scrollIntoView", self.javascript)
+        self.assertNotIn("elements.mediaConfirmedCard.scrollIntoView", self.javascript)
+
+    def test_short_viewports_keep_the_composer_height_bounded(self) -> None:
+        self.assertIn("max-height: clamp(48px, 18dvh, 128px)", self.css)
+        self.assertIn("@media (max-height: 600px)", self.css)
+        self.assertIn("max-height: clamp(48px, 16dvh, 72px)", self.css)
+
     def test_out_of_order_checklist_responses_do_not_replace_newer_state(self) -> None:
         node = shutil.which("node")
         if not node:

@@ -115,6 +115,10 @@ WATER_SHUTOFF_BRANCHES = (
     RepairBranch.PIPE_ISSUE.value,
 )
 LOCATION_DESCRIPTION_PATTERN = re.compile(r"[\u3400-\u9fff]{1,12}(?:縣|市|區|鄉|鎮)")
+LOCATION_CORRECTION_PATTERN = re.compile(
+    r"(?:改成|改為|改到|更正(?:成|為|到)?|換成|其實(?:是|在)|"
+    r"不是.+(?:而是|才是)|地點(?:是|在|改|換)|服務地點)"
+)
 
 
 class WebSessionError(Exception):
@@ -506,7 +510,9 @@ class WebSessionService:
 
             candidates = _routing_candidates(routing)
             if record.confirmed_branch is None:
-                record.original_need = user_text
+                record.original_need = (
+                    f"{record.original_need}\n{user_text}" if record.original_need else user_text
+                )
                 record.routing = routing
                 record.replacement_pending = False
                 record.replacement_text = None
@@ -520,10 +526,12 @@ class WebSessionService:
                     record.state = "routing_pending"
                 elif routing.cross_service:
                     record.state = "collecting_need"
-                else:
+                elif routing.non_target_service:
                     record.safety_stopped = True
                     self._invalidate_summary(record)
                     record.state = "error"
+                else:
+                    record.state = "collecting_need"
                 return await self._to_view(record)
 
             if routing.non_target_service:
@@ -560,6 +568,18 @@ class WebSessionService:
                     ]
                 )
                 record.state = "replacement_pending"
+                return await self._to_view(record)
+
+            if record.consultation_form is not None and _is_explicit_location_correction(user_text):
+                record.original_need = (
+                    f"{record.original_need}\n{user_text}" if record.original_need else user_text
+                )
+                record.messages.append(self._message("user", user_text))
+                self._prepare_location_correction(record)
+                await self._run_agent_turn(
+                    record,
+                    f"{BRANCH_LABELS[record.confirmed_branch]}，服務地點更正為：{user_text}",
+                )
                 return await self._to_view(record)
 
             if record.consultation_form is not None:
@@ -1153,6 +1173,26 @@ class WebSessionService:
         else:
             record.consultation_form = None
 
+    def _prepare_location_correction(self, record: _SessionRecord) -> None:
+        """Clear stale location/form provenance before resolving a stated correction."""
+
+        record.location = None
+        record.source_consultation_form = None
+        record.consultation_form = None
+        record.conversation = ConversationSession(session_id=record.session_id)
+        record.shared_slots_need_confirmation = bool(
+            record.answers or record.preferred_start is not None or record.preferred_end is not None
+        )
+        record.checklist["location"] = False
+        record.checklist["consultation"] = False
+        record.tool_trace = [
+            trace
+            for trace in record.tool_trace
+            if trace.name
+            not in {"resolve_location", "get_consultation_form", "match_service_providers"}
+        ]
+        self._invalidate_summary(record)
+
     async def _get_record(self, session_id: str) -> _SessionRecord:
         async with self._sessions_lock:
             record = self._sessions.get(session_id)
@@ -1545,6 +1585,12 @@ def _authoritative_user_texts(record: _SessionRecord) -> tuple[str, ...]:
 
 def _contains_location_description(user_text: str) -> bool:
     return LOCATION_DESCRIPTION_PATTERN.search(user_text) is not None
+
+
+def _is_explicit_location_correction(user_text: str) -> bool:
+    return bool(
+        LOCATION_CORRECTION_PATTERN.search(user_text) and _contains_location_description(user_text)
+    )
 
 
 def _form_contains_branch(form: ConsultationForm, branch: RepairBranch) -> bool:

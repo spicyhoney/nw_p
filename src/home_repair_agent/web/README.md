@@ -15,6 +15,9 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
   `service_id=17`、`repair_form_v1` 版本及分支適用性，不能採信模型文字或舊畫面。
 - 一則訊息含多項需求時只顯示受控 alternatives，請使用者先選一項，不自動建立
   多任務。切換分支也要再次確認，並清除舊分支答案、舊圖片分析及有衝突的地點。
+- 分支確認前可跨輪補齊縣市、行政區與問題描述；這些文字只作後續唯讀查詢輸入，
+  不會提前驗證 service／location。matching 前若明確更正地點，舊 location/form
+  provenance 與 summary identity 會失效，重新查證後仍須重新提交表單與確認摘要。
 - 依已確認分支投影表單。`water_shutoff` 只適用於 `faucet_leak`、
   `toilet_issue`、`pipe_issue`；`electrical_issue` 不會在 form、summary、matching
   answers 或 case payload 中帶入該欄位；`other` 必須填寫具體
@@ -27,7 +30,8 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
   `pending_provider` 案件；既有 confirmation、idempotency、transaction 與 audit
   邊界維持不變。建案後表單與摘要鎖定。
 - 保留人工 Checklist、鍵盤操作、live region、清楚 focus、reduced-motion 與
-  polling／stale response 防護基線。
+  polling／stale response 防護基線。對話欄只有一個內容捲動區，composer 是獨立
+  底列，不會被 media、表單或摘要推出可操作範圍。
 - Bedrock 模式可透過既有 `BedrockModelClient` 執行文字對話與 process-local 唯讀
   MCP Tools；請求由 production pacing wrapper 保持至少 1.1 秒的啟動間隔。
 - HF 模式可上傳一張 JPEG／PNG／WebP synthetic／公開測試圖片。既有安全儲存、
@@ -41,6 +45,8 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
 - 待回覆時只見遮罩 contact；明確接受後才顯示完整 synthetic contact，並建立
   `SYN-ORDER-*`。拒絕不會建立訂單。
 - pending／accepted 的指派廠商可查看案件圖片；未指派或 rejected 一律 404。
+- 頁面使用自然垂直捲動與單欄 reflow；案件 answers 只顯示受控中文 metadata，
+  `preferred_time` 不重複顯示原始值，日期與區間固定以 `Asia/Taipei` 呈現。
 
 案件狀態機與授權詳情請見
 [服務廠商派單／接單](../../../docs/provider-workflow.md)；無障礙與前端競態基線請見
@@ -277,6 +283,30 @@ chain（例如 `AWS_PROFILE`）取得授權，同樣不會 fallback。圖片分�
 上傳圖片時，正規化後的圖片 bytes 也會送到所選 HF VLM provider。請只使用
 synthetic／公開測試內容。
 
+### HF 多輪 synthetic eval（明確 opt-in）
+
+`scripts/huggingface_web_eval.py` 會以與 Web 相同的 `WebSessionService`、
+`AgentRunner`、三個模型可見唯讀 Tools 及 process-local MCP transport，逐案執行七個
+synthetic 文字情境：完整需求、跨輪地點、地點更正、問題更正、模糊問題、多地點及
+provider failure。它不測圖片 bytes，也不會建立案件、媒合、派單或持久資源。
+
+腳本沒有預設 CI 入口，也不會隱含送出 hosted request；必須由人類建立一枚新的、未曾
+貼在聊天／文件／截圖中的 HF token，只放在目前 shell，並加上 `--live`：
+
+```powershell
+$env:HF_TOKEN = "<new shell-only token>"
+$env:HF_MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
+$env:HF_PROVIDER = "auto"
+python scripts/huggingface_web_eval.py --live
+```
+
+缺 token 或錯誤設定會 fail fast，不會切到 Mock。第七案使用可重現的 timeout 注入驗證
+相同 no-fallback 邊界，不會故意讓 hosted provider 超時。輸出的
+`hf_web_eval_v1` JSON 只含 case label／字數、stop reason、Web session state、受控 Tool
+參數及結果狀態；不含 raw user／assistant messages、token、完整 provider payload、Tool
+完整結果或本機路徑。任一品質／契約 check 失敗時，仍先輸出完整七案的去識別 evidence，
+再以 non-zero exit code 結束；失敗不可改寫成通過。
+
 ## 7. 測試與實際結果
 
 主要回歸位置：
@@ -294,6 +324,7 @@ synthetic／公開測試內容。
 ```powershell
 python -m pytest tests/test_repair_conversation.py tests/test_repair_form_configuration.py -q
 python -m pytest tests/test_web_app.py tests/test_media_web.py -q
+python -m pytest tests/test_huggingface_web_eval.py tests/test_huggingface_model.py tests/test_huggingface_vision.py -q
 python -m pytest -q
 node --check .\src\home_repair_agent\web\static\app.js
 node --check .\src\home_repair_agent\web\static\provider.js

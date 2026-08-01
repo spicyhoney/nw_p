@@ -32,8 +32,10 @@
 html,
 body {
   width: 100%;
+  height: 100%;
   min-height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -42,8 +44,6 @@ body {
   color: var(--ink);
   font-size: 16px;
   line-height: 1.5;
-  overflow-x: hidden;
-  overflow: hidden;
 }
 
 button,
@@ -229,6 +229,7 @@ a:focus-visible {
 
 .app-layout {
   height: calc(100vh - var(--header-height));
+  height: calc(100dvh - var(--header-height));
   display: grid;
   grid-template-columns: minmax(220px, 250px) minmax(430px, 1fr) minmax(300px, 350px);
   overflow: hidden;
@@ -252,9 +253,24 @@ a:focus-visible {
 
 .conversation-pane {
   display: grid;
-  grid-template-rows: auto minmax(120px, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--surface);
   overflow: hidden;
+}
+
+.conversation-scroll-region {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+.conversation-scroll-region:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
 }
 
 .candidates-pane {
@@ -576,10 +592,8 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 0;
+  min-height: 120px;
   padding: 22px 26px;
-  overflow-y: auto;
-  scroll-behavior: smooth;
 }
 
 .message {
@@ -634,11 +648,9 @@ a:focus-visible {
 }
 
 .consultation-form-section {
-  max-height: 58vh;
   padding: 22px 26px 24px;
   border-top: 4px solid var(--teal);
   background: #fbfcfc;
-  overflow-y: auto;
 }
 
 .form-description {
@@ -1576,8 +1588,7 @@ a:focus-visible {
   }
 
   body {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .app-header {
@@ -1665,7 +1676,7 @@ a:focus-visible {
   }
 
   .conversation-pane {
-    grid-template-rows: auto minmax(100px, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .workspace-heading,
@@ -1784,9 +1795,6 @@ a:focus-visible {
     padding-block: 16px;
   }
 
-  .consultation-form-section {
-    max-height: 62vh;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1919,23 +1927,7 @@ a:focus-visible {
   min-height: 48px;
 }
 
-.conversation-pane {
-  grid-template-rows: auto minmax(120px, 1fr) repeat(5, auto);
-  overflow-y: auto;
-}
-
-.message-composer {
-  position: sticky;
-  z-index: 5;
-  bottom: 0;
-}
-
 @media (max-width: 860px) {
-  .conversation-pane {
-    grid-template-rows: auto minmax(100px, 1fr) repeat(5, auto);
-    overflow-y: auto;
-  }
-
   .routing-section,
   .consultation-summary-section {
     margin-inline: 16px;

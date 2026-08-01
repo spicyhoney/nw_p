@@ -14,6 +14,71 @@ const providerStore = {
 
 const providerElements = {};
 
+const PROVIDER_ANSWER_DEFINITIONS = Object.freeze({
+  issue_category: Object.freeze({
+    label: "問題類型",
+    values: Object.freeze({
+      faucet_leak: "水龍頭漏水",
+      leaking_faucet: "水龍頭漏水",
+      toilet_issue: "馬桶堵塞或無法沖水",
+      pipe_issue: "水管漏水或堵塞",
+      electrical_issue: "插座、燈具或電路問題",
+      other: "其他水電問題",
+    }),
+  }),
+  issue_description: Object.freeze({
+    label: "問題描述",
+    freeText: true,
+  }),
+  water_shutoff: Object.freeze({
+    label: "目前是否可以關閉水源",
+    values: Object.freeze({
+      yes: "可以",
+      no: "不可以",
+      unknown: "不確定",
+    }),
+  }),
+  preferred_date: Object.freeze({
+    label: "希望服務日期",
+    format: "date",
+  }),
+  contact_method: Object.freeze({
+    label: "偏好的聯絡方式",
+    values: Object.freeze({
+      app: "App 訊息",
+      phone: "電話",
+      email: "Email",
+    }),
+  }),
+  budget: Object.freeze({
+    label: "預算",
+    freeText: true,
+    values: Object.freeze({
+      skipped: "略過／不知道",
+      declined_to_answer: "不願回答",
+    }),
+  }),
+  urgency: Object.freeze({
+    label: "緊急程度",
+    values: Object.freeze({
+      normal: "一般",
+      urgent: "緊急",
+      skipped: "略過／不知道",
+      declined_to_answer: "不願回答",
+    }),
+  }),
+  notes: Object.freeze({
+    label: "其他備註",
+    freeText: true,
+  }),
+});
+
+const EXCLUDED_PROVIDER_ANSWER_KEYS = new Set([
+  "preferred_time",
+  "service_location",
+  "photos",
+]);
+
 document.addEventListener("DOMContentLoaded", () => {
   bindProviderElements();
   bindProviderEvents();
@@ -332,8 +397,8 @@ function renderProviderDetail() {
   );
   providerElements.detailSummary.textContent = detail.problem_summary;
   providerElements.answerList.replaceChildren(
-    ...Object.entries(detail.answers || {}).map(([key, value]) =>
-      definition(answerLabel(key), answerValue(value)),
+    ...providerAnswerEntries(detail.answers).map(([label, value]) =>
+      definition(label, value),
     ),
   );
   renderProviderCaseImage(detail);
@@ -554,15 +619,52 @@ function contactAccessLabel(access) {
   }[access] || "未知權限";
 }
 
-function answerLabel(key) {
-  return {
-    issue_category: "問題類型",
-    notes: "其他備註",
-  }[key] || key;
+function providerAnswerEntries(answers) {
+  return Object.entries(answers || {}).flatMap(([key, value]) => {
+    if (EXCLUDED_PROVIDER_ANSWER_KEYS.has(key)) {
+      return [];
+    }
+    const metadata = PROVIDER_ANSWER_DEFINITIONS[key];
+    if (!metadata) {
+      return [];
+    }
+    return [[metadata.label, answerValue(metadata, value)]];
+  });
 }
 
-function answerValue(value) {
-  return Array.isArray(value) ? value.join("、") : String(value);
+function answerValue(metadata, value) {
+  const values = Array.isArray(value) ? value : [value];
+  const labels = values.map((item) => {
+    const normalized = String(item);
+    if (metadata.values?.[normalized]) {
+      return metadata.values[normalized];
+    }
+    if (metadata.format === "date") {
+      return formatProviderCalendarDate(normalized);
+    }
+    if (metadata.freeText) {
+      return normalized;
+    }
+    return "未提供可顯示內容";
+  });
+  return labels.join("、");
+}
+
+function formatProviderCalendarDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return "未提供可顯示日期";
+  }
+  const parsed = new Date(`${value}T00:00:00+08:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return "未提供可顯示日期";
+  }
+  return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  }).format(parsed);
 }
 
 function formatProviderDate(value) {

@@ -544,6 +544,59 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(200, completed.status_code)
         self.assertEqual("臺北市大安區", completed.json()["location"]["full_name"])
 
+    def test_location_parts_before_branch_confirmation_accumulate_across_turns(
+        self,
+    ) -> None:
+        session = self.create_session()
+        session_id = session["session_id"]
+
+        for text in ("新北市", "板橋區"):
+            response = self.client.post(
+                f"/api/sessions/{session_id}/messages",
+                json={"text": text},
+            )
+            self.assertEqual(200, response.status_code)
+            collecting = response.json()
+            self.assertEqual("collecting_need", collecting["state"])
+            self.assertTrue(collecting["can_send_message"])
+            self.assertIsNone(collecting["service"])
+            self.assertIsNone(collecting["location"])
+            self.assertEqual([], collecting["tool_trace"])
+
+        proposal_response = self.client.post(
+            f"/api/sessions/{session_id}/messages",
+            json={"text": "浴室水龍頭漏水。"},
+        )
+        self.assertEqual(200, proposal_response.status_code)
+        proposal = proposal_response.json()
+        self.assertEqual("routing_pending", proposal["state"])
+
+        confirmed = self.confirm_branch(proposal, "faucet_leak")
+
+        self.assertEqual("awaiting_form", confirmed["state"])
+        self.assertEqual("新北市板橋區", confirmed["location"]["full_name"])
+        self.assertEqual(
+            ["search_services", "resolve_location", "get_consultation_form"],
+            [entry["name"] for entry in confirmed["tool_trace"]],
+        )
+
+    def test_ambiguous_issue_without_a_branch_remains_open_for_clarification(self) -> None:
+        session = self.create_session()
+
+        response = self.client.post(
+            f"/api/sessions/{session['session_id']}/messages",
+            json={"text": "家裡一直有水聲，但不知道哪裡壞掉。"},
+        )
+
+        self.assertEqual(200, response.status_code)
+        result = response.json()
+        self.assertEqual("collecting_need", result["state"])
+        self.assertTrue(result["can_send_message"])
+        self.assertIsNone(result["active_task"]["branch"])
+        self.assertIsNone(result["service"])
+        self.assertIsNone(result["location"])
+        self.assertEqual([], result["tool_trace"])
+
     def test_manual_checklist_toggle_persists_through_session_refresh(self) -> None:
         session = self.prepare_form()
         session_id = session["session_id"]
@@ -791,6 +844,115 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(200, completed.status_code)
         self.assertEqual("新北市板橋區", completed.json()["location"]["full_name"])
         self.assertEqual("awaiting_form", completed.json()["state"])
+
+    def test_location_correction_revalidates_and_makes_the_old_summary_stale(self) -> None:
+        proposal = self.propose_branch(
+            "faucet_leak",
+            text="新北市板橋區水龍頭漏水",
+        )
+        ready = self.confirm_branch(proposal, "faucet_leak")
+        saved_response = self.client.post(
+            f"/api/sessions/{ready['session_id']}/form",
+            json=self.valid_form_payload(ready),
+        )
+        self.assertEqual(200, saved_response.status_code)
+        saved = saved_response.json()
+        stale_summary = self.summary_confirmation_payload(saved)
+
+        correction = self.client.post(
+            f"/api/sessions/{ready['session_id']}/messages",
+            json={"text": "改成臺北市大安區。"},
+        )
+
+        self.assertEqual(200, correction.status_code)
+        corrected = correction.json()
+        self.assertEqual("awaiting_form", corrected["state"])
+        self.assertEqual("臺北市大安區", corrected["location"]["full_name"])
+        self.assertEqual("repair_form_v1", corrected["consultation_form"]["form_key"])
+        self.assertTrue(corrected["active_task"]["shared_slots_need_confirmation"])
+        self.assertIsNone(corrected["active_task"]["summary"])
+        self.assertEqual([], corrected["candidates"])
+        self.assertTrue(corrected["can_submit_form"])
+        self.assertFalse(corrected["can_confirm_summary"])
+        self.assertFalse(corrected["can_dispatch"])
+        self.assertEqual(
+            1,
+            sum(entry["name"] == "resolve_location" for entry in corrected["tool_trace"]),
+        )
+        self.assertEqual(
+            1,
+            sum(entry["name"] == "get_consultation_form" for entry in corrected["tool_trace"]),
+        )
+        self.assertNotIn(
+            "match_service_providers",
+            [entry["name"] for entry in corrected["tool_trace"]],
+        )
+
+        resaved_response = self.client.post(
+            f"/api/sessions/{ready['session_id']}/form",
+            json=self.valid_form_payload(corrected),
+        )
+        self.assertEqual(200, resaved_response.status_code)
+        resaved = resaved_response.json()
+        self.assertGreater(
+            resaved["active_task"]["summary"]["version"],
+            stale_summary["summary_version"],
+        )
+
+        stale = self.client.post(
+            f"/api/sessions/{ready['session_id']}/summary/confirm",
+            json=stale_summary,
+        )
+        self.assertEqual(409, stale.status_code)
+        self.assertEqual("STALE_SUMMARY_VERSION", stale.json()["error"]["code"])
+
+    def test_incomplete_location_correction_clears_old_location_without_guessing(
+        self,
+    ) -> None:
+        ready = self.prepare_form(
+            "faucet_leak",
+            text="新北市板橋區水龍頭漏水",
+        )
+
+        correction = self.client.post(
+            f"/api/sessions/{ready['session_id']}/messages",
+            json={"text": "改成大安區。"},
+        )
+
+        self.assertEqual(200, correction.status_code)
+        corrected = correction.json()
+        self.assertEqual("clarifying", corrected["state"])
+        self.assertIsNone(corrected["location"])
+        self.assertIsNone(corrected["consultation_form"])
+        self.assertFalse(corrected["can_submit_form"])
+        self.assertIn("完整的縣市與行政區", corrected["messages"][-1]["text"])
+
+        completed = self.client.post(
+            f"/api/sessions/{ready['session_id']}/messages",
+            json={"text": "臺北市大安區"},
+        )
+        self.assertEqual(200, completed.status_code)
+        completed_body = completed.json()
+        self.assertEqual("awaiting_form", completed_body["state"])
+        self.assertEqual("臺北市大安區", completed_body["location"]["full_name"])
+        self.assertTrue(completed_body["can_submit_form"])
+
+    def test_location_like_issue_text_does_not_silently_replace_location(self) -> None:
+        ready = self.prepare_form(
+            "faucet_leak",
+            text="新北市板橋區水龍頭漏水",
+        )
+
+        response = self.client.post(
+            f"/api/sessions/{ready['session_id']}/messages",
+            json={"text": "施工區域在浴室。"},
+        )
+
+        self.assertEqual(409, response.status_code)
+        self.assertEqual("FORM_ALREADY_READY", response.json()["error"]["code"])
+        unchanged = self.client.get(f"/api/sessions/{ready['session_id']}").json()
+        self.assertEqual("新北市板橋區", unchanged["location"]["full_name"])
+        self.assertEqual("repair_form_v1", unchanged["consultation_form"]["form_key"])
 
     def test_replacement_pending_blocks_old_summary_confirmation(self) -> None:
         session = self.prepare_summary("faucet_leak")

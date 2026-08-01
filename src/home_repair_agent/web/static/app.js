@@ -54,6 +54,7 @@ const store = {
   mediaProvider: "unknown",
   mediaBusy: false,
   previewObjectUrl: "",
+  lastMessageSignature: "",
 };
 
 const elements = {};
@@ -87,6 +88,9 @@ function bindElements() {
   elements.traceList = document.querySelector("#trace-list");
   elements.workflowNote = document.querySelector("#workflow-note");
   elements.sessionState = document.querySelector("#session-state");
+  elements.conversationScrollRegion = document.querySelector(
+    "#conversation-scroll-region",
+  );
   elements.messageList = document.querySelector("#message-list");
   elements.messageForm = document.querySelector("#message-form");
   elements.messageInput = document.querySelector("#message-input");
@@ -1061,7 +1065,17 @@ function renderChecklist() {
 }
 
 function renderMessages() {
-  const nodes = store.session.messages.map((message) => {
+  const messages = store.session.messages || [];
+  const lastMessage = messages.at(-1);
+  const signature = [
+    store.session.session_id,
+    messages.length,
+    lastMessage?.role || "",
+    lastMessage?.text || "",
+  ].join(":");
+  const shouldRevealLatest = signature !== store.lastMessageSignature;
+  store.lastMessageSignature = signature;
+  const nodes = messages.map((message) => {
     const article = document.createElement("article");
     article.className = `message message--${message.role}`;
 
@@ -1078,9 +1092,28 @@ function renderMessages() {
     return article;
   });
   elements.messageList.replaceChildren(...nodes);
-  requestAnimationFrame(() => {
-    elements.messageList.scrollTop = elements.messageList.scrollHeight;
-  });
+  if (shouldRevealLatest) {
+    requestAnimationFrame(() => {
+      const latestMessage = elements.messageList.lastElementChild;
+      const scrollRegion = elements.conversationScrollRegion;
+      if (!latestMessage || !scrollRegion) {
+        return;
+      }
+      const messageBounds = latestMessage.getBoundingClientRect();
+      const regionBounds = scrollRegion.getBoundingClientRect();
+      let delta = 0;
+      if (messageBounds.bottom > regionBounds.bottom) {
+        delta = messageBounds.bottom - regionBounds.bottom + 16;
+      } else if (messageBounds.top < regionBounds.top) {
+        delta = messageBounds.top - regionBounds.top - 16;
+      }
+      if (delta) {
+        scrollRegion.scrollTo({
+          top: scrollRegion.scrollTop + delta,
+        });
+      }
+    });
+  }
 }
 
 function renderRouting() {

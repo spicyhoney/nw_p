@@ -9,8 +9,8 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.5.0" />
-    <script src="/static/app.js?v=0.5.0" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.5.2" />
+    <script src="/static/app.js?v=0.5.2" defer></script>
   </head>
   <body data-mobile-view="conversation">
     <a class="skip-link" href="#conversation-pane">跳到主要對話</a>
@@ -166,12 +166,19 @@
         </header>
 
         <div
-          id="message-list"
-          class="message-list"
-          role="log"
-          aria-live="polite"
-          aria-relevant="additions"
-        ></div>
+          id="conversation-scroll-region"
+          class="conversation-scroll-region"
+          role="region"
+          aria-label="對話內容與諮詢資訊"
+          tabindex="0"
+        >
+          <div
+            id="message-list"
+            class="message-list"
+            role="log"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></div>
 
         <section
           id="routing-section"
@@ -313,6 +320,8 @@
             確認摘要並媒合
           </button>
         </section>
+
+        </div>
 
         <form
           id="message-form"

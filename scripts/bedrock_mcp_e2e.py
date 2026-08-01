@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta, timezone
 
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -17,17 +17,17 @@ from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.agent.models import (
     AgentTurnResult,
     AssistantToolCalls,
-    ConversationMessage,
     ConversationSession,
-    ModelTurn,
-    ToolDefinition,
     ToolTraceEntry,
+)
+from home_repair_agent.agent.paced_model import (
+    MINIMUM_BEDROCK_INTERVAL_SECONDS,
+    PacedModelClient,
 )
 from home_repair_agent.agent.ports import ModelClient
 from home_repair_agent.backend.services import ReadServiceLayer
 from home_repair_agent.mcp_server.server import create_mcp_server
 
-MINIMUM_BEDROCK_INTERVAL_SECONDS = 1.1
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 EXPECTED_TOOLS = frozenset(
     {
@@ -53,59 +53,6 @@ search_services、resolve_location、get_consultation_form、match_service_provi
 四項都成功後才輸出最終文字，並明示候選為 synthetic、沒有建立案件或保留時段。
 """
 )
-
-
-class PacedModelClient:
-    """Keep model request starts below the competition's one-RPS ceiling."""
-
-    def __init__(
-        self,
-        delegate: ModelClient,
-        *,
-        minimum_interval_seconds: float = MINIMUM_BEDROCK_INTERVAL_SECONDS,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-        monotonic: Callable[[], float] = time.monotonic,
-    ) -> None:
-        if minimum_interval_seconds < MINIMUM_BEDROCK_INTERVAL_SECONDS:
-            raise ValueError(
-                f"minimum_interval_seconds must be at least {MINIMUM_BEDROCK_INTERVAL_SECONDS}"
-            )
-        self._delegate = delegate
-        self._minimum_interval_seconds = minimum_interval_seconds
-        self._sleep = sleep
-        self._monotonic = monotonic
-        self._lock = asyncio.Lock()
-        self._request_started_at: list[float] = []
-
-    @property
-    def request_count(self) -> int:
-        return len(self._request_started_at)
-
-    @property
-    def request_intervals_seconds(self) -> list[float]:
-        return [
-            later - earlier
-            for earlier, later in zip(
-                self._request_started_at,
-                self._request_started_at[1:],
-                strict=False,
-            )
-        ]
-
-    async def complete(
-        self,
-        *,
-        messages: Sequence[ConversationMessage],
-        tools: Sequence[ToolDefinition],
-    ) -> ModelTurn:
-        async with self._lock:
-            if self._request_started_at:
-                elapsed = self._monotonic() - self._request_started_at[-1]
-                wait_seconds = self._minimum_interval_seconds - elapsed
-                if wait_seconds > 0:
-                    await self._sleep(wait_seconds)
-            self._request_started_at.append(self._monotonic())
-            return await self._delegate.complete(messages=messages, tools=tools)
 
 
 async def run_bedrock_mcp_e2e(

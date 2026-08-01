@@ -795,7 +795,7 @@ function renderMedia() {
   elements.mediaSection.hidden = !branchReady && !media;
   elements.mediaMode.textContent = available
     ? "Hugging Face 外部分析"
-    : "圖片分析目前不可用（Mock／未設定）";
+    : "圖片分析目前不可用（Mock／Bedrock／未設定）";
   elements.mediaMode.classList.toggle("media-mode--unavailable", !available);
   elements.mediaUploadForm.hidden = Boolean(media) || !branchReady;
   elements.mediaFile.disabled = blocked || !available;
@@ -803,7 +803,7 @@ function renderMedia() {
   elements.mediaUploadButton.disabled = blocked || !available;
   elements.mediaUploadButton.textContent = store.mediaBusy ? "處理中…" : "上傳並分析";
   if (!available && !media && !store.mediaBusy) {
-    setMediaStatus("此 session 使用 Mock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
+    setMediaStatus("此 session 使用 Mock、Bedrock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
   } else if (!branchReady && !media && !store.mediaBusy) {
     setMediaStatus("請先確認水電修繕分支，圖片控制才會開放。");
   }
@@ -916,6 +916,7 @@ function renderHeader() {
   elements.providerChip.textContent = {
     mock: "Mock 模式",
     huggingface: "HF 模式",
+    bedrock: "Bedrock 模式",
   }[session.provider.key];
   elements.providerChip.title = session.provider.is_external
     ? `${session.provider.label}，外部 hosted model`

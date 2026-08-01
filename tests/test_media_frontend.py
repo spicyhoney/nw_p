@@ -29,6 +29,8 @@ class MediaFrontendContractTests(unittest.TestCase):
     def test_upload_requires_huggingface_and_explicit_consent(self) -> None:
         self.assertIn("health.model_provider", self.app)
         self.assertIn('store.mediaProvider === "huggingface"', self.app)
+        self.assertIn('bedrock: "Bedrock 模式"', self.app)
+        self.assertIn("Mock／Bedrock／未設定", self.app)
         self.assertIn('body.append("external_processing_confirmed", "true")', self.app)
         self.assertIn('method: "POST", body', self.app)
         self.assertIn("new FormData()", self.app)

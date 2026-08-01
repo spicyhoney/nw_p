@@ -28,6 +28,8 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
   邊界維持不變。建案後表單與摘要鎖定。
 - 保留人工 Checklist、鍵盤操作、live region、清楚 focus、reduced-motion 與
   polling／stale response 防護基線。
+- Bedrock 模式可透過既有 `BedrockModelClient` 執行文字對話與 process-local 唯讀
+  MCP Tools；請求由 production pacing wrapper 保持至少 1.1 秒的啟動間隔。
 - HF 模式可上傳一張 JPEG／PNG／WebP synthetic／公開測試圖片。既有安全儲存、
   VLM 建議、人工修正／確認及服務目錄重驗管線不變；圖片會綁定 active branch，
   移除圖片會使現有摘要版本失效。
@@ -48,7 +50,8 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
 
 刻意沒做：
 
-- 沒有 AWS、Bedrock、AgentCore、RDS、S3 adapter 或公開部署；這些仍是候選方向。
+- 沒有 AWS hosting、AgentCore、RDS、S3 adapter 或公開部署；Bedrock 目前僅作為
+  既有 provider-neutral port 的文字模型 adapter。
 - 本功能沒有改動 `AgentRunner`、`ToolClient` 或四個唯讀 MCP Tool schemas，也沒有
   新增寫入 MCP Tool。
 - 沒有擴充到居家清潔等其他服務類別；canonical service 仍只有水電修繕
@@ -253,19 +256,26 @@ Windows PostgreSQL 模式不要改用裸 `python -m uvicorn ...` 啟動。Linux�
 
 | 變數 | 預設 | 用途 |
 |---|---|---|
-| `WEB_MODEL_PROVIDER` | `mock` | `mock` 或 `huggingface` |
+| `WEB_MODEL_PROVIDER` | `mock` | `mock`、`huggingface` 或 `bedrock` |
 | `WEB_CASE_REPOSITORY` | `memory` | `memory` 或 `postgres`；只影響 case workflow |
 | `DATABASE_URL` | 無 | PostgreSQL case 模式必填；不得提交正式密碼 |
 | `WEB_HOST` | `127.0.0.1` | Web bind host |
 | `WEB_PORT` | `8080` | Web port |
 | `HF_TOKEN` 等 | 見 `.env.example` | Hugging Face 模式；缺少時 fail fast |
+| `BEDROCK_REGION` | 無 | Bedrock 模式必填，例如 `us-west-2` |
+| `BEDROCK_MODEL_ID` | 無 | Bedrock 模式必填，例如 `amazon.nova-lite-v1:0` |
+| `AWS_PROFILE` | AWS SDK 預設鏈 | 本機可指定 named profile；不得寫入程式或提交 credential |
 | `HF_VL_MODEL_ID` | `Qwen/Qwen3-VL-30B-A3B-Instruct` | 圖片分析模型 |
 | `HF_VL_PROVIDER` | `auto` | 圖片模型的 Inference Provider |
 | `MEDIA_ROOT` | `var/media` | 私有本機圖片根目錄；不進 Git |
 
 `WEB_MODEL_PROVIDER=huggingface` 會把對話與 Tool schema 傳到 hosted provider；沒有
-必要設定時不會靜默切回 Mock。使用者每次勾選外部處理同意並上傳圖片時，正規化後的
-圖片 bytes 也會送到所選 HF VLM provider。請只使用 synthetic／公開測試內容。
+必要設定時不會靜默切回 Mock。`WEB_MODEL_PROVIDER=bedrock` 會使用
+`BEDROCK_REGION`／`BEDROCK_MODEL_ID` 建立文字 client，並可由本機標準 AWS credential
+chain（例如 `AWS_PROFILE`）取得授權，同樣不會 fallback。圖片分析仍只在 Hugging Face
+模式可用，Bedrock 文字模式不會建立或改用 HF VLM。使用者每次勾選外部處理同意並
+上傳圖片時，正規化後的圖片 bytes 也會送到所選 HF VLM provider。請只使用
+synthetic／公開測試內容。
 
 ## 7. 測試與實際結果
 

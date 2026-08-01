@@ -170,7 +170,7 @@ def create_app(
                 provider=ProviderView(
                     key=provider_key,
                     label=provider_label,
-                    is_external=provider_key == "huggingface",
+                    is_external=provider_key in {"huggingface", "bedrock"},
                 ),
                 now=now,
                 media_storage=media_storage,

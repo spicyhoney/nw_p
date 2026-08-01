@@ -9,6 +9,10 @@ from datetime import datetime, timedelta, timezone
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
+from home_repair_agent.agent.bedrock_model import (
+    BedrockConfigurationError,
+    BedrockModelClient,
+)
 from home_repair_agent.agent.huggingface_model import (
     HuggingFaceConfigurationError,
     HuggingFaceModelClient,
@@ -17,6 +21,7 @@ from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
 from home_repair_agent.agent.models import ConversationSession, ToolTraceEntry
+from home_repair_agent.agent.paced_model import PacedModelClient
 from home_repair_agent.agent.ports import ModelClient
 from home_repair_agent.backend.models import (
     AvailableProviderSlot,
@@ -319,7 +324,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model-provider",
-        choices=("mock", "huggingface"),
+        choices=("mock", "huggingface", "bedrock"),
         default="mock",
         help="model adapter to use (default: mock)",
     )
@@ -347,6 +352,10 @@ def _resolve_model_client(
         client = HuggingFaceModelClient.from_environment(environ=environ)
         label = f"Hugging Face｜{client.model_id}（provider={client.provider}）"
         return client, label
+    if model_provider == "bedrock":
+        client = BedrockModelClient.from_environment(environ=environ)
+        label = f"Amazon Bedrock｜{client.model_id}（region={client.region}）"
+        return PacedModelClient(client), label
     raise ValueError(f"unsupported model provider: {model_provider}")
 
 
@@ -355,7 +364,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
     try:
         model_client, model_label = _resolve_model_client(args.model_provider)
-    except HuggingFaceConfigurationError as error:
+    except (HuggingFaceConfigurationError, BedrockConfigurationError) as error:
         parser.error(str(error))
     logging.getLogger("mcp.server.lowlevel.server").setLevel(logging.WARNING)
     asyncio.run(

@@ -223,6 +223,47 @@ class WebAppTests(unittest.TestCase):
         )
         self.assertEqual("no-store", response.headers["cache-control"])
 
+    def test_fake_bedrock_mode_exposes_only_the_safe_provider_contract(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "WEB_MODEL_PROVIDER": "bedrock",
+                    "AWS_PROFILE": "private-profile-marker",
+                },
+                clear=False,
+            ),
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(Mock(), "Amazon Bedrock test double"),
+            ) as resolver,
+            TestClient(create_app()) as client,
+        ):
+            health = client.get("/api/health")
+            session = client.post("/api/sessions")
+
+        self.assertEqual(200, health.status_code)
+        self.assertEqual("bedrock", health.json()["model_provider"])
+        self.assertEqual(201, session.status_code)
+        self.assertEqual(
+            {
+                "key": "bedrock",
+                "label": "Amazon Bedrock test double",
+                "is_external": True,
+            },
+            session.json()["provider"],
+        )
+        resolver.assert_called_once_with("bedrock")
+        public_response = f"{health.text}\n{session.text}"
+        for forbidden in (
+            "AWS_PROFILE",
+            "private-profile-marker",
+            "account_id",
+            "arn:aws",
+            "credential",
+        ):
+            self.assertNotIn(forbidden, public_response)
+
     def test_first_message_only_proposes_routing_until_explicit_confirmation(self) -> None:
         proposal = self.propose_branch("faucet_leak")
 

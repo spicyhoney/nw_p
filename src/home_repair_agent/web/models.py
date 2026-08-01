@@ -142,7 +142,7 @@ class ChatMessageView(WebModel):
 
 
 class ProviderView(WebModel):
-    key: Literal["mock", "huggingface"]
+    key: Literal["mock", "huggingface", "bedrock"]
     label: str
     is_external: bool
 
@@ -275,7 +275,7 @@ class HealthView(WebModel):
     ok: Literal[True] = True
     service: Literal["home-repair-web"] = "home-repair-web"
     mode: Literal["provider-workflow-demo"] = "provider-workflow-demo"
-    model_provider: Literal["mock", "huggingface"]
+    model_provider: Literal["mock", "huggingface", "bedrock"]
 
 
 class DemoProviderIdentityListView(WebModel):

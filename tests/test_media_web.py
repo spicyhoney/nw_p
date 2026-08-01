@@ -445,6 +445,47 @@ class MediaWebMockModeTests(unittest.TestCase):
         self.assertEqual(409, response.status_code)
         self.assertEqual("IMAGE_ANALYSIS_UNAVAILABLE", response.json()["error"]["code"])
 
+    def test_bedrock_text_mode_does_not_create_or_fallback_to_hf_vision(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            patch.dict(
+                os.environ,
+                {"WEB_MODEL_PROVIDER": "bedrock", "MEDIA_ROOT": media_root},
+                clear=False,
+            ),
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(RuleBasedRepairMockModel(), "Amazon Bedrock test double"),
+            ),
+            patch(
+                "home_repair_agent.web.app.HuggingFaceVisionClient.from_environment"
+            ) as vision_factory,
+            TestClient(create_app()) as client,
+        ):
+            session = client.post("/api/sessions").json()
+            session_id = session["session_id"]
+            proposal = client.post(
+                f"/api/sessions/{session_id}/messages",
+                json={"text": "臺北市大安區水龍頭漏水"},
+            )
+            self.assertEqual(200, proposal.status_code, proposal.text)
+            confirmed = client.post(
+                f"/api/sessions/{session_id}/branch/confirm",
+                json={"branch": "faucet_leak", "confirm": True},
+            )
+            self.assertEqual(200, confirmed.status_code, confirmed.text)
+            response = client.post(
+                f"/api/sessions/{session_id}/image",
+                files={"file": ("repair.png", _png_bytes(), "image/png")},
+                data={"external_processing_confirmed": "true"},
+            )
+
+            vision_factory.assert_not_called()
+            self.assertEqual([], os.listdir(media_root))
+
+        self.assertEqual(409, response.status_code)
+        self.assertEqual("IMAGE_ANALYSIS_UNAVAILABLE", response.json()["error"]["code"])
+
 
 if __name__ == "__main__":
     unittest.main()

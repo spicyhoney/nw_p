@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
+from unittest.mock import Mock, patch
 
+from home_repair_agent.agent.bedrock_model import (
+    BedrockConfigurationError,
+    BedrockModelClient,
+)
 from home_repair_agent.agent.demo import (
     TAIPEI_TIMEZONE,
     DemoReadRepository,
@@ -13,6 +18,7 @@ from home_repair_agent.agent.huggingface_model import (
     HuggingFaceConfigurationError,
 )
 from home_repair_agent.agent.mock_model import RuleBasedRepairMockModel
+from home_repair_agent.agent.paced_model import PacedModelClient
 from home_repair_agent.backend.services import ReadServiceLayer
 
 
@@ -103,6 +109,38 @@ class DemoModelRoutingTests(unittest.TestCase):
             "HF_TOKEN is required",
         ):
             _resolve_model_client("huggingface", environ={})
+
+    def test_bedrock_mode_wraps_the_explicit_client_with_production_pacing(self) -> None:
+        explicit_client = BedrockModelClient(
+            client=Mock(),
+            model_id="amazon.nova-lite-v1:0",
+            region="us-west-2",
+        )
+        environment = {
+            "AWS_PROFILE": "synthetic-profile",
+            "BEDROCK_REGION": "us-west-2",
+            "BEDROCK_MODEL_ID": "amazon.nova-lite-v1:0",
+        }
+        with patch.object(
+            BedrockModelClient,
+            "from_environment",
+            return_value=explicit_client,
+        ) as factory:
+            model, label = _resolve_model_client("bedrock", environ=environment)
+
+        self.assertIsInstance(model, PacedModelClient)
+        self.assertIs(model._delegate, explicit_client)
+        factory.assert_called_once_with(environ=environment)
+        self.assertIn("Amazon Bedrock", label)
+        self.assertIn("amazon.nova-lite-v1:0", label)
+        self.assertNotIn("synthetic-profile", label)
+
+    def test_bedrock_mode_does_not_silently_fall_back(self) -> None:
+        with self.assertRaisesRegex(
+            BedrockConfigurationError,
+            "BEDROCK_REGION is required",
+        ):
+            _resolve_model_client("bedrock", environ={})
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
 from home_repair_agent.agent.models import (
     AgentTurnResult,
+    AssistantToolCalls,
     ConversationMessage,
     ConversationSession,
     ModelTurn,
@@ -65,8 +66,10 @@ class PacedModelClient:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
-        if minimum_interval_seconds < 1.0:
-            raise ValueError("minimum_interval_seconds must be at least 1.0")
+        if minimum_interval_seconds < MINIMUM_BEDROCK_INTERVAL_SECONDS:
+            raise ValueError(
+                f"minimum_interval_seconds must be at least {MINIMUM_BEDROCK_INTERVAL_SECONDS}"
+            )
         self._delegate = delegate
         self._minimum_interval_seconds = minimum_interval_seconds
         self._sleep = sleep
@@ -140,7 +143,7 @@ async def run_bedrock_mcp_e2e(
             user_text=SYNTHETIC_INPUT,
         )
 
-    _validate_result(result)
+    _validate_result(result, conversation)
     completed_at = timestamp_utc or datetime.now(UTC)
     if completed_at.tzinfo is None or completed_at.utcoffset() is None:
         raise ValueError("timestamp_utc must include a timezone")
@@ -169,17 +172,76 @@ async def run_bedrock_mcp_e2e(
     }
 
 
-def _validate_result(result: AgentTurnResult) -> None:
+def _validate_result(
+    result: AgentTurnResult,
+    conversation: ConversationSession,
+) -> None:
     if result.stop_reason != "completed":
         raise RuntimeError("Bedrock MCP E2E did not complete safely.")
+
+    if any(entry.mcp_is_error or entry.result.get("ok") is not True for entry in result.tool_trace):
+        raise RuntimeError("Bedrock MCP E2E returned an unsuccessful MCP result.")
 
     observed_tools = {entry.name for entry in result.tool_trace}
     if missing_tools := EXPECTED_TOOLS - observed_tools:
         missing = ", ".join(sorted(missing_tools))
         raise RuntimeError(f"Bedrock MCP E2E missed required tools: {missing}.")
 
-    if any(entry.mcp_is_error or entry.result.get("ok") is not True for entry in result.tool_trace):
-        raise RuntimeError("Bedrock MCP E2E returned an unsuccessful MCP result.")
+    call_turns = _tool_call_turns(conversation)
+    search_results: list[tuple[int, set[int]]] = []
+    location_results: list[tuple[int, str]] = []
+    form_results: list[tuple[int, int]] = []
+
+    for entry in result.tool_trace:
+        call_turn = call_turns.get(entry.call_id)
+        if call_turn is None:
+            raise RuntimeError("Bedrock MCP E2E tool trace is inconsistent.")
+
+        turn_index, call_name, call_arguments = call_turn
+        if call_name != entry.name or call_arguments != entry.arguments:
+            raise RuntimeError("Bedrock MCP E2E tool trace is inconsistent.")
+
+        data = entry.result.get("data")
+        if not isinstance(data, dict):
+            raise TypeError("Bedrock MCP E2E returned an invalid tool result.")
+
+        if entry.name == "search_services":
+            search_results.append((turn_index, _service_ids_from_search_result(data)))
+        elif entry.name == "resolve_location":
+            location_results.append((turn_index, _required_string(data, "location_id")))
+        elif entry.name == "get_consultation_form":
+            service_id = _required_integer(entry.arguments, "service_id")
+            if not any(
+                search_turn < turn_index and service_id in service_ids
+                for search_turn, service_ids in search_results
+            ):
+                raise RuntimeError("Bedrock MCP E2E form call lacked prior service ID provenance.")
+            returned_service_id = _required_integer(data, "service_id")
+            if returned_service_id != service_id:
+                raise RuntimeError("Bedrock MCP E2E form result did not confirm its service ID.")
+            form_results.append((turn_index, returned_service_id))
+        elif entry.name == "match_service_providers":
+            service_id = _required_integer(entry.arguments, "service_id")
+            location_id = _required_string(entry.arguments, "location_id")
+            if not any(
+                form_turn < turn_index and form_service_id == service_id
+                for form_turn, form_service_id in form_results
+            ):
+                raise RuntimeError(
+                    "Bedrock MCP E2E match call lacked prior form service ID provenance."
+                )
+            if not any(
+                location_turn < turn_index and resolved_location_id == location_id
+                for location_turn, resolved_location_id in location_results
+            ):
+                raise RuntimeError(
+                    "Bedrock MCP E2E match call lacked prior location ID provenance."
+                )
+            if (
+                _required_integer(data, "service_id") != service_id
+                or _required_string(data, "location_id") != location_id
+            ):
+                raise RuntimeError("Bedrock MCP E2E match result did not confirm its input IDs.")
 
     match_entries = [
         entry for entry in result.tool_trace if entry.name == "match_service_providers"
@@ -191,6 +253,50 @@ def _validate_result(result: AgentTurnResult) -> None:
     forbidden_claims = ("已建立案件", "已下單", "已預約", "已保留時段")
     if any(claim in result.reply for claim in forbidden_claims):
         raise RuntimeError("Bedrock MCP E2E final reply claimed a write action.")
+
+
+def _tool_call_turns(
+    conversation: ConversationSession,
+) -> dict[str, tuple[int, str, dict[str, object]]]:
+    call_turns: dict[str, tuple[int, str, dict[str, object]]] = {}
+    turn_index = 0
+    for message in conversation.messages:
+        if not isinstance(message, AssistantToolCalls):
+            continue
+        turn_index += 1
+        for call in message.calls:
+            if call.call_id in call_turns:
+                raise RuntimeError("Bedrock MCP E2E reused a tool call ID.")
+            call_turns[call.call_id] = (turn_index, call.name, call.arguments)
+    return call_turns
+
+
+def _service_ids_from_search_result(data: dict[str, object]) -> set[int]:
+    services = data.get("services")
+    if not isinstance(services, list):
+        raise TypeError("Bedrock MCP E2E search returned invalid service data.")
+    return {
+        service_id
+        for service in services
+        if isinstance(service, dict)
+        and (service_id := service.get("service_id")) is not None
+        and isinstance(service_id, int)
+        and not isinstance(service_id, bool)
+    }
+
+
+def _required_integer(source: dict[str, object], key: str) -> int:
+    value = source.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError("Bedrock MCP E2E returned an invalid ID value.")
+    return value
+
+
+def _required_string(source: dict[str, object], key: str) -> str:
+    value = source.get(key)
+    if not isinstance(value, str) or not value:
+        raise TypeError("Bedrock MCP E2E returned an invalid ID value.")
+    return value
 
 
 def _redacted_trace(entry: ToolTraceEntry) -> dict[str, object]:

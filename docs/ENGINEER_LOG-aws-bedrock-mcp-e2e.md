@@ -5,8 +5,8 @@
 ## 範圍與基底
 
 - 分支：`feature/aws-bedrock-mcp-e2e`。
-- branch base：`dbc9cfeb4590e821ab4932d10f9848175d7cb1b6`（PR #17 的
-  `feature/aws-bedrock-agentcore-poc`）。
+- branch base：`357cc274b56bfbcaec81aefeccfe97cc730446ac`（PR #17 已合併後的
+  `main`）。
 - 本輪只新增可重跑的 E2E harness、contract tests 與文件；沒有修改
   `AgentRunner`、`MCPToolClient`、Service Layer、MCP schema、Web、派單／slot state、
   `HANDOFF.md`、`TASKS.md`、`app.py`、`pyproject.toml` 或 Kiro specs。
@@ -99,10 +99,10 @@ cleanup 對象。
 
 | 驗證 | 結果 |
 |---|---|
-| E2E harness focused | `4 passed` |
-| Bedrock adapter + E2E | `19 passed` |
+| E2E harness focused | `10 passed, 4 subtests passed` |
+| Bedrock／live-smoke／E2E focused | `33 passed, 7 subtests passed` |
 | AgentRunner／Demo／MCP regression | `29 passed, 11 subtests passed` |
-| 完整 `pytest -q` | `152 passed, 19 skipped, 52 subtests passed` |
+| 完整 `pytest -q` | `166 passed, 19 skipped, 59 subtests passed` |
 | 受影響 Ruff | passed |
 | 全 repo Ruff | 22 個既有 data-cleaning findings；PR #17 base 同樣為 22，沒有新增 |
 | compileall | passed |
@@ -111,6 +111,11 @@ cleanup 對象。
 
 19 個 skip 是未提供 `TEST_DATABASE_URL`／對應資料環境的既有條件；本輪不改資料庫
 契約。短效 AWS credential temp bridge 在 live run 的 `finally` 清除後為 0 個。
+
+PR #18 review 修正後，`PacedModelClient` 拒絕所有低於 1.1 秒的設定；E2E 驗證會依
+`ConversationSession` 的 ModelTurn 邊界，確認 form／match 使用的是更早成功
+ToolResult 實際回傳的 service／location ID。同一輪預先猜中 Demo ID、錯誤 MCP
+結果、`ok=false`、`max_steps` 與未遮罩參數都有 regression tests。
 
 ## 尚未證明
 

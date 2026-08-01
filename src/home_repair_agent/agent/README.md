@@ -317,10 +317,11 @@ synthetic live tool-use 已通過，細節見 AWS POC 證據。
 format check，且納入 PostgreSQL CI targeted list；Nova Lite live smoke 在
 `stopReason` 白名單後重新成功。
 
-2026-08-01 Bedrock × MCP E2E：harness focused `4 passed`，Bedrock adapter + E2E
-`19 passed`，AgentRunner／Demo／MCP regression `29 passed, 11 subtests passed`，完整
-suite `152 passed, 19 skipped, 52 subtests passed`。Nova Lite 經真實 AgentRunner 與
-process-local MCP protocol 完成四個唯讀 Tool；細節見 Bedrock × MCP E2E 證據。
+2026-08-01 Bedrock × MCP E2E：review 後限制 interval 不得低於 1.1 秒，並驗證
+form／match 的 ID 必須來自更早 ModelTurn 的成功 ToolResult；同輪猜中 Demo ID
+仍會拒絕。harness `10 passed, 4 subtests passed`，Bedrock／live-smoke／E2E focused
+`33 passed, 7 subtests passed`，完整 suite
+`166 passed, 19 skipped, 59 subtests passed`。細節見 Bedrock × MCP E2E 證據。
 
 ## 尚未做
 

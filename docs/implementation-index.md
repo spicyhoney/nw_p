@@ -91,9 +91,10 @@ Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時
   未修改的 `AgentRunner`、`MCPToolClient`、process-local MCP protocol 與
   `ReadServiceLayer`，實際完成服務、行政區、表單與 synthetic 候選四工具閉環。
   4 次 Bedrock request 的 start interval 為 1.797／1.110／1.437 秒，沒有 AWS
-  持久資源。focused `19 passed`，Agent／Demo／MCP regression
-  `29 passed, 11 subtests passed`，完整 `152 passed, 19 skipped,
-  52 subtests passed`。
+  持久資源。PR review 後加入 1.1 秒設定下限與跨 ModelTurn ToolResult ID
+  provenance 驗證；同輪猜 ID、MCP error、`ok=false`、`max_steps` 與 evidence
+  redaction regression 均通過。focused `33 passed, 7 subtests passed`，完整
+  `166 passed, 19 skipped, 59 subtests passed`。
 
 - 2026-08-01：新增 `BedrockModelClient`，沿用 provider-neutral messages／tools 與
   `ModelTurn`，完成 Converse text／tool-use／tool-result 轉換、JSON object 驗證、

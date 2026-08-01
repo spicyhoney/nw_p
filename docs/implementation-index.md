@@ -13,16 +13,16 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 引導式單一修繕對話 | 已驗證單一 Active Task；五分支均需明確確認 | `backend/repair_conversation.py`、`web/`、`data/processed/curated_repair_form.json` | [Web 引導式流程](../src/home_repair_agent/web/README.md)、[Feature requirements](../.kiro/specs/guided-home-repair-conversation/requirements.md) | focused `59 passed, 50 subtests passed`；兩條 FastAPI HTTP E2E |
 | 四個唯讀 MCP Tools | 已驗證；本次未改 schema | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
-| Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract；本次未改 AgentRunner／ToolClient | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| Agent 核心迴圈 | 已驗證 Mock、HF 與 Bedrock adapter contract；本次未改 AgentRunner／ToolClient | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
-| 圖片上傳與 HF VLM | 已整合；guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／branch binding／summary invalidation tests |
-| Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證 guided 單一修繕、人工 Checklist、雙端 workflow 與 async case repository 切換；唯讀服務資料仍是 Demo repository | `src/home_repair_agent/web/` | [Web README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | HTTP／a11y／Node regression；本輪未做真瀏覽器 smoke |
+| 圖片上傳與 HF VLM | 已整合；完成本機、live HF、PostgreSQL 16.14 驗證，guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003／branch binding／summary invalidation tests |
+| Bedrock Model adapter | contract、synthetic tool-use smoke 與四工具 MCP live 閉環已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_*.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC](ENGINEER_LOG-aws-bedrock-agentcore-poc.md)、[MCP E2E](ENGINEER_LOG-aws-bedrock-mcp-e2e.md) | fake-client contract、Nova Lite Converse、AgentRunner × MCP 四工具 live |
+| FastAPI / Demo UI | 已驗證 guided 單一修繕、人工 Checklist、無障礙雙端 workflow 與 async case repository 切換；唯讀服務資料仍是 Demo repository | `src/home_repair_agent/web/` | [Web README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | HTTP／a11y／Node regression；既有桌面／手機 browser E2E，本輪未重跑真瀏覽器 smoke |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
-| AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
+| AgentCore Runtime / Gateway 部署 | 未執行；本輪範圍無既有 deployment artifact，且最小 direct-code 流程需要本輪禁止建立的 S3 artifact | 尚無 | [AWS 架構](architecture.md)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | 兩個允許 Region 的 Runtime count 均為 0 |
 
 ## 目前可執行的閉環
 
@@ -94,6 +94,16 @@ Web session／Active Task 仍不能恢復，也不會真的保留師傅時段。
 adapter 或寫入 MCP Tool。CLI 與 Web 可顯式切換到 Hugging Face hosted model；缺少
 `HF_TOKEN` 時會停止並提示，不會靜默切回 Mock。
 
+另有一條真實 Bedrock、但仍為 process-local MCP 的 synthetic 閉環：
+
+```text
+Amazon Nova Lite -> AgentRunner -> MCPToolClient -> FastMCP Server
+  -> ReadServiceLayer -> DemoReadRepository -> ToolResult -> Nova Lite final answer
+```
+
+2026-08-01 live run 實際完成四個唯讀 Tool 並取得 synthetic 候選；這不等同外部
+Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時段。
+
 ## 最近驗證
 
 - 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
@@ -111,6 +121,30 @@ adapter 或寫入 MCP Tool。CLI 與 Web 可顯式切換到 Hugging Face hosted 
   format check 及 `git diff --check` 通過。全庫 Ruff check 已執行但保留 15 個既有、
   非本功能檔案 finding；全庫 format check 也受既有未格式化檔案阻擋，兩者是
   baseline debt，不能宣稱全庫通過。本輪沒有執行真瀏覽器 smoke。
+- 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
+  `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與
+  reason/content 不一致都拒絕。格式化兩個新檔，並將四個 Bedrock Python 檔納入
+  PostgreSQL CI targeted Ruff check／format check。focused
+  `52 passed, 14 subtests passed`，完整 `156 passed, 19 skipped,
+  55 subtests passed`；Nova Lite synthetic live smoke 重新通過。
+
+- 2026-08-01：新增 `scripts/bedrock_mcp_e2e.py` 與 contract tests；Nova Lite 經
+  未修改的 `AgentRunner`、`MCPToolClient`、process-local MCP protocol 與
+  `ReadServiceLayer`，實際完成服務、行政區、表單與 synthetic 候選四工具閉環。
+  4 次 Bedrock request 的 start interval 為 1.797／1.110／1.437 秒，沒有 AWS
+  持久資源。PR review 後加入 1.1 秒設定下限與跨 ModelTurn ToolResult ID
+  provenance 驗證；同輪猜 ID、MCP error、`ok=false`、`max_steps` 與 evidence
+  redaction regression 均通過。focused `33 passed, 7 subtests passed`，完整
+  `166 passed, 19 skipped, 59 subtests passed`。
+
+- 2026-08-01：新增 `BedrockModelClient`，沿用 provider-neutral messages／tools 與
+  `ModelTurn`，完成 Converse text／tool-use／tool-result 轉換、JSON object 驗證、
+  explicit Region／model／credential fail-fast 與 provider error 遮罩；沒有修改
+  AgentRunner、MCP 或 Service Layer。fake-client focused `15 passed`，完整
+  `148 passed, 19 skipped, 52 subtests passed`。`us-west-2` 的
+  `amazon.nova-lite-v1:0` synthetic live tool-use 成功；兩個允許 Region 的
+  AgentCore Runtime count 均為 0，本輪未建立任何持久 AWS 資源。
+
 - 2026-07-31：實作 MEDIA-001：一張 JPEG／PNG／WebP、8 MiB、實際解碼與 EXIF
   清除、安全相對路徑、HF VLM 結構化建議、人工更正／確認、服務目錄重驗、
   memory／PostgreSQL case 欄位與廠商受控圖片 endpoint。Mock 與 HF error 都不

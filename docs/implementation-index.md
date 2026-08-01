@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-31
+最後更新：2026-08-01
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -12,16 +12,16 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | Service Layer | 唯讀、媒合、派單／接單與 async PostgreSQL 寫入均已驗證 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試與 PostgreSQL 16.14 整合測試 |
 | 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
-| Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| Agent 核心迴圈 | 已驗證 Mock、HF 與 Bedrock adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | 圖片上傳與 HF VLM | 已整合並完成本機、live HF 與 PostgreSQL 16.14 驗證 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003 tests |
-| Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
+| Bedrock Model adapter | contract 與 synthetic tool-use live smoke 已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_live_smoke.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | fake-client contract、Nova Lite Converse/tool use live |
 | FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
-| AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
+| AgentCore Runtime / Gateway 部署 | 未執行；本輪範圍無既有 deployment artifact，且最小 direct-code 流程需要本輪禁止建立的 S3 artifact | 尚無 | [AWS 架構](architecture.md)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | 兩個允許 Region 的 Runtime count 均為 0 |
 
 ## 目前可執行的閉環
 
@@ -69,6 +69,14 @@ Web session 仍不能恢復，也不會真的保留師傅時段。廠商 header 
 hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
+
+- 2026-08-01：新增 `BedrockModelClient`，沿用 provider-neutral messages／tools 與
+  `ModelTurn`，完成 Converse text／tool-use／tool-result 轉換、JSON object 驗證、
+  explicit Region／model／credential fail-fast 與 provider error 遮罩；沒有修改
+  AgentRunner、MCP 或 Service Layer。fake-client focused `15 passed`，完整
+  `148 passed, 19 skipped, 52 subtests passed`。`us-west-2` 的
+  `amazon.nova-lite-v1:0` synthetic live tool-use 成功；兩個允許 Region 的
+  AgentCore Runtime count 均為 0，本輪未建立任何持久 AWS 資源。
 
 - 2026-07-31：實作 MEDIA-001：一張 JPEG／PNG／WebP、8 MiB、實際解碼與 EXIF
   清除、安全相對路徑、HF VLM 結構化建議、人工更正／確認、服務目錄重驗、

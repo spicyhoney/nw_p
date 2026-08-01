@@ -57,6 +57,8 @@ jobs:
       - name: Check affected Python files
         run: |
           python -m ruff check \
+            scripts/bedrock_live_smoke.py \
+            src/home_repair_agent/agent/bedrock_model.py \
             src/home_repair_agent/backend/case_ports.py \
             src/home_repair_agent/backend/case_services.py \
             src/home_repair_agent/backend/postgres_case_repository.py \
@@ -65,11 +67,15 @@ jobs:
             src/home_repair_agent/web/demo_case_repository.py \
             src/home_repair_agent/web/models.py \
             src/home_repair_agent/web/service.py \
+            tests/test_bedrock_live_smoke.py \
+            tests/test_bedrock_model.py \
             tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \
             tests/test_web_app.py
           python -m ruff format --check \
+            scripts/bedrock_live_smoke.py \
+            src/home_repair_agent/agent/bedrock_model.py \
             src/home_repair_agent/backend/case_ports.py \
             src/home_repair_agent/backend/case_services.py \
             src/home_repair_agent/backend/postgres_case_repository.py \
@@ -78,6 +84,8 @@ jobs:
             src/home_repair_agent/web/demo_case_repository.py \
             src/home_repair_agent/web/models.py \
             src/home_repair_agent/web/service.py \
+            tests/test_bedrock_live_smoke.py \
+            tests/test_bedrock_model.py \
             tests/test_consumer_accessibility.py \
             tests/test_postgres_case_repository.py \
             tests/test_postgres_integration.py \

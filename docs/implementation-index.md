@@ -70,6 +70,13 @@ hosted model 不得自行把相對日期換成具體年月日。
 
 ## 最近驗證
 
+- 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
+  `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與
+  reason/content 不一致都拒絕。格式化兩個新檔，並將四個 Bedrock Python 檔納入
+  PostgreSQL CI targeted Ruff check／format check。focused
+  `52 passed, 14 subtests passed`，完整 `156 passed, 19 skipped,
+  55 subtests passed`；Nova Lite synthetic live smoke 重新通過。
+
 - 2026-08-01：新增 `BedrockModelClient`，沿用 provider-neutral messages／tools 與
   `ModelTurn`，完成 Converse text／tool-use／tool-result 轉換、JSON object 驗證、
   explicit Region／model／credential fail-fast 與 provider error 遮罩；沒有修改

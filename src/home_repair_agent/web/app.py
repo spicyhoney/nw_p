@@ -49,6 +49,7 @@ from home_repair_agent.web.demo_case_repository import DemoCaseWorkflowRepositor
 from home_repair_agent.web.models import (
     ApiErrorBody,
     ApiErrorResponse,
+    BranchConfirmRequest,
     ChecklistKey,
     ChecklistUpdateRequest,
     DemoProviderIdentityListView,
@@ -61,6 +62,7 @@ from home_repair_agent.web.models import (
     ProviderDecisionRequest,
     ProviderView,
     SessionView,
+    SummaryConfirmRequest,
 )
 from home_repair_agent.web.service import (
     WEB_CHAT_TOOL_NAMES,
@@ -336,6 +338,17 @@ def create_app(
         )
 
     @app.post(
+        "/api/sessions/{session_id}/branch/confirm",
+        response_model=SessionView,
+    )
+    async def confirm_session_branch(
+        session_id: str,
+        payload: BranchConfirmRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).confirm_branch(session_id, payload)
+
+    @app.post(
         "/api/sessions/{session_id}/messages",
         response_model=SessionView,
     )
@@ -356,6 +369,17 @@ def create_app(
         request: Request,
     ) -> SessionView:
         return await _session_service(request).submit_form(session_id, payload)
+
+    @app.post(
+        "/api/sessions/{session_id}/summary/confirm",
+        response_model=SessionView,
+    )
+    async def confirm_session_summary(
+        session_id: str,
+        payload: SummaryConfirmRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).confirm_summary(session_id, payload)
 
     @app.post(
         "/api/sessions/{session_id}/dispatch",

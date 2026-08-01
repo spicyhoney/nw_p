@@ -18,13 +18,17 @@ from home_repair_agent.backend.models import (
     ResolvedLocation,
     ServiceSummary,
 )
+from home_repair_agent.backend.repair_conversation import RepairBranch
 
 AnswerValue = str | list[str]
 ChecklistKey = Literal["service", "location", "consultation"]
 SessionState = Literal[
     "collecting_need",
+    "routing_pending",
+    "replacement_pending",
     "clarifying",
     "awaiting_form",
+    "awaiting_summary_confirmation",
     "matched",
     "no_candidates",
     "dispatch_pending",
@@ -33,6 +37,17 @@ SessionState = Literal[
     "error",
 ]
 ProgressState = Literal["pending", "active", "complete"]
+TaskStatus = Literal[
+    "routing",
+    "collecting",
+    "replacement_pending",
+    "awaiting_form",
+    "awaiting_summary_confirmation",
+    "summary_confirmed",
+    "matched",
+    "dispatched",
+    "error",
+]
 
 
 class WebModel(BaseModel):
@@ -51,6 +66,18 @@ class MessageRequest(WebModel):
         if not value:
             raise ValueError("訊息不可為空白。")
         return value
+
+
+class BranchConfirmRequest(WebModel):
+    branch: RepairBranch
+    confirm: bool
+
+
+class SummaryConfirmRequest(WebModel):
+    active_task_id: str = Field(min_length=1, max_length=128)
+    summary_id: str = Field(min_length=1, max_length=128)
+    summary_version: int = Field(ge=1)
+    confirm: bool
 
 
 class FormSubmitRequest(WebModel):
@@ -120,6 +147,46 @@ class ProviderView(WebModel):
     is_external: bool
 
 
+class RepairRoutingView(WebModel):
+    confidence: Literal["high", "medium", "low"]
+    alternatives: list[RepairBranch] = Field(default_factory=list)
+    unsupported: bool
+    clarification_question: str | None = None
+    canonical_service_id: int | None = None
+    repair_branch: RepairBranch | None = None
+    pending_branch: RepairBranch | None = None
+    confirmed_branch: RepairBranch | None = None
+    replacement_pending: bool = False
+
+
+class ConsultationSummaryView(WebModel):
+    summary_id: str = Field(min_length=1, max_length=128)
+    version: int = Field(ge=1)
+    confirmed: bool
+    canonical_service_id: Literal[17] = 17
+    service_name: str
+    branch: RepairBranch
+    location_id: str
+    location_name: str
+    preferred_start: datetime
+    preferred_end: datetime
+    form_key: Literal["repair_form_v1"] = "repair_form_v1"
+    form_version: int = Field(gt=0)
+    answers: dict[str, AnswerValue] = Field(default_factory=dict)
+    synthetic_contact: str = "林小安 · 0912-345-678 · Demo 地址"
+    shared_slots_need_confirmation: bool = False
+
+
+class ActiveConsultationTaskView(WebModel):
+    active_task_id: str = Field(min_length=1, max_length=128)
+    status: TaskStatus
+    branch: RepairBranch | None = None
+    collected_fields: dict[str, AnswerValue] = Field(default_factory=dict)
+    missing_fields: list[str] = Field(default_factory=list)
+    summary: ConsultationSummaryView | None = None
+    shared_slots_need_confirmation: bool = False
+
+
 class ImageAnalysisView(WebModel):
     service_query: str = Field(min_length=1, max_length=300)
     problem_summary: str = Field(min_length=1, max_length=1000)
@@ -133,6 +200,7 @@ class ImageAnalysisView(WebModel):
 class SessionMediaView(WebModel):
     media_id: str
     content_type: Literal["image/jpeg", "image/png", "image/webp"]
+    branch: RepairBranch | None = None
     analysis: ImageAnalysisView
 
 
@@ -182,6 +250,8 @@ class SessionView(WebModel):
     state: SessionState
     provider: ProviderView
     messages: list[ChatMessageView] = Field(default_factory=list)
+    repair_routing: RepairRoutingView | None = None
+    active_task: ActiveConsultationTaskView | None = None
     service: ServiceSummary | None = None
     location: ResolvedLocation | None = None
     consultation_form: ConsultationForm | None = None
@@ -197,6 +267,7 @@ class SessionView(WebModel):
     data_source: Literal["synthetic"] = "synthetic"
     can_send_message: bool
     can_submit_form: bool
+    can_confirm_summary: bool
     can_dispatch: bool
 
 

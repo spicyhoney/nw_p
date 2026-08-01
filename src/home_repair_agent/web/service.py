@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -25,6 +26,11 @@ from home_repair_agent.backend.case_services import (
     CaseWorkflowNotFoundError,
     CaseWorkflowService,
 )
+from home_repair_agent.backend.conversation_policy import (
+    APPROVED_HARD_STOP_MESSAGE,
+    assess_repair_safety,
+    contains_disallowed_personal_data,
+)
 from home_repair_agent.backend.media_storage import (
     MediaRead,
     MediaStorage,
@@ -40,25 +46,39 @@ from home_repair_agent.backend.models import (
     ServiceSearchResult,
     ServiceSummary,
 )
+from home_repair_agent.backend.repair_conversation import (
+    RepairBranch,
+    RepairRoutingResult,
+    is_supported_water_repair_text,
+    route_repair_branch,
+)
 from home_repair_agent.web.models import (
+    ActiveConsultationTaskView,
     AnswerValue,
+    BranchConfirmRequest,
     ChatMessageView,
     ChecklistItemView,
     ChecklistKey,
+    ConsultationSummaryView,
     DispatchRequest,
     FormSubmitRequest,
     ImageAnalysisConfirmRequest,
     ImageAnalysisView,
     ProgressStepView,
     ProviderView,
+    RepairRoutingView,
     SessionMediaView,
     SessionState,
     SessionView,
+    SummaryConfirmRequest,
+    TaskStatus,
     ToolTraceView,
 )
 
-GREETING = "你好，我是修繕小隊長。請告訴我服務地點和需要處理的問題。"
-FORM_LOCKED_MESSAGE = "諮詢表單已準備完成，請先填完表單，或重新開始更正需求。"
+CANONICAL_SERVICE_ID = 17
+REPAIR_FORM_KEY = "repair_form_v1"
+GREETING = "你好，我是修繕小隊長。請先描述一項要處理的水電修繕問題。"
+FORM_LOCKED_MESSAGE = "諮詢表單已準備完成；若要更換問題分支，請先提出新的修繕問題。"
 MATCHED_LOCKED_MESSAGE = "本次媒合已完成；若要更改需求，請重新開始。"
 WEB_CHAT_TOOL_NAMES = frozenset(
     {
@@ -78,6 +98,23 @@ CHECKLIST_ITEMS: tuple[tuple[ChecklistKey, str], ...] = (
     ("location", "服務地點無誤"),
     ("consultation", "諮詢內容與希望時段無誤"),
 )
+BRANCH_LABELS: dict[RepairBranch, str] = {
+    RepairBranch.FAUCET_LEAK: "水龍頭漏水",
+    RepairBranch.TOILET_ISSUE: "馬桶問題",
+    RepairBranch.PIPE_ISSUE: "水管問題",
+    RepairBranch.ELECTRICAL_ISSUE: "插座、燈具或電路問題",
+    RepairBranch.OTHER: "其他水電問題",
+}
+FORM_PROJECTION_EXCLUDED_TOPICS = frozenset({"service_location", "preferred_date", "photos"})
+SHARED_ANSWER_KEYS = frozenset({"budget", "urgency"})
+OPTIONAL_ANSWER_STATES = frozenset({"skipped", "declined_to_answer"})
+URGENCY_VALUES = frozenset({"normal", "urgent"})
+WATER_SHUTOFF_BRANCHES = (
+    RepairBranch.FAUCET_LEAK.value,
+    RepairBranch.TOILET_ISSUE.value,
+    RepairBranch.PIPE_ISSUE.value,
+)
+LOCATION_DESCRIPTION_PATTERN = re.compile(r"[\u3400-\u9fff]{1,12}(?:縣|市|區|鄉|鎮)")
 
 
 class WebSessionError(Exception):
@@ -135,17 +172,31 @@ class VisionAnalysisClient(Protocol):
 @dataclass
 class _SessionRecord:
     session_id: str
+    active_task_id: str
     conversation: ConversationSession
     messages: list[ChatMessageView]
     state: SessionState = "collecting_need"
+    original_need: str | None = None
+    routing: RepairRoutingResult | None = None
+    confirmed_branch: RepairBranch | None = None
+    replacement_pending: bool = False
+    replacement_text: str | None = None
+    safety_stopped: bool = False
     service: ServiceSummary | None = None
     location: ResolvedLocation | None = None
+    source_consultation_form: ConsultationForm | None = None
     consultation_form: ConsultationForm | None = None
     answers: dict[str, AnswerValue] = field(default_factory=dict)
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
+    summary_version: int = 0
+    summary_id: str | None = None
+    summary_confirmed_version: int | None = None
+    summary_confirmed_id: str | None = None
+    shared_slots_need_confirmation: bool = False
     candidates: list[ProviderMatchCandidate] = field(default_factory=list)
     media: StoredMedia | None = None
+    media_branch: RepairBranch | None = None
     image_analysis: ImageAnalysisView | None = None
     checklist: dict[ChecklistKey, bool] = field(
         default_factory=lambda: {key: False for key, _label in CHECKLIST_ITEMS}
@@ -155,7 +206,7 @@ class _SessionRecord:
 
 
 class WebSessionService:
-    """Application service for consumer consultation, matching and dispatch."""
+    """Application service for one active repair task, matching and dispatch."""
 
     def __init__(
         self,
@@ -219,7 +270,7 @@ class WebSessionService:
         original_filename: str | None,
         external_processing_confirmed: bool,
     ) -> SessionView:
-        """Validate, normalize and analyze one session image without applying it yet."""
+        """Validate, normalize and analyze one image for the active task."""
 
         record = await self._get_record(session_id)
         async with record.lock:
@@ -229,13 +280,13 @@ class WebSessionService:
                     code="IMAGE_ANALYSIS_UNAVAILABLE",
                     message="圖片分析只在 Hugging Face AI 模式提供；目前不會自動降級或模擬。",
                 )
+            self._require_media_flow_open(record)
             if external_processing_confirmed is not True:
                 raise WebSessionInputError(
                     code="EXTERNAL_PROCESSING_CONFIRMATION_REQUIRED",
                     message="圖片會送往 Hugging Face 外部服務，請先明確同意。",
                     fields={"external_processing_confirmed": "請勾選外部處理同意。"},
                 )
-            self._require_media_flow_open(record)
             storage = self._require_media_storage()
             vision = self._require_vision_client()
 
@@ -287,12 +338,20 @@ class WebSessionService:
                     finally:
                         _delete_media_quietly(storage, new_media)
                     raise _media_storage_web_error(error) from error
+            if record.confirmed_branch is None:  # guarded by _require_media_flow_open
+                _delete_media_quietly(storage, new_media)
+                raise WebSessionConflictError(
+                    code="IMAGE_BRANCH_CONFIRMATION_REQUIRED",
+                    message="請先確認修繕分支，再上傳或分析圖片。",
+                )
             record.media = new_media
+            record.media_branch = record.confirmed_branch
             record.image_analysis = ImageAnalysisView(
                 **result.model_dump(),
                 confirmed=False,
                 correction=None,
             )
+            self._invalidate_summary(record)
             return await self._to_view(record)
 
     async def get_session_image(self, session_id: str) -> MediaRead:
@@ -323,7 +382,9 @@ class WebSessionService:
             except MediaStorageError as error:
                 raise _media_storage_web_error(error) from error
             record.media = None
+            record.media_branch = None
             record.image_analysis = None
+            self._invalidate_summary(record)
             return await self._to_view(record)
 
     async def confirm_image_analysis(
@@ -331,13 +392,25 @@ class WebSessionService:
         session_id: str,
         confirmation: ImageAnalysisConfirmRequest,
     ) -> SessionView:
-        """Revalidate a user-edited suggestion through the read tool before applying it."""
+        """Revalidate a user-edited suggestion without changing the repair branch."""
 
         record = await self._get_record(session_id)
         async with record.lock:
             self._require_media_flow_open(record)
             if record.media is None or record.image_analysis is None:
                 raise WebSessionMediaNotFoundError()
+            if record.media_branch != record.confirmed_branch:
+                raise WebSessionConflictError(
+                    code="IMAGE_BRANCH_MISMATCH",
+                    message="圖片不屬於目前修繕分支，請移除後重新上傳。",
+                )
+            confirmation_texts = (
+                confirmation.service_query,
+                confirmation.problem_summary,
+                *confirmation.safety_warnings,
+            )
+            self._require_no_personal_data(*confirmation_texts)
+            self._raise_for_hard_stop(record, *confirmation_texts)
 
             async with self._tool_client_lock:
                 execution = await self._tool_client.call_tool(
@@ -357,11 +430,11 @@ class WebSessionService:
                     code="INVALID_SERVICE_RESPONSE",
                     message="服務目錄回應格式異常，圖片建議尚未套用。",
                 ) from error
-            if result.count != 1:
+            if result.count != 1 or result.services[0].service_id != CANONICAL_SERVICE_ID:
                 raise WebSessionInputError(
                     code="SERVICE_REVALIDATION_AMBIGUOUS",
-                    message="這個圖片建議無法唯一對應服務，請把服務描述修得更具體後再確認。",
-                    fields={"service_query": "必須唯一對應專案服務目錄中的一項服務。"},
+                    message="這個圖片建議無法唯一對應水電修繕服務，請修正後再確認。",
+                    fields={"service_query": "必須唯一對應 service_id=17 水電修繕。"},
                 )
 
             previous = record.image_analysis
@@ -380,7 +453,6 @@ class WebSessionService:
                 correction="使用者已修正模型建議。" if changed else None,
             )
             record.service = result.services[0]
-            record.consultation_form = None
             record.tool_trace = [
                 *record.tool_trace,
                 ToolTraceView(
@@ -394,25 +466,102 @@ class WebSessionService:
                     self._message("user", "已確認並套用圖片分析建議。"),
                     self._message(
                         "assistant",
-                        (
-                            f"已用服務目錄確認為「{record.service.name}」。"
-                            "圖片仍只是輔助資訊；請再告訴我服務地點。"
-                        ),
+                        "圖片建議已用 service_id=17 服務目錄重驗；目前分支仍以你的明確選擇為準。",
                     ),
                 ]
             )
+            self._invalidate_summary(record)
             record.state = self._derive_state(record)
             return await self._to_view(record)
 
     async def send_message(self, session_id: str, user_text: str) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            self._require_no_personal_data(user_text)
+            routing = route_repair_branch(user_text)
+            if routing.safety_stop:
+                record.routing = routing
+                self._activate_safety_stop(
+                    record,
+                    message=routing.safety_message or APPROVED_HARD_STOP_MESSAGE,
+                )
+                return await self._to_view(record)
+            if record.safety_stopped:
+                raise WebSessionConflictError(
+                    code="SAFETY_STOP_ACTIVE",
+                    message="此諮詢已因安全風險停止一般媒合；請 reset 後再建立安全的修繕諮詢。",
+                )
             self._require_confirmed_media(record)
-            if record.state in {"matched", "no_candidates"}:
+            if record.state in {
+                "matched",
+                "no_candidates",
+                "dispatch_pending",
+                "provider_accepted",
+                "provider_rejected",
+            }:
                 raise WebSessionConflictError(
                     code="MATCH_ALREADY_COMPLETED",
                     message=MATCHED_LOCKED_MESSAGE,
                 )
+
+            candidates = _routing_candidates(routing)
+            if record.confirmed_branch is None:
+                record.original_need = user_text
+                record.routing = routing
+                record.replacement_pending = False
+                record.replacement_text = None
+                record.messages.extend(
+                    [
+                        self._message("user", user_text),
+                        self._message("assistant", _routing_message(routing, candidates)),
+                    ]
+                )
+                if candidates:
+                    record.state = "routing_pending"
+                elif routing.cross_service:
+                    record.state = "collecting_need"
+                else:
+                    record.safety_stopped = True
+                    self._invalidate_summary(record)
+                    record.state = "error"
+                return await self._to_view(record)
+
+            if routing.non_target_service:
+                record.routing = routing
+                record.replacement_pending = False
+                record.replacement_text = None
+                record.messages.extend(
+                    [
+                        self._message("user", user_text),
+                        self._message("assistant", _routing_message(routing, ())),
+                    ]
+                )
+                record.state = self._derive_state(record)
+                return await self._to_view(record)
+
+            replacement_candidates = tuple(
+                branch for branch in candidates if branch != record.confirmed_branch
+            )
+            if replacement_candidates:
+                record.routing = routing
+                record.replacement_pending = True
+                record.replacement_text = user_text
+                record.messages.extend(
+                    [
+                        self._message("user", user_text),
+                        self._message(
+                            "assistant",
+                            _replacement_message(
+                                record.confirmed_branch,
+                                candidates,
+                                safety_message=routing.safety_message,
+                            ),
+                        ),
+                    ]
+                )
+                record.state = "replacement_pending"
+                return await self._to_view(record)
+
             if record.consultation_form is not None:
                 raise WebSessionConflictError(
                     code="FORM_ALREADY_READY",
@@ -420,17 +569,110 @@ class WebSessionService:
                 )
 
             record.messages.append(self._message("user", user_text))
-            async with self._tool_client_lock:
-                result = await self._runner.run_turn(
-                    session=record.conversation,
-                    user_text=user_text,
+            await self._run_agent_turn(record, user_text)
+            return await self._to_view(record)
+
+    async def confirm_branch(
+        self,
+        session_id: str,
+        confirmation: BranchConfirmRequest,
+    ) -> SessionView:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            if record.safety_stopped:
+                raise WebSessionConflictError(
+                    code="SAFETY_STOP_ACTIVE",
+                    message="此諮詢已因安全風險停止，不能確認或切換一般修繕分支。",
                 )
-            record.messages.append(self._message("assistant", result.reply))
-            trace_is_valid = self._apply_agent_trace(record, result.tool_trace)
-            if result.stop_reason != "completed" or not trace_is_valid:
-                record.state = "error"
-            else:
+            if record.confirmed_branch is not None and not record.replacement_pending:
+                raise WebSessionConflictError(
+                    code="BRANCH_CONFIRMATION_NOT_PENDING",
+                    message="目前沒有待確認的分支切換。",
+                )
+            if record.routing is None:
+                raise WebSessionConflictError(
+                    code="BRANCH_PROPOSAL_NOT_READY",
+                    message="目前沒有待確認的修繕分支，請先描述一項水電問題。",
+                )
+            candidates = _routing_candidates(record.routing)
+            if confirmation.branch not in candidates:
+                raise WebSessionInputError(
+                    code="INVALID_BRANCH_CONFIRMATION",
+                    message="只能確認目前受控候選中的修繕分支。",
+                    fields={"branch": "請使用目前 routing proposal 提供的候選。"},
+                )
+
+            label = BRANCH_LABELS[confirmation.branch]
+            if confirmation.confirm is not True:
+                was_replacement = record.replacement_pending
+                record.routing = None
+                record.replacement_pending = False
+                record.replacement_text = None
+                record.messages.extend(
+                    [
+                        self._message("user", f"不切換為「{label}」。"),
+                        self._message(
+                            "assistant",
+                            "已保留原修繕分支。"
+                            if was_replacement
+                            else "尚未選定分支，請重新描述或選擇。",
+                        ),
+                    ]
+                )
                 record.state = self._derive_state(record)
+                return await self._to_view(record)
+
+            previous_branch = record.confirmed_branch
+            need_text = record.replacement_text or record.original_need or label
+            self._require_no_personal_data(need_text)
+            self._raise_for_hard_stop(record, need_text)
+            await self._validate_branch_confirmation(
+                confirmation.branch,
+                need_text=need_text,
+            )
+
+            replacement_has_location = (
+                previous_branch is not None
+                and confirmation.branch != previous_branch
+                and _contains_location_description(need_text)
+            )
+            if previous_branch is not None and confirmation.branch != previous_branch:
+                await self._replace_branch(
+                    record,
+                    confirmation.branch,
+                    clear_location=replacement_has_location,
+                )
+                record.original_need = need_text
+            else:
+                record.confirmed_branch = confirmation.branch
+
+            record.replacement_pending = False
+            record.replacement_text = None
+            record.messages.append(self._message("user", f"確認修繕分支：{label}。"))
+
+            if record.source_consultation_form is not None:
+                record.consultation_form = _project_form(
+                    record.source_consultation_form,
+                    confirmation.branch,
+                )
+                record.messages.append(
+                    self._message(
+                        "assistant",
+                        f"已切換為「{label}」。共用地點與時段已保留，但送出表單前請重新核對。",
+                    )
+                )
+                record.state = self._derive_state(record)
+            else:
+                agent_need = label if replacement_has_location else need_text
+                await self._run_agent_turn(record, f"水電修繕需求：{agent_need}")
+                if replacement_has_location:
+                    record.messages.append(
+                        self._message(
+                            "assistant",
+                            "新訊息含有地點描述，舊服務地點已清除。"
+                            "請重新提供完整縣市＋行政區；系統不會沿用或猜測新地點。",
+                        )
+                    )
             return await self._to_view(record)
 
     async def submit_form(
@@ -440,21 +682,34 @@ class WebSessionService:
     ) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            if record.state in {
+                "dispatch_pending",
+                "provider_accepted",
+                "provider_rejected",
+            } or await self._case_workflow.has_session_cases(session_id):
+                raise WebSessionConflictError(
+                    code="CASE_ALREADY_SUBMITTED",
+                    message="這次諮詢已有派單或稽核紀錄，不能再改寫表單與摘要。",
+                )
+            answer_texts = _answer_text_values(submission.answers)
+            self._require_no_personal_data(*answer_texts)
+            self._raise_for_hard_stop(record, *answer_texts)
             self._require_confirmed_media(record)
+            self._require_stable_branch(record)
             if record.state in {"matched", "no_candidates"}:
                 raise WebSessionConflictError(
                     code="MATCH_ALREADY_COMPLETED",
                     message=MATCHED_LOCKED_MESSAGE,
                 )
             if (
-                record.state != "awaiting_form"
+                record.confirmed_branch is None
                 or record.service is None
                 or record.location is None
                 or record.consultation_form is None
             ):
                 raise WebSessionConflictError(
                     code="FORM_NOT_READY",
-                    message="服務、地點或諮詢表單尚未確認，不能進行媒合。",
+                    message="分支、服務、地點或諮詢表單尚未確認，不能保存表單。",
                 )
             if submission.preferred_start <= self._now():
                 raise WebSessionInputError(
@@ -465,15 +720,80 @@ class WebSessionService:
 
             clean_answers = _validate_answers(
                 form=record.consultation_form,
+                branch=record.confirmed_branch,
                 supplied=submission.answers,
                 preferred_start=submission.preferred_start,
                 preferred_end=submission.preferred_end,
             )
+            record.answers = clean_answers
+            record.preferred_start = submission.preferred_start
+            record.preferred_end = submission.preferred_end
+            record.candidates.clear()
+            record.summary_version += 1
+            record.summary_id = str(uuid4())
+            record.summary_confirmed_version = None
+            record.summary_confirmed_id = None
+            record.shared_slots_need_confirmation = False
+            record.checklist["consultation"] = False
+            record.messages.extend(
+                [
+                    self._message("user", "已保存諮詢表單與希望服務時段。"),
+                    self._message(
+                        "assistant",
+                        "已產生可修改摘要，尚未媒合。請核對最新摘要後按下「確認摘要並媒合」。",
+                    ),
+                ]
+            )
+            record.state = "awaiting_summary_confirmation"
+            return await self._to_view(record)
+
+    async def confirm_summary(
+        self,
+        session_id: str,
+        confirmation: SummaryConfirmRequest,
+    ) -> SessionView:
+        record = await self._get_record(session_id)
+        async with record.lock:
+            self._enforce_authoritative_input_policies(record)
+            self._require_confirmed_media(record)
+            self._require_stable_branch(record)
+            if (
+                confirmation.active_task_id != record.active_task_id
+                or confirmation.summary_id != record.summary_id
+                or confirmation.summary_version != record.summary_version
+            ):
+                raise WebSessionConflictError(
+                    code="STALE_SUMMARY_VERSION",
+                    message="摘要或修繕任務已更新，請重新核對最新內容後再確認。",
+                )
+            summary = _build_summary(record)
+            if summary is None:
+                raise WebSessionConflictError(
+                    code="SUMMARY_NOT_READY",
+                    message="必要資料尚未完整，不能確認摘要或進行媒合。",
+                )
+            if confirmation.confirm is not True:
+                raise WebSessionInputError(
+                    code="SUMMARY_CONFIRMATION_REQUIRED",
+                    message="必須明確確認目前摘要後才能媒合。",
+                    fields={"confirm": "請明確確認最新摘要。"},
+                )
+            if (
+                record.summary_confirmed_version == record.summary_version
+                and record.summary_confirmed_id == record.summary_id
+            ):
+                return await self._to_view(record)
+            if record.service is None or record.location is None:
+                raise WebSessionConflictError(
+                    code="SUMMARY_NOT_READY",
+                    message="服務或地點尚未確認，不能進行媒合。",
+                )
+
             arguments: dict[str, object] = {
                 "service_id": record.service.service_id,
                 "location_id": record.location.location_id,
-                "preferred_start": submission.preferred_start.isoformat(),
-                "preferred_end": submission.preferred_end.isoformat(),
+                "preferred_start": summary.preferred_start.isoformat(),
+                "preferred_end": summary.preferred_end.isoformat(),
                 "limit": 3,
             }
             async with self._tool_client_lock:
@@ -487,18 +807,24 @@ class WebSessionService:
                     code="MATCHING_UNAVAILABLE",
                     message="目前無法取得可靠的媒合候選，請稍後再試。",
                 )
-            data = payload.get("data")
             try:
-                match_result = ProviderMatchResult.model_validate(data)
+                match_result = ProviderMatchResult.model_validate(payload.get("data"))
             except Exception as error:
                 raise WebSessionUpstreamError(
                     code="INVALID_MATCHING_RESPONSE",
                     message="媒合結果格式異常，已停止顯示。",
                 ) from error
+            if (
+                match_result.service_id != CANONICAL_SERVICE_ID
+                or match_result.location_id != record.location.location_id
+            ):
+                raise WebSessionUpstreamError(
+                    code="INVALID_MATCHING_RESPONSE",
+                    message="媒合結果與已確認摘要不一致，已停止顯示。",
+                )
 
-            record.answers = clean_answers
-            record.preferred_start = submission.preferred_start
-            record.preferred_end = submission.preferred_end
+            record.summary_confirmed_version = record.summary_version
+            record.summary_confirmed_id = record.summary_id
             record.candidates = list(match_result.candidates)
             record.tool_trace = [
                 *record.tool_trace,
@@ -508,20 +834,12 @@ class WebSessionService:
                     ok=True,
                 ),
             ][-8:]
-            record.messages.append(
-                self._message(
-                    "user",
-                    "已提交諮詢表單，並確認希望服務時段。",
-                )
-            )
+            record.messages.append(self._message("user", "已確認最新摘要並同意進行媒合。"))
             if record.candidates:
                 record.messages.append(
                     self._message(
                         "assistant",
-                        (
-                            f"找到 {len(record.candidates)} 位 synthetic 師傅候選。"
-                            "目前只提供候選，尚未建立案件，也未保留時段。"
-                        ),
+                        f"找到 {len(record.candidates)} 位 synthetic 師傅候選；尚未建立案件或保留時段。",
                     )
                 )
                 record.state = "matched"
@@ -542,9 +860,22 @@ class WebSessionService:
     ) -> SessionView:
         record = await self._get_record(session_id)
         async with record.lock:
+            self._enforce_authoritative_input_policies(record)
             self._require_confirmed_media(record)
+            self._require_stable_branch(record)
             if (
-                record.service is None
+                record.summary_version < 1
+                or record.summary_id is None
+                or record.summary_confirmed_version != record.summary_version
+                or record.summary_confirmed_id != record.summary_id
+            ):
+                raise WebSessionConflictError(
+                    code="SUMMARY_CONFIRMATION_REQUIRED",
+                    message="尚未確認最新摘要，不能建立派單案件。",
+                )
+            if (
+                record.confirmed_branch is None
+                or record.service is None
                 or record.location is None
                 or record.consultation_form is None
                 or record.preferred_start is None
@@ -573,6 +904,12 @@ class WebSessionService:
                     fields={"provider_id": "請選擇目前畫面提供的候選廠商。"},
                 )
 
+            media_is_current = (
+                record.media is not None
+                and record.media_branch == record.confirmed_branch
+                and record.image_analysis is not None
+                and record.image_analysis.confirmed
+            )
             await self._case_workflow.submit_case(
                 CaseSubmissionCommand(
                     session_id=record.session_id,
@@ -582,10 +919,10 @@ class WebSessionService:
                     location_id=record.location.location_id,
                     location_name=record.location.full_name,
                     problem_summary=_problem_summary(record),
-                    image_path=record.media.relative_path if record.media is not None else None,
+                    image_path=record.media.relative_path if media_is_current else None,
                     image_analysis=(
                         CaseImageAnalysis.model_validate(record.image_analysis.model_dump())
-                        if record.image_analysis is not None
+                        if media_is_current and record.image_analysis is not None
                         else None
                     ),
                     answers=dict(record.answers),
@@ -632,17 +969,31 @@ class WebSessionService:
                 except MediaStorageError as error:
                     raise _media_storage_web_error(error) from error
             replacement = self._new_record(session_id)
+            record.active_task_id = replacement.active_task_id
             record.conversation = replacement.conversation
             record.messages = replacement.messages
             record.state = replacement.state
+            record.original_need = None
+            record.routing = None
+            record.confirmed_branch = None
+            record.replacement_pending = False
+            record.replacement_text = None
+            record.safety_stopped = False
             record.service = None
             record.location = None
+            record.source_consultation_form = None
             record.consultation_form = None
             record.answers.clear()
             record.preferred_start = None
             record.preferred_end = None
+            record.summary_version = 0
+            record.summary_id = None
+            record.summary_confirmed_version = None
+            record.summary_confirmed_id = None
+            record.shared_slots_need_confirmation = False
             record.candidates.clear()
             record.media = None
+            record.media_branch = None
             record.image_analysis = None
             record.checklist = dict(replacement.checklist)
             record.tool_trace.clear()
@@ -668,6 +1019,140 @@ class WebSessionService:
                 raise CaseWorkflowNotFoundError() from error
             raise _media_storage_web_error(error) from error
 
+    async def _validate_branch_confirmation(
+        self,
+        branch: RepairBranch,
+        *,
+        need_text: str,
+    ) -> None:
+        current_routing = route_repair_branch(need_text)
+        if (
+            current_routing.unsupported
+            or current_routing.non_target_service
+            or current_routing.cross_service
+            or branch not in _routing_candidates(current_routing)
+        ):
+            raise WebSessionInputError(
+                code="INVALID_BRANCH_CONFIRMATION",
+                message="目前需求不能安全確認為這個水電修繕分支。",
+                fields={"branch": "請以目前單一水電需求重新取得並確認分支。"},
+            )
+        try:
+            async with self._tool_client_lock:
+                service_execution = await self._tool_client.call_tool(
+                    name="search_services",
+                    arguments={"query": "水電修繕", "limit": 5},
+                )
+                service_payload = service_execution.payload
+                if service_execution.mcp_is_error or service_payload.get("ok") is not True:
+                    raise WebSessionUpstreamError(
+                        code="BRANCH_VALIDATION_FAILED",
+                        message="目前無法驗證水電修繕服務與諮詢單，尚未確認分支。",
+                    )
+                service_result = ServiceSearchResult.model_validate(service_payload.get("data"))
+                if (
+                    service_result.count != 1
+                    or len(service_result.services) != 1
+                    or service_result.services[0].service_id != CANONICAL_SERVICE_ID
+                ):
+                    raise WebSessionUpstreamError(
+                        code="BRANCH_VALIDATION_FAILED",
+                        message="目前無法驗證水電修繕服務與諮詢單，尚未確認分支。",
+                    )
+
+                form_execution = await self._tool_client.call_tool(
+                    name="get_consultation_form",
+                    arguments={"service_id": CANONICAL_SERVICE_ID},
+                )
+                form_payload = form_execution.payload
+                if form_execution.mcp_is_error or form_payload.get("ok") is not True:
+                    raise WebSessionUpstreamError(
+                        code="BRANCH_VALIDATION_FAILED",
+                        message="目前無法驗證水電修繕服務與諮詢單，尚未確認分支。",
+                    )
+                form = ConsultationForm.model_validate(form_payload.get("data"))
+                if not _valid_form_contract(form) or not _form_contains_branch(
+                    form,
+                    branch,
+                ):
+                    raise WebSessionUpstreamError(
+                        code="BRANCH_VALIDATION_FAILED",
+                        message="目前無法驗證水電修繕服務與諮詢單，尚未確認分支。",
+                    )
+        except WebSessionUpstreamError:
+            raise
+        except Exception as error:
+            raise WebSessionUpstreamError(
+                code="BRANCH_VALIDATION_FAILED",
+                message="目前無法驗證水電修繕服務與諮詢單，尚未確認分支。",
+            ) from error
+
+    async def _run_agent_turn(self, record: _SessionRecord, user_text: str) -> None:
+        async with self._tool_client_lock:
+            result = await self._runner.run_turn(
+                session=record.conversation,
+                user_text=user_text,
+            )
+        record.messages.append(self._message("assistant", result.reply))
+        trace_is_valid = self._apply_agent_trace(record, result.tool_trace)
+        if result.stop_reason != "completed" or not trace_is_valid:
+            record.state = "error"
+        else:
+            record.state = self._derive_state(record)
+
+    async def _replace_branch(
+        self,
+        record: _SessionRecord,
+        branch: RepairBranch,
+        *,
+        clear_location: bool,
+    ) -> None:
+        if record.media is not None:
+            storage = self._require_media_storage()
+            try:
+                _delete_media(storage, record.media)
+            except MediaStorageError as error:
+                raise _media_storage_web_error(error) from error
+        retained_answers = {
+            key: value for key, value in record.answers.items() if key in SHARED_ANSWER_KEYS
+        }
+        had_shared_values = bool(
+            record.location is not None
+            or record.preferred_start is not None
+            or record.preferred_end is not None
+            or retained_answers
+        )
+        record.confirmed_branch = branch
+        record.answers = retained_answers
+        record.candidates.clear()
+        if record.summary_version:
+            record.summary_version += 1
+            record.summary_id = str(uuid4())
+        else:
+            record.summary_id = None
+        record.summary_confirmed_version = None
+        record.summary_confirmed_id = None
+        record.shared_slots_need_confirmation = had_shared_values or clear_location
+        record.media = None
+        record.media_branch = None
+        record.image_analysis = None
+        record.checklist["consultation"] = False
+        invalidated_tools = {"match_service_providers"}
+        if clear_location:
+            record.location = None
+            record.source_consultation_form = None
+            record.consultation_form = None
+            record.conversation = ConversationSession(session_id=record.session_id)
+            record.checklist["location"] = False
+            invalidated_tools.update({"resolve_location", "get_consultation_form"})
+        record.tool_trace = [
+            trace for trace in record.tool_trace if trace.name not in invalidated_tools
+        ]
+        if record.source_consultation_form is not None:
+            record.consultation_form = _project_form(record.source_consultation_form, branch)
+        else:
+            record.consultation_form = None
+
     async def _get_record(self, session_id: str) -> _SessionRecord:
         async with self._sessions_lock:
             record = self._sessions.get(session_id)
@@ -678,12 +1163,23 @@ class WebSessionService:
     def _new_record(self, session_id: str) -> _SessionRecord:
         return _SessionRecord(
             session_id=session_id,
+            active_task_id=str(uuid4()),
             conversation=ConversationSession(session_id=session_id),
             messages=[self._message("assistant", GREETING)],
         )
 
     def _require_media_flow_open(self, record: _SessionRecord) -> None:
-        if record.consultation_form is not None or record.state in {
+        if record.safety_stopped:
+            raise WebSessionConflictError(
+                code="SAFETY_STOP_ACTIVE",
+                message="此諮詢已因安全風險停止，不能上傳或處理圖片。",
+            )
+        if record.confirmed_branch is None:
+            raise WebSessionConflictError(
+                code="IMAGE_BRANCH_CONFIRMATION_REQUIRED",
+                message="請先確認修繕分支，再上傳或分析圖片。",
+            )
+        if record.answers or record.state in {
             "matched",
             "no_candidates",
             "dispatch_pending",
@@ -692,17 +1188,32 @@ class WebSessionService:
         }:
             raise WebSessionConflictError(
                 code="MEDIA_FLOW_LOCKED",
-                message="諮詢表單或案件流程已開始；請重新開始後再更換圖片。",
+                message="摘要或案件流程已開始；請修改前移除摘要資料或重新開始。",
             )
 
     @staticmethod
     def _require_confirmed_media(record: _SessionRecord) -> None:
         if record.media is not None and (
-            record.image_analysis is None or not record.image_analysis.confirmed
+            record.image_analysis is None
+            or not record.image_analysis.confirmed
+            or record.media_branch != record.confirmed_branch
         ):
             raise WebSessionConflictError(
                 code="IMAGE_CONFIRMATION_REQUIRED",
-                message="請先確認或移除圖片分析建議，再繼續諮詢與媒合。",
+                message="請先確認或移除目前分支的圖片分析建議，再繼續。",
+            )
+
+    @staticmethod
+    def _require_stable_branch(record: _SessionRecord) -> None:
+        if record.safety_stopped:
+            raise WebSessionConflictError(
+                code="SAFETY_STOP_ACTIVE",
+                message="此諮詢已因安全風險停止一般媒合與派單。",
+            )
+        if record.replacement_pending:
+            raise WebSessionConflictError(
+                code="BRANCH_CONFIRMATION_REQUIRED",
+                message="請先確認或取消待處理的修繕分支切換。",
             )
 
     def _require_media_dependencies(self) -> None:
@@ -728,6 +1239,39 @@ class WebSessionService:
             )
         return self._vision_client
 
+    @staticmethod
+    def _require_no_personal_data(*texts: str) -> None:
+        if contains_disallowed_personal_data(*texts):
+            raise WebSessionInputError(
+                code="PERSONAL_DATA_NOT_ALLOWED",
+                message="此 synthetic Demo 不接受真實姓名、電話、Email 或精確住家地址。",
+                fields={"input": "請移除個資，只保留縣市、行政區與修繕現象。"},
+            )
+
+    def _activate_safety_stop(self, record: _SessionRecord, *, message: str) -> None:
+        record.replacement_pending = False
+        record.replacement_text = None
+        record.safety_stopped = True
+        self._invalidate_summary(record)
+        if not record.messages or record.messages[-1].text != message:
+            record.messages.append(self._message("assistant", message))
+        record.state = "error"
+
+    def _raise_for_hard_stop(self, record: _SessionRecord, *texts: str) -> None:
+        assessment = assess_repair_safety(*texts)
+        if assessment.hard_stop:
+            message = assessment.message or APPROVED_HARD_STOP_MESSAGE
+            self._activate_safety_stop(record, message=message)
+            raise WebSessionConflictError(
+                code="SAFETY_STOP_ACTIVE",
+                message=message,
+            )
+
+    def _enforce_authoritative_input_policies(self, record: _SessionRecord) -> None:
+        texts = _authoritative_user_texts(record)
+        self._require_no_personal_data(*texts)
+        self._raise_for_hard_stop(record, *texts)
+
     def _message(
         self,
         role: Literal["user", "assistant"],
@@ -749,6 +1293,35 @@ class WebSessionService:
         for entry in trace:
             is_allowed = entry.name in WEB_CHAT_TOOL_NAMES
             ok = is_allowed and entry.result.get("ok") is True and not entry.mcp_is_error
+            if not is_allowed:
+                trace_is_valid = False
+            elif ok:
+                data = entry.result.get("data")
+                try:
+                    if entry.name == "search_services":
+                        result = ServiceSearchResult.model_validate(data)
+                        service = result.services[0] if result.count == 1 else None
+                        if service is None or service.service_id != CANONICAL_SERVICE_ID:
+                            ok = False
+                            trace_is_valid = False
+                        else:
+                            record.service = service
+                    elif entry.name == "resolve_location":
+                        record.location = ResolvedLocation.model_validate(data)
+                    elif entry.name == "get_consultation_form":
+                        form = ConsultationForm.model_validate(data)
+                        if record.confirmed_branch is None or not _valid_form_contract(form):
+                            ok = False
+                            trace_is_valid = False
+                        else:
+                            record.source_consultation_form = form
+                            record.consultation_form = _project_form(
+                                form,
+                                record.confirmed_branch,
+                            )
+                except Exception:  # noqa: BLE001 - invalid tool payload is not exposed
+                    ok = False
+                    trace_is_valid = False
             record.tool_trace.append(
                 ToolTraceView(
                     name=entry.name,
@@ -756,33 +1329,39 @@ class WebSessionService:
                     ok=ok,
                 )
             )
-            if not is_allowed:
-                trace_is_valid = False
-                continue
-            if not ok:
-                continue
-            data = entry.result.get("data")
-            try:
-                if entry.name == "search_services":
-                    result = ServiceSearchResult.model_validate(data)
-                    record.service = result.services[0] if result.count == 1 else None
-                elif entry.name == "resolve_location":
-                    record.location = ResolvedLocation.model_validate(data)
-                elif entry.name == "get_consultation_form":
-                    record.consultation_form = ConsultationForm.model_validate(data)
-            except Exception:  # noqa: BLE001 - invalid tool payload is not exposed
-                trace_is_valid = False
         record.tool_trace = record.tool_trace[-8:]
         return trace_is_valid
 
     def _derive_state(self, record: _SessionRecord) -> SessionState:
+        if record.safety_stopped:
+            return "error"
+        if record.replacement_pending:
+            return "replacement_pending"
         if record.candidates:
             return "matched"
+        if _build_summary(record) is not None:
+            return "awaiting_summary_confirmation"
+        if record.confirmed_branch is not None and record.location is None:
+            return "clarifying"
         if record.consultation_form is not None:
             return "awaiting_form"
         if record.service is not None or record.location is not None:
             return "clarifying"
+        if record.routing is not None and _routing_candidates(record.routing):
+            return "routing_pending"
         return "collecting_need"
+
+    def _invalidate_summary(self, record: _SessionRecord) -> None:
+        if record.summary_version > 0:
+            record.summary_version += 1
+            record.summary_id = str(uuid4())
+        else:
+            record.summary_id = None
+        record.summary_confirmed_version = None
+        record.summary_confirmed_id = None
+        record.candidates.clear()
+        if record.answers:
+            record.state = "awaiting_summary_confirmation"
 
     async def _to_view(self, record: _SessionRecord) -> SessionView:
         dispatch = await self._case_workflow.get_consumer_case(record.session_id)
@@ -801,28 +1380,53 @@ class WebSessionService:
                     )
                 )
 
+        summary = _build_summary(record)
+        summary_is_confirmed = (
+            summary is not None
+            and record.summary_confirmed_version == record.summary_version
+            and record.summary_confirmed_id == record.summary_id
+        )
         rejected_provider_ids = (
             set(dispatch.rejected_provider_ids) if dispatch is not None else set()
         )
-        can_dispatch = bool(record.candidates) and (
-            dispatch is None
-            or (
-                dispatch.can_dispatch_again
-                and any(
-                    candidate.provider_id not in rejected_provider_ids
-                    for candidate in record.candidates
+        can_dispatch = (
+            summary_is_confirmed
+            and bool(record.candidates)
+            and (
+                dispatch is None
+                or (
+                    dispatch.can_dispatch_again
+                    and any(
+                        candidate.provider_id not in rejected_provider_ids
+                        for candidate in record.candidates
+                    )
                 )
             )
         )
         media_confirmed = record.media is None or (
-            record.image_analysis is not None and record.image_analysis.confirmed
+            record.image_analysis is not None
+            and record.image_analysis.confirmed
+            and record.media_branch == record.confirmed_branch
         )
-        progress = _build_progress(record, dispatch=dispatch)
+        flow_locked = (
+            record.safety_stopped
+            or record.replacement_pending
+            or record.state
+            in {
+                "matched",
+                "no_candidates",
+                "dispatch_pending",
+                "provider_accepted",
+                "provider_rejected",
+            }
+        )
         return SessionView(
             session_id=record.session_id,
             state=record.state,
             provider=self._provider,
             messages=list(record.messages),
+            repair_routing=_build_routing_view(record),
+            active_task=_build_active_task(record, dispatch=dispatch),
             service=record.service,
             location=record.location,
             consultation_form=record.consultation_form,
@@ -835,33 +1439,340 @@ class WebSessionService:
                 SessionMediaView(
                     media_id=record.media.media_id,
                     content_type=record.media.content_type,
+                    branch=record.media_branch,
                     analysis=record.image_analysis,
                 )
                 if record.media is not None and record.image_analysis is not None
                 else None
             ),
-            progress=progress,
+            progress=_build_progress(record, dispatch=dispatch),
             checklist=_build_checklist(record),
             tool_trace=list(record.tool_trace),
-            can_send_message=media_confirmed
-            and record.consultation_form is None
-            and record.state not in {"matched", "no_candidates"},
+            can_send_message=media_confirmed and not flow_locked,
             can_submit_form=media_confirmed
-            and record.state == "awaiting_form"
+            and not flow_locked
+            and record.confirmed_branch is not None
             and record.consultation_form is not None
             and record.service is not None
             and record.location is not None,
-            can_dispatch=media_confirmed and can_dispatch,
+            can_confirm_summary=media_confirmed
+            and not flow_locked
+            and summary is not None
+            and not summary_is_confirmed,
+            can_dispatch=media_confirmed
+            and not record.safety_stopped
+            and not record.replacement_pending
+            and can_dispatch,
         )
+
+
+def _routing_candidates(result: RepairRoutingResult) -> tuple[RepairBranch, ...]:
+    if result.unsupported:
+        return ()
+    candidates: list[RepairBranch] = []
+    raw_values = [result.branch, *result.alternatives]
+    for value in raw_values:
+        if value is None:
+            continue
+        try:
+            branch = value if isinstance(value, RepairBranch) else RepairBranch(value)
+        except ValueError:
+            continue
+        if branch not in candidates:
+            candidates.append(branch)
+    return tuple(candidates)
+
+
+def _routing_message(
+    result: RepairRoutingResult,
+    candidates: tuple[RepairBranch, ...],
+) -> str:
+    if not candidates:
+        return (
+            result.safety_message
+            or result.clarification_question
+            or ("目前無法把需求安全對應到五個水電修繕分支；請只描述一項水電問題。")
+        )
+    labels = "、".join(f"「{BRANCH_LABELS[item]}」" for item in candidates)
+    confidence = result.confidence.value
+    if len(candidates) > 1:
+        proposal = f"偵測到多個可能項目：{labels}。本次只處理一項，請先選擇並明確確認。"
+    else:
+        proposal = f"建議分支為 {labels}。即使信心為 {confidence}，仍需由你明確確認。"
+    return f"{result.safety_message} {proposal}" if result.safety_message else proposal
+
+
+def _replacement_message(
+    current: RepairBranch,
+    candidates: tuple[RepairBranch, ...],
+    *,
+    safety_message: str | None,
+) -> str:
+    alternatives = [item for item in candidates if item != current]
+    labels = "、".join(f"「{BRANCH_LABELS[item]}」" for item in alternatives)
+    proposal = (
+        f"目前分支是「{BRANCH_LABELS[current]}」，新訊息可能是 {labels}。"
+        "切換會清除舊分支答案與圖片分析，但保留無衝突的共用資料；請明確確認。"
+    )
+    return f"{safety_message} {proposal}" if safety_message else proposal
+
+
+def _answer_text_values(answers: dict[str, AnswerValue]) -> tuple[str, ...]:
+    values: list[str] = []
+    for value in answers.values():
+        if isinstance(value, str):
+            values.append(value)
+        else:
+            values.extend(item for item in value if isinstance(item, str))
+    return tuple(values)
+
+
+def _authoritative_user_texts(record: _SessionRecord) -> tuple[str, ...]:
+    values = [
+        text for text in (record.original_need, record.replacement_text) if isinstance(text, str)
+    ]
+    values.extend(_answer_text_values(record.answers))
+    if record.image_analysis is not None and record.image_analysis.confirmed:
+        values.extend(
+            (
+                record.image_analysis.service_query,
+                record.image_analysis.problem_summary,
+                *record.image_analysis.safety_warnings,
+            )
+        )
+    return tuple(values)
+
+
+def _contains_location_description(user_text: str) -> bool:
+    return LOCATION_DESCRIPTION_PATTERN.search(user_text) is not None
+
+
+def _form_contains_branch(form: ConsultationForm, branch: RepairBranch) -> bool:
+    category_topics = [topic for topic in form.topics if topic.topic_key == "issue_category"]
+    return len(category_topics) == 1 and any(
+        option.value == branch.value for option in category_topics[0].options
+    )
+
+
+def _valid_form_contract(form: ConsultationForm) -> bool:
+    if (
+        form.form_key != REPAIR_FORM_KEY
+        or form.service_id != CANONICAL_SERVICE_ID
+        or form.version != 1
+    ):
+        return False
+    category_topics = [topic for topic in form.topics if topic.topic_key == "issue_category"]
+    water_shutoff_topics = [topic for topic in form.topics if topic.topic_key == "water_shutoff"]
+    if len(category_topics) != 1 or len(water_shutoff_topics) != 1:
+        return False
+    category_values = [option.value for option in category_topics[0].options]
+    expected_categories = {branch.value for branch in RepairBranch}
+    if (
+        len(category_values) != len(expected_categories)
+        or set(category_values) != expected_categories
+    ):
+        return False
+    applicable = water_shutoff_topics[0].config.get("applicable_issue_categories")
+    return (
+        isinstance(applicable, list)
+        and len(applicable) == len(WATER_SHUTOFF_BRANCHES)
+        and all(type(value) is str for value in applicable)
+        and set(applicable) == set(WATER_SHUTOFF_BRANCHES)
+    )
+
+
+def _project_form(form: ConsultationForm, branch: RepairBranch) -> ConsultationForm:
+    topics: list[FormTopic] = []
+    for topic in sorted(form.topics, key=lambda item: item.sort_order):
+        if topic.topic_key in FORM_PROJECTION_EXCLUDED_TOPICS:
+            continue
+        applicable = topic.config.get("applicable_issue_categories")
+        if applicable is not None and (
+            not isinstance(applicable, list) or branch.value not in applicable
+        ):
+            continue
+        projected = topic.model_copy(deep=True)
+        if projected.topic_key == "issue_category":
+            projected.options = [
+                option for option in projected.options if option.value == branch.value
+            ]
+        if projected.topic_key == "preferred_time":
+            projected.config = {
+                **projected.config,
+                "control": "datetime_range",
+                "timezone": "Asia/Taipei",
+            }
+        topics.append(projected)
+    return form.model_copy(update={"topics": topics}, deep=True)
+
+
+def _build_routing_view(record: _SessionRecord) -> RepairRoutingView | None:
+    if record.routing is None:
+        return None
+    candidates = _routing_candidates(record.routing)
+    repair_branch = record.routing.branch if record.routing.branch in candidates else None
+    pending_branch = (
+        repair_branch if record.replacement_pending or record.confirmed_branch is None else None
+    )
+    return RepairRoutingView(
+        confidence=record.routing.confidence,
+        alternatives=list(candidates),
+        unsupported=record.routing.unsupported,
+        clarification_question=record.routing.clarification_question,
+        canonical_service_id=(
+            CANONICAL_SERVICE_ID if record.confirmed_branch is not None else None
+        ),
+        repair_branch=repair_branch,
+        pending_branch=pending_branch,
+        confirmed_branch=record.confirmed_branch,
+        replacement_pending=record.replacement_pending,
+    )
+
+
+def _build_active_task(
+    record: _SessionRecord,
+    *,
+    dispatch: ConsumerCaseView | None,
+) -> ActiveConsultationTaskView | None:
+    if (
+        record.original_need is None
+        and record.routing is None
+        and record.confirmed_branch is None
+        and record.media is None
+    ):
+        return None
+    return ActiveConsultationTaskView(
+        active_task_id=record.active_task_id,
+        status=_task_status(record, dispatch=dispatch),
+        branch=record.confirmed_branch,
+        collected_fields=_collected_fields(record),
+        missing_fields=_missing_fields(record, include_summary_confirmation=True),
+        summary=_build_summary(record),
+        shared_slots_need_confirmation=record.shared_slots_need_confirmation,
+    )
+
+
+def _task_status(
+    record: _SessionRecord,
+    *,
+    dispatch: ConsumerCaseView | None,
+) -> TaskStatus:
+    if dispatch is not None:
+        return "dispatched"
+    mapping: dict[SessionState, TaskStatus] = {
+        "collecting_need": "routing",
+        "routing_pending": "routing",
+        "replacement_pending": "replacement_pending",
+        "clarifying": "collecting",
+        "awaiting_form": "awaiting_form",
+        "awaiting_summary_confirmation": "awaiting_summary_confirmation",
+        "matched": "matched",
+        "no_candidates": "summary_confirmed",
+        "dispatch_pending": "dispatched",
+        "provider_accepted": "dispatched",
+        "provider_rejected": "dispatched",
+        "error": "error",
+    }
+    return mapping[record.state]
+
+
+def _collected_fields(record: _SessionRecord) -> dict[str, AnswerValue]:
+    collected: dict[str, AnswerValue] = {}
+    if record.confirmed_branch is not None:
+        collected["canonical_service_id"] = str(CANONICAL_SERVICE_ID)
+        collected["issue_category"] = record.confirmed_branch.value
+    if record.location is not None:
+        collected["county_name"] = record.location.county_name
+        collected["district_name"] = record.location.district_name
+    if record.preferred_start is not None and record.preferred_end is not None:
+        collected["preferred_start"] = record.preferred_start.isoformat()
+        collected["preferred_end"] = record.preferred_end.isoformat()
+    collected.update(record.answers)
+    return collected
+
+
+def _missing_fields(
+    record: _SessionRecord,
+    *,
+    include_summary_confirmation: bool,
+) -> list[str]:
+    missing: list[str] = []
+    if record.confirmed_branch is None:
+        missing.append("repair_branch")
+    if record.service is None:
+        missing.append("service")
+    if record.location is None:
+        missing.extend(["county_name", "district_name"])
+    if record.consultation_form is None:
+        missing.append("consultation_form")
+    else:
+        for topic in record.consultation_form.topics:
+            if topic.topic_key == "issue_category":
+                continue
+            if topic.topic_key == "preferred_time":
+                if record.preferred_start is None or record.preferred_end is None:
+                    missing.append("preferred_time")
+                continue
+            if topic.is_required and _is_missing(record.answers.get(topic.topic_key)):
+                missing.append(topic.topic_key)
+    if record.shared_slots_need_confirmation:
+        missing.append("shared_slots_confirmation")
+    summary = _build_summary(record) if include_summary_confirmation else None
+    if (
+        include_summary_confirmation
+        and summary is not None
+        and (
+            record.summary_confirmed_version != record.summary_version
+            or record.summary_confirmed_id != record.summary_id
+        )
+    ):
+        missing.append("summary_confirmation")
+    return list(dict.fromkeys(missing))
+
+
+def _build_summary(record: _SessionRecord) -> ConsultationSummaryView | None:
+    if (
+        record.summary_version < 1
+        or record.summary_id is None
+        or _missing_fields(
+            record,
+            include_summary_confirmation=False,
+        )
+    ):
+        return None
+    if (
+        record.confirmed_branch is None
+        or record.service is None
+        or record.location is None
+        or record.consultation_form is None
+        or record.preferred_start is None
+        or record.preferred_end is None
+    ):
+        return None
+    return ConsultationSummaryView(
+        summary_id=record.summary_id,
+        version=record.summary_version,
+        confirmed=(
+            record.summary_confirmed_version == record.summary_version
+            and record.summary_confirmed_id == record.summary_id
+        ),
+        service_name=record.service.name,
+        branch=record.confirmed_branch,
+        location_id=record.location.location_id,
+        location_name=record.location.full_name,
+        preferred_start=record.preferred_start,
+        preferred_end=record.preferred_end,
+        form_version=record.consultation_form.version,
+        answers=dict(record.answers),
+        shared_slots_need_confirmation=record.shared_slots_need_confirmation,
+    )
 
 
 def _build_checklist(record: _SessionRecord) -> list[ChecklistItemView]:
     suggestions: dict[ChecklistKey, bool] = {
-        "service": record.service is not None,
+        "service": record.service is not None and record.confirmed_branch is not None,
         "location": record.location is not None,
-        "consultation": bool(record.answers)
-        and record.preferred_start is not None
-        and record.preferred_end is not None,
+        "consultation": _build_summary(record) is not None,
     }
     return [
         ChecklistItemView(
@@ -877,18 +1788,19 @@ def _build_checklist(record: _SessionRecord) -> list[ChecklistItemView]:
 def _validate_answers(
     *,
     form: ConsultationForm,
+    branch: RepairBranch,
     supplied: dict[str, AnswerValue],
     preferred_start: datetime,
     preferred_end: datetime,
 ) -> dict[str, AnswerValue]:
     topics = sorted(form.topics, key=lambda topic: topic.sort_order)
-    known_keys = {topic.topic_key for topic in topics}
+    known_keys = {topic.topic_key for topic in topics} | SHARED_ANSWER_KEYS
     unknown_keys = set(supplied) - known_keys
     if unknown_keys:
         raise WebSessionInputError(
             code="UNKNOWN_FORM_FIELD",
-            message="表單包含未定義欄位，已停止送出。",
-            fields={key: "這個欄位不在目前諮詢單中。" for key in sorted(unknown_keys)},
+            message="表單包含未定義或不適用欄位，已停止送出。",
+            fields={key: "這個欄位不在目前分支的諮詢單中。" for key in sorted(unknown_keys)},
         )
 
     clean: dict[str, AnswerValue] = {}
@@ -897,21 +1809,64 @@ def _validate_answers(
         if topic.topic_key == "preferred_time":
             clean[topic.topic_key] = f"{preferred_start.isoformat()} / {preferred_end.isoformat()}"
             continue
+        if topic.topic_key == "issue_category":
+            value = supplied.get(topic.topic_key)
+            if not _is_missing(value) and value != branch.value:
+                field_errors[topic.topic_key] = "問題類型必須與已確認修繕分支一致。"
+            else:
+                clean[topic.topic_key] = branch.value
+            continue
 
         value = supplied.get(topic.topic_key)
         if _is_missing(value):
             if topic.is_required:
                 field_errors[topic.topic_key] = "此欄位為必填。"
             continue
+        if (
+            topic.topic_key in SHARED_ANSWER_KEYS
+            and isinstance(value, str)
+            and value in OPTIONAL_ANSWER_STATES
+        ):
+            clean[topic.topic_key] = value
+            continue
         try:
             clean[topic.topic_key] = _validate_topic_value(topic, value)
         except (TypeError, ValueError) as error:
             field_errors[topic.topic_key] = str(error)
 
+    for key in sorted(SHARED_ANSWER_KEYS):
+        value = supplied.get(key)
+        if _is_missing(value):
+            clean[key] = "skipped"
+            continue
+        if not isinstance(value, str):
+            field_errors[key] = "請輸入文字或選擇略過／拒答。"
+            continue
+        normalized = value.strip()
+        if normalized in OPTIONAL_ANSWER_STATES:
+            clean[key] = normalized
+        elif key == "urgency" and normalized not in URGENCY_VALUES:
+            field_errors[key] = "緊急程度只能是 normal、urgent、skipped 或 declined_to_answer。"
+        elif len(normalized) > 120:
+            field_errors[key] = "內容不可超過 120 個字元。"
+        else:
+            clean[key] = normalized
+
+    if branch == RepairBranch.OTHER:
+        description = clean.get("issue_description")
+        normalized = description.strip() if isinstance(description, str) else ""
+        comparison = normalized.casefold().strip(" .。!！?？,，、:：;；")
+        if comparison in {"", "other", "其他", "其他水電問題"}:
+            field_errors["issue_description"] = "請具體描述其他水電問題，不可只填『其他』。"
+        elif not is_supported_water_repair_text(normalized):
+            field_errors["issue_description"] = (
+                "其他分支仍須描述明確的居家水電修繕現象；清潔或外送需求不在本次範圍。"
+            )
+
     if field_errors:
         raise WebSessionInputError(
             code="INVALID_FORM_ANSWERS",
-            message="請修正諮詢表單後再送出。",
+            message="請修正諮詢表單後再保存。",
             fields=field_errors,
         )
     return clean
@@ -952,7 +1907,7 @@ def _build_progress(
     *,
     dispatch: ConsumerCaseView | None,
 ) -> list[ProgressStepView]:
-    form_complete = bool(record.answers)
+    summary = _build_summary(record)
     matching_complete = bool(record.candidates) or record.state == "no_candidates"
     states = {
         "service": "complete" if record.service is not None else "active",
@@ -965,7 +1920,7 @@ def _build_progress(
         ),
         "form": (
             "complete"
-            if form_complete
+            if summary is not None
             else "active"
             if record.consultation_form is not None
             else "pending"
@@ -989,35 +1944,17 @@ def _build_progress(
 
 
 def _problem_summary(record: _SessionRecord) -> str:
-    category_value = record.answers.get("issue_category")
-    category_label = ""
-    if isinstance(category_value, str) and record.consultation_form is not None:
-        topic = next(
-            (
-                item
-                for item in record.consultation_form.topics
-                if item.topic_key == "issue_category"
-            ),
-            None,
-        )
-        if topic is not None:
-            option = next(
-                (item for item in topic.options if item.value == category_value),
-                None,
-            )
-            category_label = option.label if option is not None else ""
-
-    notes = record.answers.get("notes")
-    notes_text = notes.strip() if isinstance(notes, str) else ""
-    parts = [
-        part
-        for part in (
-            category_label or record.service.name if record.service is not None else "",
-            notes_text,
-        )
-        if part
-    ]
-    return "｜".join(parts)[:1000] or "已完成結構化修繕諮詢"
+    branch_label = BRANCH_LABELS.get(record.confirmed_branch, "水電修繕")
+    description = record.answers.get("issue_description")
+    description_text = description.strip() if isinstance(description, str) else ""
+    image_text = (
+        record.image_analysis.problem_summary
+        if record.image_analysis is not None
+        and record.image_analysis.confirmed
+        and record.media_branch == record.confirmed_branch
+        else ""
+    )
+    return "｜".join(part for part in (branch_label, description_text, image_text) if part)[:1000]
 
 
 def _dispatch_status_message(dispatch: ConsumerCaseView) -> str:
@@ -1049,8 +1986,6 @@ def _delete_media_quietly(storage: MediaStorage, media: StoredMedia) -> None:
     try:
         _delete_media(storage, media)
     except MediaStorageError:
-        # The original provider/storage exception remains the public failure.
-        # No path or image bytes are included in either error.
         return
 
 

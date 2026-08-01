@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
-
 TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 
 
@@ -70,7 +69,13 @@ def build_curated_repair_form() -> dict[str, Any]:
             "title": "目前是否可以關閉水源",
             "is_required": True,
             "sort_order": 4,
-            "config": {},
+            "config": {
+                "applicable_issue_categories": [
+                    "faucet_leak",
+                    "toilet_issue",
+                    "pipe_issue",
+                ]
+            },
         },
         {
             "topic_key": "preferred_date",
@@ -303,9 +308,7 @@ def build_demo_seed(
         "provider_availability": [
             {
                 **item,
-                **_synthetic_provenance(
-                    f"availability:{item['availability_id']}"
-                ),
+                **_synthetic_provenance(f"availability:{item['availability_id']}"),
             }
             for item in availability
         ],

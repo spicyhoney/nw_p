@@ -72,6 +72,15 @@ function bindElements() {
   elements.progressList = document.querySelector("#progress-list");
   elements.serviceSummary = document.querySelector("#service-summary");
   elements.locationSummary = document.querySelector("#location-summary");
+  elements.branchSummary = document.querySelector("#branch-summary");
+  elements.taskStatusSummary = document.querySelector("#task-status-summary");
+  elements.collectedFieldsList = document.querySelector("#collected-fields-list");
+  elements.missingFieldsList = document.querySelector("#missing-fields-list");
+  elements.sharedSlotsWarning = document.querySelector("#shared-slots-warning");
+  elements.routingSection = document.querySelector("#routing-section");
+  elements.routingGuidance = document.querySelector("#routing-guidance");
+  elements.routingOptions = document.querySelector("#routing-options");
+  elements.routingReject = document.querySelector("#routing-reject");
   elements.checklistList = document.querySelector("#checklist-list");
   elements.checklistSummary = document.querySelector("#checklist-summary");
   elements.checklistFeedback = document.querySelector("#checklist-feedback");
@@ -88,6 +97,12 @@ function bindElements() {
   elements.consultationForm = document.querySelector("#consultation-form");
   elements.formFields = document.querySelector("#form-fields");
   elements.formError = document.querySelector("#form-error");
+  elements.summarySection = document.querySelector("#summary-section");
+  elements.summaryVersion = document.querySelector("#summary-version");
+  elements.summaryGuidance = document.querySelector("#summary-guidance");
+  elements.summaryDetails = document.querySelector("#summary-details");
+  elements.summaryAnswers = document.querySelector("#summary-answers");
+  elements.summaryConfirm = document.querySelector("#summary-confirm");
   elements.candidateList = document.querySelector("#candidate-list");
   elements.dispatchStatus = document.querySelector("#dispatch-status");
   elements.dispatchStatusTitle = document.querySelector(
@@ -139,6 +154,8 @@ function bindElements() {
 function bindEvents() {
   elements.messageForm.addEventListener("submit", handleMessageSubmit);
   elements.consultationForm.addEventListener("submit", handleFormSubmit);
+  elements.routingReject.addEventListener("click", rejectRoutingProposal);
+  elements.summaryConfirm.addEventListener("click", confirmSummary);
   elements.resetButton.addEventListener("click", resetSession);
   elements.cancelDispatch.addEventListener("click", cancelDispatch);
   elements.confirmDispatch.addEventListener("click", confirmDispatch);
@@ -226,6 +243,79 @@ async function handleMessageSubmit(event) {
   }
 }
 
+async function confirmBranch(branch, confirm = true) {
+  if (!store.session || isSessionMutationBlocked()) {
+    return;
+  }
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  setBusy(true, confirm ? "正在確認修繕分支。" : "正在保留原修繕分支。");
+  try {
+    const response = await api(
+      `/api/sessions/${sessionId}/branch/confirm`,
+      {
+        method: "POST",
+        body: JSON.stringify({ branch, confirm }),
+      },
+    );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
+    renderSession();
+    announce(
+      confirm
+        ? `已確認${branchLabel(branch)}，請繼續核對地點與表單。`
+        : "未套用候選分支。",
+    );
+  } catch (error) {
+    showAlert(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function rejectRoutingProposal() {
+  const candidate = routingCandidates()[0];
+  if (candidate) {
+    confirmBranch(candidate, false);
+  }
+}
+
+async function confirmSummary() {
+  const task = store.session?.active_task;
+  const summary = task?.summary;
+  if (!store.session || !task || !summary || !store.session.can_confirm_summary) {
+    return;
+  }
+  const sessionId = store.session.session_id;
+  const request = sessionResponses.begin(sessionId);
+  setBusy(true, "正在確認最新摘要並執行媒合。");
+  try {
+    const response = await api(
+      `/api/sessions/${sessionId}/summary/confirm`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          active_task_id: task.active_task_id,
+          summary_id: summary.summary_id,
+          summary_version: summary.version,
+          confirm: true,
+        }),
+      },
+    );
+    if (!sessionResponses.apply(store, request, response)) {
+      return;
+    }
+    renderSession();
+    announce(`摘要已確認，共有 ${store.session.candidates.length} 位候選。`);
+    setMobileView("candidates", { focusHeading: true });
+  } catch (error) {
+    showAlert(error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
 async function handleFormSubmit(event) {
   event.preventDefault();
   if (
@@ -244,7 +334,7 @@ async function handleFormSubmit(event) {
 
   const sessionId = store.session.session_id;
   const request = sessionResponses.begin(sessionId);
-  setBusy(true, "正在核對表單並媒合師傅。");
+  setBusy(true, "正在驗證表單並產生最新摘要。");
   try {
     const response = await api(
       `/api/sessions/${sessionId}/form`,
@@ -257,8 +347,7 @@ async function handleFormSubmit(event) {
       return;
     }
     renderSession();
-    announce(`媒合完成，共有 ${store.session.candidates.length} 位候選。`);
-    setMobileView("candidates", { focusHeading: true });
+    announce("表單已保存，請核對最新摘要後再確認媒合。");
   } catch (error) {
     showFormError(error);
   } finally {
@@ -580,6 +669,10 @@ async function handleMediaUpload(event) {
   if (!store.session || store.mediaBusy || !isHuggingFaceMediaAvailable()) {
     return;
   }
+  if (!store.session.active_task?.branch) {
+    setMediaStatus("請先確認水電修繕分支，再上傳圖片。");
+    return;
+  }
   const file = elements.mediaFile.files?.[0];
   const error = file ? validateMediaFile(file) : "請先選擇一張圖片。";
   if (error) {
@@ -643,6 +736,10 @@ async function confirmMediaAnalysis(event) {
   if (!store.session || !media || store.mediaBusy) {
     return;
   }
+  if (!store.session.active_task?.branch) {
+    setMediaStatus("請先確認水電修繕分支，再確認圖片分析。");
+    return;
+  }
   const payload = {
     service_query: elements.mediaServiceQuery.value.trim(),
     problem_summary: elements.mediaProblemSummary.value.trim(),
@@ -691,20 +788,24 @@ function renderMedia() {
   const media = currentMedia();
   const analysis = media?.analysis || null;
   const available = isHuggingFaceMediaAvailable();
-  const blocked = store.mediaBusy || isSessionMutationBlocked();
+  const branchReady = Boolean(store.session.active_task?.branch);
+  const blocked = store.mediaBusy || isSessionMutationBlocked() || !branchReady;
   const selectedFile = elements.mediaFile.files?.[0];
 
+  elements.mediaSection.hidden = !branchReady && !media;
   elements.mediaMode.textContent = available
     ? "Hugging Face 外部分析"
     : "圖片分析目前不可用（Mock／未設定）";
   elements.mediaMode.classList.toggle("media-mode--unavailable", !available);
-  elements.mediaUploadForm.hidden = Boolean(media);
+  elements.mediaUploadForm.hidden = Boolean(media) || !branchReady;
   elements.mediaFile.disabled = blocked || !available;
   elements.mediaConsent.disabled = blocked || !available;
   elements.mediaUploadButton.disabled = blocked || !available;
   elements.mediaUploadButton.textContent = store.mediaBusy ? "處理中…" : "上傳並分析";
   if (!available && !media && !store.mediaBusy) {
     setMediaStatus("此 session 使用 Mock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
+  } else if (!branchReady && !media && !store.mediaBusy) {
+    setMediaStatus("請先確認水電修繕分支，圖片控制才會開放。");
   }
 
   const previewSource = media ? mediaImagePath() : store.previewObjectUrl;
@@ -801,8 +902,10 @@ function renderSession() {
   renderProgress();
   renderChecklist();
   renderMessages();
+  renderRouting();
   renderMedia();
   renderForm();
+  renderSummary();
   renderDispatch();
   renderCandidates();
   updateControls();
@@ -823,8 +926,11 @@ function renderHeader() {
   );
   const labels = {
     collecting_need: "確認需求",
+    routing_pending: "確認分支",
+    replacement_pending: "確認切換",
     clarifying: "補充資料",
     awaiting_form: "填寫諮詢單",
+    awaiting_summary_confirmation: "核對摘要",
     matched: "媒合完成",
     no_candidates: "暫無候選",
     dispatch_pending: "等待廠商",
@@ -867,6 +973,21 @@ function renderProgress() {
     session.service?.name || "尚未確認";
   elements.locationSummary.textContent =
     session.location?.full_name || "尚未確認";
+  const task = session.active_task;
+  elements.branchSummary.textContent = task?.branch
+    ? branchLabel(task.branch)
+    : "尚未確認";
+  elements.taskStatusSummary.textContent = task
+    ? taskStatusLabel(task.status)
+    : "等待描述";
+  elements.collectedFieldsList.replaceChildren(
+    ...fieldListNodes(task?.collected_fields, "尚無"),
+  );
+  elements.missingFieldsList.replaceChildren(
+    ...missingFieldNodes(task?.missing_fields),
+  );
+  elements.sharedSlotsWarning.hidden =
+    !Boolean(task?.shared_slots_need_confirmation);
 
   const traceItems = session.tool_trace.map((trace) => {
     const item = document.createElement("li");
@@ -961,10 +1082,58 @@ function renderMessages() {
   });
 }
 
+function renderRouting() {
+  const routing = store.session?.repair_routing;
+  const candidates = routingCandidates();
+  const needsConfirmation = Boolean(
+    routing &&
+      candidates.length &&
+      (!routing.confirmed_branch || routing.replacement_pending),
+  );
+  elements.routingSection.hidden = !needsConfirmation;
+  if (!needsConfirmation) {
+    elements.routingOptions.replaceChildren();
+    return;
+  }
+  elements.routingGuidance.textContent = routing.replacement_pending
+    ? "切換後會清除舊分支答案與圖片分析；地點與時段會保留並要求重新核對。"
+    : candidates.length > 1
+      ? "偵測到多個項目，本 session 只處理一項，請先選擇。"
+      : `系統信心為 ${routing.confidence}；任何信心等級都必須由你確認。`;
+  elements.routingOptions.replaceChildren(
+    ...candidates.map((branch) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary-button";
+      button.textContent = `確認處理：${branchLabel(branch)}`;
+      button.disabled = isSessionMutationBlocked();
+      button.addEventListener("click", () => confirmBranch(branch, true));
+      return button;
+    }),
+  );
+  elements.routingReject.textContent = routing.replacement_pending
+    ? "保留目前分支"
+    : "這些都不是";
+}
+
+function routingCandidates() {
+  const routing = store.session?.repair_routing;
+  if (!routing) {
+    return [];
+  }
+  return [...new Set([
+    routing.repair_branch,
+    ...(routing.alternatives || []),
+  ].filter(Boolean))];
+}
+
 function renderForm() {
   const form = store.session.consultation_form;
-  const formCompleted = Object.keys(store.session.answers || {}).length > 0;
-  if (!form || formCompleted) {
+  const formLocked =
+    (store.session.candidates || []).length > 0 ||
+    store.session.state === "no_candidates" ||
+    Boolean(store.session.dispatch);
+  if (!form || formLocked) {
     elements.formSection.hidden = true;
     elements.formFields.replaceChildren();
     return;
@@ -1037,6 +1206,12 @@ function renderChoiceTopic(group, topic) {
     input.type = topic.input_type === "single_select" ? "radio" : "checkbox";
     input.name = `answer:${topic.topic_key}`;
     input.value = option.value;
+    const savedValue = store.session.answers?.[topic.topic_key];
+    input.checked = Array.isArray(savedValue)
+      ? savedValue.includes(option.value)
+      : savedValue === option.value ||
+        (topic.topic_key === "issue_category" &&
+          store.session.active_task?.branch === option.value);
     input.required = Boolean(
       topic.is_required && topic.input_type === "single_select" && index === 0,
     );
@@ -1070,6 +1245,10 @@ function renderTextTopic(group, topic) {
   } else {
     input.rows = 3;
   }
+  const savedValue = store.session.answers?.[topic.topic_key];
+  if (typeof savedValue === "string") {
+    input.value = savedValue;
+  }
 
   group.append(label, input);
 }
@@ -1084,14 +1263,14 @@ function renderDateTimeTopic(group, topic) {
   const start = createDateTimePart(
     "開始",
     "preferred_start",
-    topic.config?.suggested_start,
+    store.session.preferred_start || topic.config?.suggested_start,
   );
   const separator = document.createElement("span");
   separator.textContent = "至";
   const end = createDateTimePart(
     "結束",
     "preferred_end",
-    topic.config?.suggested_end,
+    store.session.preferred_end || topic.config?.suggested_end,
   );
   grid.append(start, separator, end);
 
@@ -1174,6 +1353,41 @@ function collectFormPayload(form) {
     preferred_start: toTaipeiIso(preferredStart),
     preferred_end: toTaipeiIso(preferredEnd),
   };
+}
+
+function renderSummary() {
+  const summary = store.session?.active_task?.summary;
+  elements.summarySection.hidden = !summary;
+  if (!summary) {
+    elements.summaryDetails.replaceChildren();
+    elements.summaryAnswers.replaceChildren();
+    return;
+  }
+  elements.summaryVersion.textContent = `版本 ${summary.version}${summary.confirmed ? " · 已確認" : " · 待確認"}`;
+  elements.summaryGuidance.textContent = summary.confirmed
+    ? "此版本已確認並完成媒合；派單仍需另外明確確認。"
+    : "如需修改，請直接更改上方表單並重新儲存；只有最新版本可確認媒合。";
+  elements.summaryDetails.replaceChildren(
+    definitionItem("服務", `${summary.service_name}（ID ${summary.canonical_service_id}）`),
+    definitionItem("分支", branchLabel(summary.branch)),
+    definitionItem("地點", summary.location_name),
+    definitionItem("希望時段", formatWindow(summary.preferred_start, summary.preferred_end)),
+    definitionItem("表單版本", `${summary.form_key} v${summary.form_version}`),
+    definitionItem("Demo 聯絡", summary.synthetic_contact),
+  );
+  const answerEntries = Object.entries(summary.answers || {});
+  elements.summaryAnswers.replaceChildren(
+    ...(answerEntries.length
+      ? answerEntries.map(([key, value]) => {
+          const item = document.createElement("li");
+          item.textContent = `${fieldLabel(key)}：${Array.isArray(value) ? value.join("、") : answerStateLabel(value)}`;
+          return item;
+        })
+      : [textListItem("尚無表單答案")]),
+  );
+  elements.summaryConfirm.hidden = summary.confirmed;
+  elements.summaryConfirm.disabled =
+    isSessionMutationBlocked() || !store.session.can_confirm_summary;
 }
 
 function renderDispatch() {
@@ -1341,6 +1555,83 @@ function renderCandidate(candidate, index, rejected) {
   return card;
 }
 
+function branchLabel(branch) {
+  return {
+    faucet_leak: "水龍頭漏水",
+    toilet_issue: "馬桶問題",
+    pipe_issue: "水管問題",
+    electrical_issue: "插座、燈具或電路問題",
+    other: "其他水電問題",
+  }[branch] || branch || "尚未確認";
+}
+
+function taskStatusLabel(status) {
+  return {
+    routing: "等待分支確認",
+    collecting: "收集共用資料",
+    replacement_pending: "等待切換確認",
+    awaiting_form: "填寫表單",
+    awaiting_summary_confirmation: "等待摘要確認",
+    summary_confirmed: "摘要已確認",
+    matched: "媒合完成",
+    dispatched: "案件流程中",
+    error: "需要重試",
+  }[status] || status;
+}
+
+function fieldLabel(key) {
+  return {
+    canonical_service_id: "服務 ID",
+    issue_category: "修繕分支",
+    issue_description: "問題描述",
+    water_shutoff: "可否關閉水源",
+    county_name: "縣市",
+    district_name: "行政區",
+    preferred_start: "開始時間",
+    preferred_end: "結束時間",
+    preferred_time: "希望時段",
+    budget: "預算",
+    urgency: "緊急程度",
+    repair_branch: "修繕分支",
+    service: "服務",
+    consultation_form: "諮詢表單",
+    shared_slots_confirmation: "重新核對共用資料",
+    summary_confirmation: "確認最新摘要",
+  }[key] || key;
+}
+
+function answerStateLabel(value) {
+  return {
+    skipped: "略過／不知道",
+    declined_to_answer: "不願回答",
+  }[value] || value;
+}
+
+function textListItem(text) {
+  const item = document.createElement("li");
+  item.textContent = text;
+  return item;
+}
+
+function fieldListNodes(fields, emptyText) {
+  const entries = Object.entries(fields || {});
+  if (!entries.length) {
+    return [textListItem(emptyText)];
+  }
+  return entries.map(([key, value]) =>
+    textListItem(
+      `${fieldLabel(key)}：${Array.isArray(value) ? value.join("、") : answerStateLabel(value)}`,
+    ),
+  );
+}
+
+function missingFieldNodes(fields) {
+  if (!Array.isArray(fields) || !fields.length) {
+    return [textListItem("無")];
+  }
+  return fields.map((key) => textListItem(fieldLabel(key)));
+}
+
 function definitionItem(labelText, valueText) {
   const wrapper = document.createElement("div");
   const label = document.createElement("dt");
@@ -1399,8 +1690,18 @@ function updateControls() {
       sessionMutationBlocked || !Boolean(store.session?.can_submit_form);
     submitButton.textContent = sessionMutationBlocked
       ? "處理中…"
-      : "查看媒合結果 →";
+      : "儲存並產生摘要 →";
   }
+  if (elements.summaryConfirm) {
+    elements.summaryConfirm.disabled =
+      sessionMutationBlocked || !Boolean(store.session?.can_confirm_summary);
+  }
+  elements.routingReject.disabled = sessionMutationBlocked;
+  elements.routingOptions
+    .querySelectorAll("button")
+    .forEach((button) => {
+      button.disabled = sessionMutationBlocked;
+    });
   renderMedia();
 }
 

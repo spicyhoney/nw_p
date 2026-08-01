@@ -9,8 +9,8 @@
       content="修繕小隊長居家水電修繕媒合 Demo"
     />
     <title>修繕小隊長</title>
-    <link rel="stylesheet" href="/static/styles.css?v=0.4.0" />
-    <script src="/static/app.js?v=0.4.0" defer></script>
+    <link rel="stylesheet" href="/static/styles.css?v=0.5.0" />
+    <script src="/static/app.js?v=0.5.0" defer></script>
   </head>
   <body data-mobile-view="conversation">
     <a class="skip-link" href="#conversation-pane">跳到主要對話</a>
@@ -103,6 +103,14 @@
           <h2 id="confirmed-title">系統已整理</h2>
           <dl>
             <div>
+              <dt>目前分支</dt>
+              <dd id="branch-summary">尚未確認</dd>
+            </div>
+            <div>
+              <dt>任務狀態</dt>
+              <dd id="task-status-summary">等待描述</dd>
+            </div>
+            <div>
               <dt>服務</dt>
               <dd id="service-summary">尚未確認</dd>
             </div>
@@ -115,6 +123,15 @@
               <dd>synthetic</dd>
             </div>
           </dl>
+          <div class="task-fields">
+            <h3>已收集欄位</h3>
+            <ul id="collected-fields-list"><li>尚無</li></ul>
+            <h3>待補欄位</h3>
+            <ul id="missing-fields-list"><li>修繕分支</li></ul>
+            <p id="shared-slots-warning" class="task-warning" hidden>
+              切換分支後保留的共用資料需要重新核對。
+            </p>
+          </div>
         </section>
 
         <details class="trace-panel">
@@ -155,6 +172,23 @@
           aria-live="polite"
           aria-relevant="additions"
         ></div>
+
+        <section
+          id="routing-section"
+          class="routing-section"
+          aria-labelledby="routing-title"
+          hidden
+        >
+          <div>
+            <p class="eyebrow">修繕分支 · 必須人工確認</p>
+            <h2 id="routing-title">請先選擇本次處理項目</h2>
+          </div>
+          <p id="routing-guidance"></p>
+          <div id="routing-options" class="routing-options"></div>
+          <button id="routing-reject" class="secondary-button" type="button">
+            這些都不是
+          </button>
+        </section>
 
         <section
           id="media-section"
@@ -251,9 +285,33 @@
               hidden
             ></p>
             <button class="primary-button" type="submit">
-              查看媒合結果 <span aria-hidden="true">→</span>
+              儲存並產生摘要 <span aria-hidden="true">→</span>
             </button>
           </form>
+        </section>
+
+        <section
+          id="summary-section"
+          class="consultation-summary-section"
+          aria-labelledby="summary-title"
+          hidden
+        >
+          <div class="summary-heading">
+            <div>
+              <p class="eyebrow">送出前核對</p>
+              <h2 id="summary-title">可修改摘要</h2>
+            </div>
+            <span id="summary-version" class="summary-version"></span>
+          </div>
+          <p id="summary-guidance">
+            如需修改，請直接更改上方表單並重新儲存；只有最新版本可確認媒合。
+          </p>
+          <dl id="summary-details" class="summary-details"></dl>
+          <h3>表單答案</h3>
+          <ul id="summary-answers" class="summary-answers"></ul>
+          <button id="summary-confirm" class="primary-button" type="button">
+            確認摘要並媒合
+          </button>
         </section>
 
         <form

@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-07-31
+最後更新：2026-08-01
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -10,20 +10,23 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | B+ 資料清洗 | 已驗證 | `src/home_repair_agent/data_cleaning/` | [清洗手冊](data-cleaning-runbook.md) | Python 測試、品質報告 |
 | PostgreSQL schema / loader | 已驗證 | `sql/`、`data_cleaning/postgres.py` | [SQL README](../sql/README.md) | PostgreSQL 16.14 整合測試 |
 | Service Layer | 唯讀、媒合、派單／接單與 async PostgreSQL 寫入均已驗證 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試與 PostgreSQL 16.14 整合測試 |
-| 四個唯讀 MCP Tools | 已驗證 | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
+| 引導式單一修繕對話 | 已驗證單一 Active Task；五分支均需明確確認 | `backend/repair_conversation.py`、`web/`、`data/processed/curated_repair_form.json` | [Web 引導式流程](../src/home_repair_agent/web/README.md)、[Feature requirements](../.kiro/specs/guided-home-repair-conversation/requirements.md) | focused `59 passed, 50 subtests passed`；兩條 FastAPI HTTP E2E |
+| 四個唯讀 MCP Tools | 已驗證；本次未改 schema | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
-| Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| Agent 核心迴圈 | 已驗證 Mock 與 HF adapter contract；本次未改 AgentRunner／ToolClient | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
-| 圖片上傳與 HF VLM | 已整合並完成本機、live HF 與 PostgreSQL 16.14 驗證 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003 tests |
+| 圖片上傳與 HF VLM | 已整合；guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／branch binding／summary invalidation tests |
 | Bedrock Model adapter | 未開始 | 尚無 | [Agent 規劃](mcp_agent_plan.md) | 等待 AWS 環境 |
-| FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
+| FastAPI / Demo UI | 已驗證 guided 單一修繕、人工 Checklist、雙端 workflow 與 async case repository 切換；唯讀服務資料仍是 Demo repository | `src/home_repair_agent/web/` | [Web README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | HTTP／a11y／Node regression；本輪未做真瀏覽器 smoke |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
 | AWS adapters / 部署 | 等待環境 | 尚無 | [AWS 架構](architecture.md) | 無主辦方憑證 |
 
 ## 目前可執行的閉環
+
+獨立 Agent／MCP 唯讀閉環維持不變：
 
 ```text
 MCP Client / 測試 Agent
@@ -37,17 +40,41 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-Agent／MCP 閉環目前仍只讀。上圖是獨立 MCP Server 的預設組裝，以及
-`PostgresReadRepository` 整合測試所對應的路徑；外部 HTTP Client 尚未端到端
-驗證。Web app 與 Terminal Demo 的 in-process MCP Server 建立
-`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查
-PostgreSQL。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
-代碼、該服務要填哪些諮詢欄位」；Web P2 另提供記憶體 session、結構化
-`SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
-確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
-只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
+四個 MCP Tools 仍全部唯讀。上圖是獨立 MCP Server 的預設組裝，以及
+`PostgresReadRepository` 整合測試所對應的路徑；外部 Streamable HTTP Client／Gateway
+尚未端到端驗證。Web app 與 Terminal Demo 的 in-process MCP Server 建立
+`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查 PostgreSQL。
 
-Web 另有一條不經 LLM 的受控寫入閉環：
+Web 現在另有一條 deterministic、單一 Active Task 的引導式閉環：
+
+```text
+一項水電需求
+  -> deterministic 五分支 proposal（不是診斷或業務事實）
+  -> 使用者明確確認 branch
+  -> 重驗 canonical service_id=17 + repair_form_v1 version/applicability
+  -> 既有 AgentRunner／唯讀 Tools 補齊服務、完整地點與表單
+  -> POST /form 只保存答案並產生摘要版本
+  -> 使用者明確確認最新摘要
+  -> match_service_providers
+  -> synthetic candidates
+```
+
+五分支為 `faucet_leak`、`toilet_issue`、`pipe_issue`、`electrical_issue`、`other`。
+多 intent 只顯示 alternatives 並要求先選一項，不會建立多 task。branch switch 也需
+確認，並清除舊分支資料、不相符圖片分析及衝突地點。`water_shutoff` 只存在於水龍頭、
+馬桶、水管三分支；`other` 必須有具體描述。
+
+表單保存不再直接媒合。每次保存都建立新的可修改摘要版本；只有最新版本透過
+`POST /summary/confirm` 明確確認後才呼叫 matching。圖片沿用既有 storage／VLM／人工
+確認／服務目錄重驗管線並綁 active branch，移除圖片會使摘要失效。建案後表單鎖定。
+
+地點仍不猜測：固定 HTTP E2E 的 `我家水龍頭一直漏水，在大安區` 會先要求完整縣市，
+補上 `臺北市大安區` 才繼續。`家裡插座一直冒火花` 會顯示安全提醒；補齊地點後可走完
+summary、matching 與 dispatch，而 electrical form、summary、matching answers、case
+payload 全程沒有 `water_shutoff`。包含漏電、觸電、起火、火災、瓦斯、人身危險或焦味
+時則安全停止一般媒合。
+
+Web 的受控寫入閉環仍不經 LLM 或 MCP：
 
 ```text
 消費者確認派單
@@ -62,14 +89,28 @@ Web 另有一條不經 LLM 的受控寫入閉環：
 ```
 
 PostgreSQL 模式以 async I/O 在程式重啟後重新讀取案件、訂單、idempotency 與 audit；
-Web session 仍不能恢復，也不會真的保留師傅時段。廠商 header 只是 Demo 身分
-模擬，不是正式登入；寫入尚未暴露為 MCP Tool。CLI 與 Web 可顯式
-切換到 Hugging Face hosted open model；沒有 `HF_TOKEN` 時會停止並提示，不會
-靜默切回 Mock。Demo synthetic 時段依啟動時間產生在下一個未來星期六；
-hosted model 不得自行把相對日期換成具體年月日。
+Web session／Active Task 仍不能恢復，也不會真的保留師傅時段。廠商 header 只是 Demo
+身分模擬，不是正式登入；目前沒有正式 PII、authentication、多任務、清潔服務、AWS
+adapter 或寫入 MCP Tool。CLI 與 Web 可顯式切換到 Hugging Face hosted model；缺少
+`HF_TOKEN` 時會停止並提示，不會靜默切回 Mock。
 
 ## 最近驗證
 
+- 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
+  `repair_form_v1` 五分支、deterministic proposal、branch／summary 明確確認、確認時
+  service/form 重驗、版本化可修改摘要、field applicability、branch switch、single
+  Active Task、multi-intent 選一項、照片 branch binding／summary invalidation、安全
+  reminder／stop 與建案後表單鎖定均有回歸。預算與緊急程度維持非表單 topic 的選填
+  共用 answers：缺答保存 `skipped`、可 `declined_to_answer`，`urgency` 僅接受
+  `normal|urgent` 加上述 answer states，且不改 `matching_v1`。faucet 與 electrical 兩條
+  固定 FastAPI HTTP E2E 均在補齊完整地點後走完
+  `summary -> matching -> dispatch_pending`，且 electrical 全程沒有 `water_shutoff`。
+  focused guided tests 為 `59 passed, 50 subtests passed`；完整 pytest 為
+  `162 passed, 18 skipped, 102 subtests passed`，18 個 skip 不算成功證據。Node syntax
+  與 concurrency regression 通過；本功能異動 Python diagnostics、Ruff check、Ruff
+  format check 及 `git diff --check` 通過。全庫 Ruff check 已執行但保留 15 個既有、
+  非本功能檔案 finding；全庫 format check 也受既有未格式化檔案阻擋，兩者是
+  baseline debt，不能宣稱全庫通過。本輪沒有執行真瀏覽器 smoke。
 - 2026-07-31：實作 MEDIA-001：一張 JPEG／PNG／WebP、8 MiB、實際解碼與 EXIF
   清除、安全相對路徑、HF VLM 結構化建議、人工更正／確認、服務目錄重驗、
   memory／PostgreSQL case 欄位與廠商受控圖片 endpoint。Mock 與 HF error 都不
@@ -83,7 +124,6 @@ hosted model 不得自行把相對日期換成具體年月日。
   overflow／console error，圖片同意列具 44px 觸控範圍。另以無個資 synthetic 水漬
   圖片完成 Hugging Face live smoke：`Qwen/Qwen3-VL-30B-A3B-Instruct` 在
   `HF_VL_PROVIDER=novita` 與 `auto` 均回傳合約內的繁中結構化結果。
-
 - 2026-07-30：完成 PR #13 checklist race review：完整 SessionView 使用
   request sequence／session generation 阻擋 stale response，一批 PUT 完成後 GET
   對齊；寫入期間鎖住其他 session mutation，失敗時恢復 checked／disabled／focus。

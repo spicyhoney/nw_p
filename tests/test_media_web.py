@@ -91,8 +91,23 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(201, response.status_code)
         return response.json()
 
-    def upload_and_confirm(self) -> dict[str, object]:
+    def prepare_confirmed_branch(self) -> dict[str, object]:
         session = self.create_session()
+        session_id = session["session_id"]
+        message = self.client.post(
+            f"/api/sessions/{session_id}/messages",
+            json={"text": "臺北市大安區水龍頭漏水"},
+        )
+        self.assertEqual(200, message.status_code, message.text)
+        branch = self.client.post(
+            f"/api/sessions/{session_id}/branch/confirm",
+            json={"branch": "faucet_leak", "confirm": True},
+        )
+        self.assertEqual(200, branch.status_code, branch.text)
+        return branch.json()
+
+    def upload_and_confirm(self) -> dict[str, object]:
+        session = self.prepare_confirmed_branch()
         session_id = session["session_id"]
         upload = self.client.post(
             f"/api/sessions/{session_id}/image",
@@ -112,27 +127,62 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(200, confirmation.status_code, confirmation.text)
         return confirmation.json()
 
-    def prepare_match(self) -> dict[str, object]:
+    def prepare_summary(self) -> dict[str, object]:
         session = self.upload_and_confirm()
         session_id = session["session_id"]
-        message = self.client.post(
-            f"/api/sessions/{session_id}/messages",
-            json={"text": "台北市大安區水龍頭漏水"},
-        )
-        self.assertEqual(200, message.status_code, message.text)
+        consultation_form = session["consultation_form"]
+        self.assertEqual("repair_form_v1", consultation_form["form_key"])
+        projected_values = {
+            "issue_category": "faucet_leak",
+            "issue_description": "廚房水龍頭接縫持續滴水，每分鐘約十滴。",
+            "water_shutoff": "yes",
+            "contact_method": "app",
+        }
+        answers = {
+            topic["topic_key"]: projected_values[topic["topic_key"]]
+            for topic in consultation_form["topics"]
+            if topic["topic_key"] != "preferred_time"
+        }
+
         form = self.client.post(
             f"/api/sessions/{session_id}/form",
             json={
-                "answers": {
-                    "issue_category": "leaking_faucet",
-                    "notes": "大約每分鐘滴水。",
-                },
+                "answers": answers,
                 "preferred_start": "2026-08-01T13:00:00+08:00",
                 "preferred_end": "2026-08-01T17:00:00+08:00",
             },
         )
         self.assertEqual(200, form.status_code, form.text)
-        return form.json()
+        summary_session = form.json()
+        self.assertEqual("awaiting_summary_confirmation", summary_session["state"])
+        self.assertEqual([], summary_session["candidates"])
+        self.assertFalse(summary_session["active_task"]["summary"]["confirmed"])
+        return summary_session
+
+    @staticmethod
+    def summary_confirmation_payload(
+        session: dict[str, object],
+    ) -> dict[str, object]:
+        task = session["active_task"]
+        summary = task["summary"]
+        return {
+            "active_task_id": task["active_task_id"],
+            "summary_id": summary["summary_id"],
+            "summary_version": summary["version"],
+            "confirm": True,
+        }
+
+    def prepare_match(self) -> dict[str, object]:
+        summary_session = self.prepare_summary()
+        session_id = summary_session["session_id"]
+        confirmation = self.client.post(
+            f"/api/sessions/{session_id}/summary/confirm",
+            json=self.summary_confirmation_payload(summary_session),
+        )
+        self.assertEqual(200, confirmation.status_code, confirmation.text)
+        matched = confirmation.json()
+        self.assertEqual("matched", matched["state"])
+        return matched
 
     def dispatch(self, session: dict[str, object], provider_id: str) -> dict[str, object]:
         response = self.client.post(
@@ -146,8 +196,52 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(200, response.status_code, response.text)
         return response.json()
 
+    def test_removing_image_invalidates_unconfirmed_summary_version(self) -> None:
+        session = self.prepare_summary()
+        session_id = session["session_id"]
+        stale_summary = session["active_task"]["summary"]
+        stale_payload = self.summary_confirmation_payload(session)
+        stale_version = stale_summary["version"]
+        self.assertTrue(session["media"]["analysis"]["confirmed"])
+        self.assertFalse(stale_summary["confirmed"])
+
+        removed = self.client.delete(f"/api/sessions/{session_id}/image")
+
+        self.assertEqual(200, removed.status_code, removed.text)
+        removed_session = removed.json()
+        latest_summary = removed_session["active_task"]["summary"]
+        self.assertIsNone(removed_session["media"])
+        self.assertEqual("awaiting_summary_confirmation", removed_session["state"])
+        self.assertEqual([], removed_session["candidates"])
+        self.assertGreater(latest_summary["version"], stale_version)
+        self.assertFalse(latest_summary["confirmed"])
+        self.assertTrue(removed_session["can_confirm_summary"])
+
+        stale = self.client.post(
+            f"/api/sessions/{session_id}/summary/confirm",
+            json=stale_payload,
+        )
+        self.assertEqual(409, stale.status_code, stale.text)
+        self.assertEqual("STALE_SUMMARY_VERSION", stale.json()["error"]["code"])
+
+        confirmation = self.client.post(
+            f"/api/sessions/{session_id}/summary/confirm",
+            json=self.summary_confirmation_payload(removed_session),
+        )
+        self.assertEqual(200, confirmation.status_code, confirmation.text)
+        confirmed_session = confirmation.json()
+        self.assertIsNone(confirmed_session["media"])
+        self.assertEqual("matched", confirmed_session["state"])
+        self.assertGreater(len(confirmed_session["candidates"]), 0)
+        self.assertTrue(confirmed_session["can_dispatch"])
+        self.assertTrue(confirmed_session["active_task"]["summary"]["confirmed"])
+        self.assertEqual(
+            latest_summary["version"],
+            confirmed_session["active_task"]["summary"]["version"],
+        )
+
     def test_upload_requires_external_confirmation_and_valid_image(self) -> None:
-        session = self.create_session()
+        session = self.prepare_confirmed_branch()
         endpoint = f"/api/sessions/{session['session_id']}/image"
 
         no_consent = self.client.post(
@@ -172,7 +266,7 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual([], os.listdir(self.media_root.name))
 
     def test_vlm_failure_cleans_up_the_uploaded_file_without_fallback(self) -> None:
-        session = self.create_session()
+        session = self.prepare_confirmed_branch()
         self.vision.fail = True
 
         response = self.client.post(
@@ -183,18 +277,14 @@ class MediaWebTests(unittest.TestCase):
 
         self.assertEqual(503, response.status_code)
         self.assertEqual("IMAGE_ANALYSIS_FAILED", response.json()["error"]["code"])
-        self.assertIsNone(
-            self.client.get(f"/api/sessions/{session['session_id']}").json()["media"]
-        )
+        self.assertIsNone(self.client.get(f"/api/sessions/{session['session_id']}").json()["media"])
         remaining_files = [
-            filename
-            for root, _dirs, files in os.walk(self.media_root.name)
-            for filename in files
+            filename for root, _dirs, files in os.walk(self.media_root.name) for filename in files
         ]
         self.assertEqual([], remaining_files)
 
     def test_unconfirmed_analysis_is_preview_only_until_catalog_revalidation(self) -> None:
-        session = self.create_session()
+        session = self.prepare_confirmed_branch()
         session_id = session["session_id"]
         upload = self.client.post(
             f"/api/sessions/{session_id}/image",
@@ -205,7 +295,8 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(200, upload.status_code, upload.text)
         body = upload.json()
         self.assertFalse(body["media"]["analysis"]["confirmed"])
-        self.assertIsNone(body["service"])
+        self.assertEqual(17, body["service"]["service_id"])
+        self.assertEqual("faucet_leak", body["active_task"]["branch"])
         self.assertFalse(body["can_send_message"])
         self.assertNotIn("image_path", upload.text)
 
@@ -232,7 +323,9 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(200, confirmed.status_code, confirmed.text)
         confirmed_body = confirmed.json()
         self.assertTrue(confirmed_body["media"]["analysis"]["confirmed"])
-        self.assertEqual("使用者已修正模型建議。", confirmed_body["media"]["analysis"]["correction"])
+        self.assertEqual(
+            "使用者已修正模型建議。", confirmed_body["media"]["analysis"]["correction"]
+        )
         self.assertEqual("水電修繕", confirmed_body["service"]["name"])
         self.assertTrue(confirmed_body["can_send_message"])
 
@@ -249,9 +342,7 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(200, reset.status_code)
         self.assertIsNone(reset.json()["media"])
         remaining_files = [
-            filename
-            for root, _dirs, files in os.walk(self.media_root.name)
-            for filename in files
+            filename for root, _dirs, files in os.walk(self.media_root.name) for filename in files
         ]
         self.assertEqual([], remaining_files)
 
@@ -323,14 +414,29 @@ class MediaWebTests(unittest.TestCase):
 
 class MediaWebMockModeTests(unittest.TestCase):
     def test_mock_mode_rejects_image_analysis_without_fallback(self) -> None:
-        with tempfile.TemporaryDirectory() as media_root, patch.dict(
-            os.environ,
-            {"WEB_MODEL_PROVIDER": "mock", "MEDIA_ROOT": media_root},
-            clear=False,
-        ), TestClient(create_app()) as client:
+        with (
+            tempfile.TemporaryDirectory() as media_root,
+            patch.dict(
+                os.environ,
+                {"WEB_MODEL_PROVIDER": "mock", "MEDIA_ROOT": media_root},
+                clear=False,
+            ),
+            TestClient(create_app()) as client,
+        ):
             session = client.post("/api/sessions").json()
+            session_id = session["session_id"]
+            proposal = client.post(
+                f"/api/sessions/{session_id}/messages",
+                json={"text": "臺北市大安區水龍頭漏水"},
+            )
+            self.assertEqual(200, proposal.status_code, proposal.text)
+            confirmed = client.post(
+                f"/api/sessions/{session_id}/branch/confirm",
+                json={"branch": "faucet_leak", "confirm": True},
+            )
+            self.assertEqual(200, confirmed.status_code, confirmed.text)
             response = client.post(
-                f"/api/sessions/{session['session_id']}/image",
+                f"/api/sessions/{session_id}/image",
                 files={"file": ("repair.png", _png_bytes(), "image/png")},
                 data={"external_processing_confirmed": "true"},
             )

@@ -27,6 +27,7 @@ from home_repair_agent.backend.models import (
     ServiceSummary,
 )
 from home_repair_agent.backend.services import ReadServiceLayer
+from home_repair_agent.data_cleaning.demo import build_curated_repair_form
 from home_repair_agent.mcp_server.server import create_mcp_server
 
 DEMO_SERVICE_ID = 17
@@ -34,7 +35,12 @@ TAIPEI_TIMEZONE = timezone(timedelta(hours=8))
 SCRIPTED_INPUTS = (
     "台北市大安區水龍頭漏水",
     "水龍頭漏水",
-    "星期六下午",
+    "水龍頭接頭持續滴水",
+    "臺北市大安區",
+    "可以",
+    "下週六",
+    "下午",
+    "App 訊息",
 )
 DEMO_NOTICE_TEMPLATE = """\
 修繕小隊長｜本機終端 Demo
@@ -43,6 +49,48 @@ DEMO_NOTICE_TEMPLATE = """\
 用途：人工驗證 Agent → 四個唯讀 MCP Tools → Service Layer 的多輪閉環。
 指令：/help、/reset、/quit
 """
+
+
+def _build_curated_consultation_form() -> ConsultationForm:
+    payload = build_curated_repair_form()
+    form = payload["form"]
+    options_by_topic: dict[str, list[FormOption]] = {}
+    for option in payload["options"]:
+        options_by_topic.setdefault(option["topic_key"], []).append(
+            FormOption(
+                option_key=option["option_key"],
+                value=option["value"],
+                label=option["label"],
+                sort_order=option["sort_order"],
+            )
+        )
+
+    topics = [
+        FormTopic(
+            topic_key=topic["topic_key"],
+            input_type=topic["input_type"],
+            title=topic["title"],
+            is_required=topic["is_required"],
+            sort_order=topic["sort_order"],
+            config=dict(topic["config"]),
+            options=sorted(
+                options_by_topic.get(topic["topic_key"], []),
+                key=lambda option: (option.sort_order, option.option_key),
+            ),
+        )
+        for topic in payload["topics"]
+    ]
+    return ConsultationForm(
+        form_key=form["form_key"],
+        service_id=form["service_id"],
+        version=form["version"],
+        name=form["name"],
+        description=form["description"],
+        topics=sorted(
+            topics,
+            key=lambda topic: (topic.sort_order, topic.topic_key),
+        ),
+    )
 
 
 class DemoReadRepository:
@@ -58,7 +106,16 @@ class DemoReadRepository:
             service_type_name="水電修繕",
             name="水電修繕",
             description="本機 Demo 用的合成服務資料。",
-            aliases=["水電", "漏水", "水龍頭", "馬桶"],
+            aliases=[
+                "水電",
+                "漏水",
+                "水龍頭",
+                "馬桶",
+                "插座",
+                "電路",
+                "電線",
+                "冒火花",
+            ],
         )
         self._locations = (
             ResolvedLocation(
@@ -74,56 +131,7 @@ class DemoReadRepository:
                 full_name="新北市板橋區",
             ),
         )
-        self._form = ConsultationForm(
-            form_key="demo_repair_form_v1",
-            service_id=DEMO_SERVICE_ID,
-            version=1,
-            name="Demo 水電修繕諮詢單",
-            description="縮短過的合成表單，用來展示多輪追問；不是正式案件表單。",
-            topics=[
-                FormTopic(
-                    topic_key="issue_category",
-                    input_type="single_select",
-                    title="需要處理的問題",
-                    is_required=True,
-                    sort_order=1,
-                    options=[
-                        FormOption(
-                            option_key="leaking_faucet",
-                            value="leaking_faucet",
-                            label="水龍頭漏水",
-                            sort_order=1,
-                        ),
-                        FormOption(
-                            option_key="clogged_toilet",
-                            value="clogged_toilet",
-                            label="馬桶堵塞",
-                            sort_order=2,
-                        ),
-                    ],
-                ),
-                FormTopic(
-                    topic_key="preferred_time",
-                    input_type="text",
-                    title=f"希望服務時間（Demo 候選日期為 {demo_start:%Y-%m-%d}）",
-                    is_required=True,
-                    sort_order=2,
-                    config={
-                        "control": "datetime_range",
-                        "timezone": "Asia/Taipei",
-                        "suggested_start": demo_start.isoformat(),
-                        "suggested_end": (demo_start + timedelta(hours=4)).isoformat(),
-                    },
-                ),
-                FormTopic(
-                    topic_key="notes",
-                    input_type="text",
-                    title="其他備註",
-                    is_required=False,
-                    sort_order=3,
-                ),
-            ],
-        )
+        self._form = _build_curated_consultation_form()
         self._slots = (
             AvailableProviderSlot(
                 provider_id="SYN-PROVIDER-001",

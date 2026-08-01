@@ -1,9 +1,9 @@
 # Agent 對話迴圈實作說明
 
-狀態：本機核心迴圈、終端 Demo 與 Hugging Face adapter contract 已驗證；
-團隊紀錄已有一次 synthetic live smoke，固定 eval 與 AWS 尚待驗證
+狀態：本機核心迴圈、終端 Demo、Hugging Face 與 Bedrock adapter contract 已驗證；
+HF 與 Bedrock 各有 synthetic live smoke，固定 eval 與 AgentCore 部署尚待驗證
 
-最後更新：2026-07-27
+最後更新：2026-08-01
 
 ## 做了什麼
 
@@ -19,6 +19,7 @@
 | `ScriptedModelClient` | `mock_model.py` | 精確控制 Tool Call 的測試替身 |
 | `HuggingFaceModelClient` | `huggingface_model.py` | 將對話與工具轉成 Hugging Face chat completion/function calling |
 | `HuggingFaceVisionClient` | `huggingface_vision.py` | 將已驗證圖片送到 HF VLM，只回傳待人工確認的結構化建議 |
+| `BedrockModelClient` | `bedrock_model.py` | 將相同對話與工具契約轉成 Bedrock Converse／tool use |
 | 本機終端 Demo | `demo.py` | 互動或腳本化展示 Agent、MCP 與 Service Layer 閉環 |
 
 它已能保存同一個 session 的多輪訊息、呼叫四個唯讀 MCP Tools、把結果交回
@@ -29,9 +30,8 @@ ModelClient，直到模型給出使用者回覆或觸發安全停止。Rule-base
 
 Agent「部署在哪裡」和「怎麼執行對話迴圈」是兩件事。迴圈可在本機使用
 Mock Model 與記憶體內 MCP transport 做 deterministic 驗證，也可用
-Hugging Face Inference Providers 驗證真正的語意理解與 tool calling；之後
-新增 `BedrockModelClient` 並把同一個 `AgentRunner` 放進 AgentCore Runtime，
-不必重寫流程。
+Hugging Face Inference Providers 與 Amazon Bedrock 可驗證真正的語意理解與
+tool calling；之後把同一個 `AgentRunner` 放進 AgentCore Runtime，不必重寫流程。
 
 ## 本機終端 Demo
 
@@ -198,25 +198,57 @@ log，不能只把 `readOnlyHint` 改成 `false` 就直接開放。
 瀏覽器 Web Speech API 或 Amazon Transcribe 只負責把聲音變成文字。朋友之後做
 語音時，只需把辨識結果送進相同的 `run_turn()`；文字版測試仍然有效。
 
-## Bedrock 怎麼接
+## Bedrock 模型模式
 
-下一個模型 adapter 需實作 `ModelClient.complete()`：
+`BedrockModelClient` 已實作相同的 `ModelClient.complete()`：
 
 1. 把 `ConversationMessage` 轉成 Bedrock Converse messages。
 2. 把 `ToolDefinition` 轉成 Bedrock `toolConfig`。
 3. 將 Bedrock 文字結果轉成 `ModelTurn.answer()`。
 4. 將 Bedrock `toolUse` 轉成 `ModelTurn.use_tools()`。
+5. 驗證 tool arguments 是可序列化的 JSON object，拒絕 list、scalar、NaN 與 bytes。
+6. 只有 `stopReason=end_turn` 接受文字、`stopReason=tool_use` 接受工具呼叫；
+   `max_tokens`、`malformed_tool_use`、context overflow、filter 或未知原因都安全失敗。
 
 AgentRunner、MCPToolClient、Service Layer 與 PostgreSQL 不需要修改。AWS
 credentials 由標準 credential provider chain 或 IAM role 提供，不得寫入程式。
+Region 與 model ID 必須明確設定，錯誤時不 fallback 到 Mock 或 Hugging Face：
+
+```powershell
+$env:BEDROCK_REGION = "us-west-2"
+$env:BEDROCK_MODEL_ID = "amazon.nova-lite-v1:0"
+python scripts/bedrock_live_smoke.py
+```
+
+`BEDROCK_REGION` 只接受比賽允許的 `us-east-1`／`us-west-2`；另可設定
+`BEDROCK_MAX_TOKENS` 與 `BEDROCK_TIMEOUT_SECONDS`。SDK client 沒有 credentials 時
+在建立階段停止；權限、model ID 或 provider 請求失敗時只拋固定的安全錯誤，不記錄
+credential、完整 provider payload 或對話內容，也不做隱藏 retry／provider 切換。
+回應解析同樣 fail closed：不把 token 截斷的 partial text 當完成回答，也不執行
+Bedrock 標示為 malformed 的 tool use。
+
+2026-08-01 已以 `us-west-2` 的 `amazon.nova-lite-v1:0` 執行兩輪 synthetic live
+smoke：第一輪回 `resolve_location({county_name: 台北市, district_name: 大安區})`，
+第二輪在回填 synthetic 結果後產生文字。時間、redacted I/O 與資源盤點見
+[AWS POC 證據](../../../docs/ENGINEER_LOG-aws-bedrock-agentcore-poc.md)。
 
 ## 測試
 
 執行：
 
 ```powershell
-python -m pytest tests/test_huggingface_model.py tests/test_agent_loop.py tests/test_agent_demo.py -q
+python -m pytest tests/test_bedrock_model.py tests/test_agent_loop.py tests/test_agent_demo.py tests/test_mcp_tools.py -q
 ```
+
+Bedrock fake-client contract tests 涵蓋：
+
+- 缺 Region、model ID、credentials 與競賽外 Region 的 fail-fast。
+- system/user/assistant/tool-use/tool-result 與 Tool schema 的雙向轉換。
+- 文字回答、tool-use、JSON object 與非 JSON nested value 驗證。
+- provider 錯誤與 response error 遮罩，且 traceback 不串出底層 provider context。
+- explicit Region/model routing，沒有 Mock／HF fallback。
+- `stopReason` 白名單：只接受 `end_turn` 文字與 `tool_use` 工具；截斷、filter、
+  malformed tool use、reason/content 不一致都拒絕。
 
 Hugging Face adapter 新增的測試涵蓋：
 
@@ -251,10 +283,23 @@ Hugging Face adapter 新增的測試涵蓋：
 Hugging Face 四工具 live smoke；本次修正環境沒有 `HF_TOKEN`，沒有重跑 live，
 也仍不宣稱模型品質或完成固定 eval。
 
+2026-08-01 Bedrock POC：adapter focused `15 passed`，AgentRunner／Demo regression
+`22 passed`，MCP protocol `7 passed, 11 subtests passed`，完整 suite
+`148 passed, 19 skipped, 52 subtests passed`。受影響 Ruff、compileall、diff check 與
+secret pattern scan 通過；全 repo Ruff 的 22 個 findings 與 base 相同。Nova Lite
+synthetic live tool-use 已通過，細節見 AWS POC 證據。
+
+2026-08-01 PR #17 review 修正：Bedrock／live-smoke focused
+`23 passed, 3 subtests passed`，Agent／Demo／MCP 合併 focused
+`52 passed, 14 subtests passed`，完整 suite
+`156 passed, 19 skipped, 55 subtests passed`。四個 Bedrock 新檔已通過 Ruff check 與
+format check，且納入 PostgreSQL CI targeted list；Nova Lite live smoke 在
+`stopReason` 白名單後重新成功。
+
 ## 尚未做
 
 - 可重複的 Hugging Face 固定 LLM tool-selection eval、延遲與額度紀錄。
-- `BedrockModelClient` 與 Bedrock tool-selection eval。
+- 可重複的 Bedrock 固定 tool-selection eval、延遲與額度紀錄。
 - AgentCore Runtime / Gateway 部署與 IAM 驗證。
 - FastAPI／瀏覽器 Demo UI、Speech-to-Text、Text-to-Speech 與前端麥克風。
 - 回答自動對映到任意表單 topic 的 LLM slot filling。

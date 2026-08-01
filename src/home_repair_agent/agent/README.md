@@ -1,7 +1,8 @@
 # Agent 對話迴圈實作說明
 
 狀態：本機核心迴圈、終端 Demo、Hugging Face 與 Bedrock adapter contract 已驗證；
-HF 與 Bedrock 各有 synthetic live smoke，固定 eval 與 AgentCore 部署尚待驗證
+Bedrock 已完成四個唯讀 MCP Tools 的 synthetic live 閉環，固定評估矩陣與
+AgentCore 部署尚待驗證
 
 最後更新：2026-08-01
 
@@ -228,12 +229,32 @@ smoke：第一輪回 `resolve_location({county_name: 台北市, district_name: �
 第二輪在回填 synthetic 結果後產生文字。時間、redacted I/O 與資源盤點見
 [AWS POC 證據](../../../docs/ENGINEER_LOG-aws-bedrock-agentcore-poc.md)。
 
+### Bedrock × 現有 MCP 完整閉環
+
+`scripts/bedrock_mcp_e2e.py` 使用相同 `BedrockModelClient`，但不再手動回填假工具
+結果。它建立現有 process-local MCP ClientSession、`MCPToolClient`、
+`ReadServiceLayer` 與 `DemoReadRepository`，讓真實 Bedrock 經 `AgentRunner` 依序
+完成：
+
+```text
+search_services -> resolve_location -> get_consultation_form
+  -> match_service_providers -> Bedrock 最終回答
+```
+
+四個結果都來自既有 MCP／Service 路徑，媒合候選帶 `data_source=synthetic`；沒有
+建立案件、真正派單、預約或保留時段。harness 的 `PacedModelClient` 保證每次
+Bedrock request start 至少相隔 1.1 秒，並只輸出遮罩後 I/O 與 synthetic trace。
+
+2026-08-01 的 Nova Lite live run 共 4 requests，實際間隔為 1.797、1.110、
+1.437 秒，四工具皆成功、最終 `stop_reason=completed`、AWS 持久資源建立數為 0。
+完整證據見 [Bedrock × MCP E2E](../../../docs/ENGINEER_LOG-aws-bedrock-mcp-e2e.md)。
+
 ## 測試
 
 執行：
 
 ```powershell
-python -m pytest tests/test_bedrock_model.py tests/test_agent_loop.py tests/test_agent_demo.py tests/test_mcp_tools.py -q
+python -m pytest tests/test_bedrock_model.py tests/test_bedrock_mcp_e2e.py tests/test_agent_loop.py tests/test_agent_demo.py tests/test_mcp_tools.py -q
 ```
 
 Bedrock fake-client contract tests 涵蓋：
@@ -282,6 +303,11 @@ Hugging Face 四工具 live smoke；本次修正環境沒有 `HF_TOKEN`，沒有
 `148 passed, 19 skipped, 52 subtests passed`。受影響 Ruff、compileall、diff check 與
 secret pattern scan 通過；全 repo Ruff 的 22 個 findings 與 base 相同。Nova Lite
 synthetic live tool-use 已通過，細節見 AWS POC 證據。
+
+2026-08-01 Bedrock × MCP E2E：harness focused `4 passed`，Bedrock adapter + E2E
+`19 passed`，AgentRunner／Demo／MCP regression `29 passed, 11 subtests passed`，完整
+suite `152 passed, 19 skipped, 52 subtests passed`。Nova Lite 經真實 AgentRunner 與
+process-local MCP protocol 完成四個唯讀 Tool；細節見 Bedrock × MCP E2E 證據。
 
 ## 尚未做
 

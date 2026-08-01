@@ -16,7 +16,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；固定案例矩陣待做 | `src/home_repair_agent/agent/huggingface_model.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式) | request/response、tool call、timeout、錯誤遮罩、Qwen3 live |
 | 圖片上傳與 HF VLM | 已整合並完成本機、live HF 與 PostgreSQL 16.14 驗證 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003 tests |
-| Bedrock Model adapter | contract 與 synthetic tool-use live smoke 已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_live_smoke.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | fake-client contract、Nova Lite Converse/tool use live |
+| Bedrock Model adapter | contract、synthetic tool-use smoke 與四工具 MCP live 閉環已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_*.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC](ENGINEER_LOG-aws-bedrock-agentcore-poc.md)、[MCP E2E](ENGINEER_LOG-aws-bedrock-mcp-e2e.md) | fake-client contract、Nova Lite Converse、AgentRunner × MCP 四工具 live |
 | FastAPI / Demo UI | 已驗證消費者人工 Checklist、無障礙雙端 P2 與 async 案件 repository 切換；唯讀服務資料仍使用 Demo repository | `src/home_repair_agent/web/` | [Web P2 README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md) | API／a11y tests、桌面／手機瀏覽器 E2E |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
@@ -68,7 +68,25 @@ Web session 仍不能恢復，也不會真的保留師傅時段。廠商 header 
 靜默切回 Mock。Demo synthetic 時段依啟動時間產生在下一個未來星期六；
 hosted model 不得自行把相對日期換成具體年月日。
 
+另有一條真實 Bedrock、但仍為 process-local MCP 的 synthetic 閉環：
+
+```text
+Amazon Nova Lite -> AgentRunner -> MCPToolClient -> FastMCP Server
+  -> ReadServiceLayer -> DemoReadRepository -> ToolResult -> Nova Lite final answer
+```
+
+2026-08-01 live run 實際完成四個唯讀 Tool 並取得 synthetic 候選；這不等同外部
+Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時段。
+
 ## 最近驗證
+
+- 2026-08-01：新增 `scripts/bedrock_mcp_e2e.py` 與 contract tests；Nova Lite 經
+  未修改的 `AgentRunner`、`MCPToolClient`、process-local MCP protocol 與
+  `ReadServiceLayer`，實際完成服務、行政區、表單與 synthetic 候選四工具閉環。
+  4 次 Bedrock request 的 start interval 為 1.797／1.110／1.437 秒，沒有 AWS
+  持久資源。focused `19 passed`，Agent／Demo／MCP regression
+  `29 passed, 11 subtests passed`，完整 `152 passed, 19 skipped,
+  52 subtests passed`。
 
 - 2026-08-01：新增 `BedrockModelClient`，沿用 provider-neutral messages／tools 與
   `ModelTurn`，完成 Converse text／tool-use／tool-result 轉換、JSON object 驗證、

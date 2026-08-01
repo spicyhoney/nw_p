@@ -26,9 +26,11 @@
 3. text blocks 轉成 `ModelTurn.answer()`；`toolUse` 轉成
    `ModelTurn.use_tools()`。
 4. tool arguments 必須是可序列化 JSON object；list、scalar、NaN、bytes 等拒絕。
-5. `BEDROCK_REGION` 與 `BEDROCK_MODEL_ID` 必填；比賽 Region 只接受
+5. `stopReason=end_turn` 才接受文字，`stopReason=tool_use` 才接受工具呼叫；
+   `max_tokens`、`malformed_tool_use`、context overflow、filter 與未知值一律拒絕。
+6. `BEDROCK_REGION` 與 `BEDROCK_MODEL_ID` 必填；比賽 Region 只接受
    `us-east-1`／`us-west-2`；SDK credential chain 無身分時在建立 client 前停止。
-6. Converse 沒有 adapter-level retry；權限、model、transport 或 provider 失敗只回固定
+7. Converse 沒有 adapter-level retry；權限、model、transport 或 provider 失敗只回固定
    `BedrockRequestError`，並 suppress 底層 traceback context。沒有 Mock／HF fallback，
    沒有 log request／response body。
 
@@ -67,6 +69,24 @@ Workshop credentials 只存在於瀏覽器記憶體、一次性 child process en
 temp bridge；每次呼叫的 `finally` 都移除檔案與環境變數，完成後掃描為
 `AWS_CREDENTIAL_TEMP_FILES=0`。repo、輸出證據與 log 都沒有 credential 或完整
 provider payload。
+
+### PR #17 review remediation live revalidation
+
+2026-08-01 依 review 補上 `stopReason` fail-closed 驗證後，以相同 synthetic case
+重新執行 live smoke：
+
+| 欄位 | 證據 |
+|---|---|
+| 時間 | `2026-08-01T06:23:07+00:00`（臺北 `2026-08-01 14:23:07+08:00`） |
+| Region／model | `us-west-2`／`amazon.nova-lite-v1:0` |
+| 流程 | 真實 `tool_use` → synthetic tool result → 真實 `end_turn` |
+| tool trace | `resolve_location({county_name: 台北市, district_name: 大安區})` |
+| redacted output | 文字長度 `124`；完整 provider payload 未保留 |
+| 結果 | `passed` |
+
+若第一輪不是 `tool_use` 或第二輪不是 `end_turn`，新 adapter 會拋固定
+`BedrockResponseError`，因此本次成功也驗證 Nova Lite 的真實 stop reason 符合白名單。
+本輪仍沒有建立 AWS 持久資源，temp credential bridge 清除後為 0。
 
 ## AgentCore Runtime 決策與盤點
 
@@ -116,6 +136,10 @@ Runtime 持續計費。若後續明確允許短效 S3 artifact（或另開 conta
 | 全 repo Ruff | 22 個既有 data-cleaning findings；base 同樣是 22，沒有新增 |
 | `git diff --check` | passed |
 | AWS／HF key 與 private-key pattern scan | 0 matched files |
+| PR #17 review focused | `23 passed, 3 subtests passed` |
+| PR #17 Agent／Demo／MCP focused | `52 passed, 14 subtests passed` |
+| PR #17 review 後完整 `pytest -q` | `156 passed, 19 skipped, 55 subtests passed` |
+| 四個 Bedrock 新檔 Ruff check／format check | passed；已納入 PostgreSQL CI targeted list |
 
 PostgreSQL tests 的 19 個 skip 仍是未提供 `TEST_DATABASE_URL`／對應環境的既有條件；
 本 POC 未修改資料庫契約。

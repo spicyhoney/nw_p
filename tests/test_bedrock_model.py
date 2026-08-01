@@ -52,6 +52,29 @@ def _answer_response(text: str = "請問您位於哪個行政區？") -> dict[st
     }
 
 
+def _tool_use_response(*, stop_reason: str = "tool_use") -> dict[str, object]:
+    return {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {
+                        "toolUse": {
+                            "toolUseId": "bedrock-call-1",
+                            "name": "resolve_location",
+                            "input": {
+                                "county_name": "台北市",
+                                "district_name": "大安區",
+                            },
+                        }
+                    }
+                ],
+            }
+        },
+        "stopReason": stop_reason,
+    }
+
+
 def _tool_definition() -> ToolDefinition:
     return ToolDefinition(
         name="resolve_location",
@@ -136,9 +159,12 @@ class BedrockConfigurationTests(unittest.TestCase):
             def client(self, *args: object, **kwargs: object) -> object:
                 raise AssertionError("client must not be created without credentials")
 
-        with patch("boto3.Session", return_value=FakeSession()), self.assertRaisesRegex(
-            BedrockConfigurationError,
-            "AWS credentials are required",
+        with (
+            patch("boto3.Session", return_value=FakeSession()),
+            self.assertRaisesRegex(
+                BedrockConfigurationError,
+                "AWS credentials are required",
+            ),
         ):
             _create_bedrock_runtime_client(
                 region="us-west-2",
@@ -285,28 +311,7 @@ class BedrockModelClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual("error", messages[2]["content"][1]["toolResult"]["status"])
 
     async def test_tool_use_response_is_converted_to_model_turn(self) -> None:
-        client = RecordingBedrockClient(
-            {
-                "output": {
-                    "message": {
-                        "role": "assistant",
-                        "content": [
-                            {
-                                "toolUse": {
-                                    "toolUseId": "bedrock-call-1",
-                                    "name": "resolve_location",
-                                    "input": {
-                                        "county_name": "台北市",
-                                        "district_name": "大安區",
-                                    },
-                                }
-                            }
-                        ],
-                    }
-                },
-                "stopReason": "tool_use",
-            }
-        )
+        client = RecordingBedrockClient(_tool_use_response())
         model = BedrockModelClient(
             client=client,
             model_id="test-model",
@@ -348,7 +353,8 @@ class BedrockModelClientTests(unittest.IsolatedAsyncioTestCase):
                             }
                         ]
                     }
-                }
+                },
+                "stopReason": "tool_use",
             }
         )
         model = BedrockModelClient(
@@ -378,7 +384,8 @@ class BedrockModelClientTests(unittest.IsolatedAsyncioTestCase):
                             }
                         ]
                     }
-                }
+                },
+                "stopReason": "tool_use",
             }
         )
         model = BedrockModelClient(
@@ -413,6 +420,68 @@ class BedrockModelClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("AKIA_TEST_ONLY", rendered)
         self.assertNotIn("synthetic private details", rendered)
         self.assertTrue(raised.exception.__suppress_context__)
+
+    async def test_incomplete_or_filtered_text_stop_reasons_are_rejected(self) -> None:
+        for stop_reason in (
+            "max_tokens",
+            "model_context_window_exceeded",
+            "content_filtered",
+        ):
+            with self.subTest(stop_reason=stop_reason):
+                response = _answer_response("這是不應被接受的 partial answer")
+                response["stopReason"] = stop_reason
+                model = BedrockModelClient(
+                    client=RecordingBedrockClient(response),
+                    model_id="test-model",
+                    region="us-west-2",
+                )
+
+                with self.assertRaisesRegex(BedrockResponseError, "stop reason"):
+                    await model.complete(
+                        messages=[UserMessage(text="synthetic 水龍頭漏水")],
+                        tools=[],
+                    )
+
+    async def test_malformed_tool_use_stop_reason_is_not_executable(self) -> None:
+        model = BedrockModelClient(
+            client=RecordingBedrockClient(_tool_use_response(stop_reason="malformed_tool_use")),
+            model_id="test-model",
+            region="us-west-2",
+        )
+
+        with self.assertRaisesRegex(BedrockResponseError, "stop reason"):
+            await model.complete(
+                messages=[UserMessage(text="台北市大安區")],
+                tools=[_tool_definition()],
+            )
+
+    async def test_tool_use_stop_reason_requires_a_tool_call(self) -> None:
+        response = _answer_response("不應以 tool_use 接受純文字")
+        response["stopReason"] = "tool_use"
+        model = BedrockModelClient(
+            client=RecordingBedrockClient(response),
+            model_id="test-model",
+            region="us-west-2",
+        )
+
+        with self.assertRaisesRegex(BedrockResponseError, "missing a valid tool call"):
+            await model.complete(
+                messages=[UserMessage(text="synthetic 水龍頭漏水")],
+                tools=[_tool_definition()],
+            )
+
+    async def test_end_turn_stop_reason_rejects_tool_call_content(self) -> None:
+        model = BedrockModelClient(
+            client=RecordingBedrockClient(_tool_use_response(stop_reason="end_turn")),
+            model_id="test-model",
+            region="us-west-2",
+        )
+
+        with self.assertRaisesRegex(BedrockResponseError, "must not contain a tool call"):
+            await model.complete(
+                messages=[UserMessage(text="台北市大安區")],
+                tools=[_tool_definition()],
+            )
 
     async def test_empty_response_is_rejected_without_payload_echo(self) -> None:
         model = BedrockModelClient(

@@ -80,6 +80,13 @@ Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時
 
 ## 最近驗證
 
+- 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
+  `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與
+  reason/content 不一致都拒絕。格式化兩個新檔，並將四個 Bedrock Python 檔納入
+  PostgreSQL CI targeted Ruff check／format check。focused
+  `52 passed, 14 subtests passed`，完整 `156 passed, 19 skipped,
+  55 subtests passed`；Nova Lite synthetic live smoke 重新通過。
+
 - 2026-08-01：新增 `scripts/bedrock_mcp_e2e.py` 與 contract tests；Nova Lite 經
   未修改的 `AgentRunner`、`MCPToolClient`、process-local MCP protocol 與
   `ReadServiceLayer`，實際完成服務、行政區、表單與 synthetic 候選四工具閉環。

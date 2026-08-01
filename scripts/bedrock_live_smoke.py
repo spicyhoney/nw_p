@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from home_repair_agent.agent.bedrock_model import BedrockModelClient
 from home_repair_agent.agent.models import (
     AssistantToolCalls,
+    ToolCall,
     ToolDefinition,
     ToolResultMessage,
     UserMessage,
@@ -16,6 +18,10 @@ SYNTHETIC_INPUT = (
     "這是無個資的 synthetic 測試。請呼叫 resolve_location 工具，"
     "確認台北市大安區；不要自行產生 location_id。"
 )
+EXPECTED_LOCATION_ARGUMENTS = {
+    "county_name": "台北市",
+    "district_name": "大安區",
+}
 
 
 def _tool_definition() -> ToolDefinition:
@@ -36,14 +42,27 @@ def _tool_definition() -> ToolDefinition:
     )
 
 
+def _validate_location_tool_calls(tool_calls: Sequence[ToolCall]) -> ToolCall:
+    if len(tool_calls) != 1:
+        raise RuntimeError("Bedrock live smoke must return exactly one resolve_location tool use.")
+
+    tool_call = tool_calls[0]
+    if tool_call.name != "resolve_location":
+        raise RuntimeError(
+            "Bedrock live smoke returned an unexpected tool instead of resolve_location."
+        )
+    if tool_call.arguments != EXPECTED_LOCATION_ARGUMENTS:
+        raise RuntimeError("Bedrock live smoke returned unexpected resolve_location arguments.")
+    return tool_call
+
+
 async def _run() -> dict[str, object]:
     client = BedrockModelClient.from_environment()
     tool = _tool_definition()
     messages = [UserMessage(text=SYNTHETIC_INPUT)]
 
     first_turn = await client.complete(messages=messages, tools=[tool])
-    if not first_turn.tool_calls:
-        raise RuntimeError("Bedrock live smoke did not return the required tool use.")
+    _validate_location_tool_calls(first_turn.tool_calls)
 
     messages.append(AssistantToolCalls(calls=first_turn.tool_calls))
     for call in first_turn.tool_calls:

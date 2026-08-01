@@ -28,9 +28,7 @@ class FakeClock:
 
 class PacedModelClientTests(unittest.IsolatedAsyncioTestCase):
     async def test_request_starts_are_spaced_below_one_rps(self) -> None:
-        delegate = ScriptedModelClient(
-            [ModelTurn.answer("第一輪"), ModelTurn.answer("第二輪")]
-        )
+        delegate = ScriptedModelClient([ModelTurn.answer("第一輪"), ModelTurn.answer("第二輪")])
         clock = FakeClock()
         client = PacedModelClient(
             delegate,
@@ -120,10 +118,7 @@ class BedrockMcpE2EHarnessTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(4, len(model.requests))
         self.assertTrue(
-            any(
-                isinstance(message, ToolResultMessage)
-                for message in model.requests[1][0]
-            )
+            any(isinstance(message, ToolResultMessage) for message in model.requests[1][0])
         )
         self.assertEqual(
             {

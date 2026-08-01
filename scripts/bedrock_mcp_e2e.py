@@ -148,9 +148,7 @@ async def run_bedrock_mcp_e2e(
 
     return {
         "timestamp_utc": completed_at.isoformat(timespec="seconds"),
-        "timestamp_taipei": completed_at.astimezone(TAIPEI_TIMEZONE).isoformat(
-            timespec="seconds"
-        ),
+        "timestamp_taipei": completed_at.astimezone(TAIPEI_TIMEZONE).isoformat(timespec="seconds"),
         "region": region,
         "model_id": model_id,
         "redacted_input": "[synthetic repair request with public location names]",
@@ -180,10 +178,7 @@ def _validate_result(result: AgentTurnResult) -> None:
         missing = ", ".join(sorted(missing_tools))
         raise RuntimeError(f"Bedrock MCP E2E missed required tools: {missing}.")
 
-    if any(
-        entry.mcp_is_error or entry.result.get("ok") is not True
-        for entry in result.tool_trace
-    ):
+    if any(entry.mcp_is_error or entry.result.get("ok") is not True for entry in result.tool_trace):
         raise RuntimeError("Bedrock MCP E2E returned an unsuccessful MCP result.")
 
     match_entries = [
@@ -223,11 +218,9 @@ def _redacted_arguments(entry: ToolTraceEntry) -> dict[str, object]:
         if key == "query":
             arguments[key] = "[synthetic repair issue]"
         elif (
-            key in {"county_name", "district_name"} and isinstance(value, str)
-        ) or (key in {"service_id", "limit"} and isinstance(value, int)) or (
-            key == "location_id"
-            and isinstance(value, str)
-            and value.startswith("DEMO-")
+            (key in {"county_name", "district_name"} and isinstance(value, str))
+            or (key in {"service_id", "limit"} and isinstance(value, int))
+            or (key == "location_id" and isinstance(value, str) and value.startswith("DEMO-"))
         ):
             arguments[key] = value
         else:

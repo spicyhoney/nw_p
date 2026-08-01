@@ -188,9 +188,7 @@ def _create_bedrock_runtime_client(
         session = boto3.Session(region_name=region)
         credentials = session.get_credentials()
         if credentials is None:
-            raise BedrockConfigurationError(
-                "AWS credentials are required for Bedrock mode."
-            )
+            raise BedrockConfigurationError("AWS credentials are required for Bedrock mode.")
         frozen = credentials.get_frozen_credentials()
         if not frozen.access_key or not frozen.secret_key:
             raise BedrockConfigurationError(
@@ -240,9 +238,7 @@ def _to_bedrock_messages(
         if isinstance(message, UserMessage):
             converted.append({"role": "user", "content": [{"text": message.text}]})
         elif isinstance(message, AssistantMessage):
-            converted.append(
-                {"role": "assistant", "content": [{"text": message.text}]}
-            )
+            converted.append({"role": "assistant", "content": [{"text": message.text}]})
         elif isinstance(message, AssistantToolCalls):
             converted.append(
                 {
@@ -254,9 +250,7 @@ def _to_bedrock_messages(
                                 "name": call.name,
                                 "input": _json_object(
                                     call.arguments,
-                                    error_message=(
-                                        "Agent tool arguments must be a JSON object."
-                                    ),
+                                    error_message=("Agent tool arguments must be a JSON object."),
                                 ),
                             }
                         }
@@ -318,6 +312,10 @@ def _to_bedrock_tool(tool: ToolDefinition) -> dict[str, Any]:
 
 
 def _parse_response(response: object) -> ModelTurn:
+    stop_reason = _mapping_field(response, "stopReason")
+    if stop_reason not in {"end_turn", "tool_use"}:
+        raise BedrockResponseError("Bedrock response has an unsupported stop reason.")
+
     output = _mapping_field(response, "output")
     message = _mapping_field(output, "message")
     content = _mapping_field(message, "content")
@@ -336,8 +334,12 @@ def _parse_response(response: object) -> ModelTurn:
         if isinstance(raw_text, str) and raw_text.strip():
             text_parts.append(raw_text.strip())
 
-    if tool_calls:
+    if stop_reason == "tool_use":
+        if not tool_calls:
+            raise BedrockResponseError("Bedrock tool-use response is missing a valid tool call.")
         return ModelTurn.use_tools(*tool_calls)
+    if tool_calls:
+        raise BedrockResponseError("Bedrock end-turn response must not contain a tool call.")
     if text_parts:
         return ModelTurn.answer("\n".join(text_parts))
     raise BedrockResponseError("Bedrock response contains neither text nor tool use.")

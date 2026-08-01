@@ -208,6 +208,8 @@ log，不能只把 `readOnlyHint` 改成 `false` 就直接開放。
 3. 將 Bedrock 文字結果轉成 `ModelTurn.answer()`。
 4. 將 Bedrock `toolUse` 轉成 `ModelTurn.use_tools()`。
 5. 驗證 tool arguments 是可序列化的 JSON object，拒絕 list、scalar、NaN 與 bytes。
+6. 只有 `stopReason=end_turn` 接受文字、`stopReason=tool_use` 接受工具呼叫；
+   `max_tokens`、`malformed_tool_use`、context overflow、filter 或未知原因都安全失敗。
 
 AgentRunner、MCPToolClient、Service Layer 與 PostgreSQL 不需要修改。AWS
 credentials 由標準 credential provider chain 或 IAM role 提供，不得寫入程式。
@@ -223,6 +225,8 @@ python scripts/bedrock_live_smoke.py
 `BEDROCK_MAX_TOKENS` 與 `BEDROCK_TIMEOUT_SECONDS`。SDK client 沒有 credentials 時
 在建立階段停止；權限、model ID 或 provider 請求失敗時只拋固定的安全錯誤，不記錄
 credential、完整 provider payload 或對話內容，也不做隱藏 retry／provider 切換。
+回應解析同樣 fail closed：不把 token 截斷的 partial text 當完成回答，也不執行
+Bedrock 標示為 malformed 的 tool use。
 
 2026-08-01 已以 `us-west-2` 的 `amazon.nova-lite-v1:0` 執行兩輪 synthetic live
 smoke：第一輪回 `resolve_location({county_name: 台北市, district_name: 大安區})`，
@@ -264,6 +268,8 @@ Bedrock fake-client contract tests 涵蓋：
 - 文字回答、tool-use、JSON object 與非 JSON nested value 驗證。
 - provider 錯誤與 response error 遮罩，且 traceback 不串出底層 provider context。
 - explicit Region/model routing，沒有 Mock／HF fallback。
+- `stopReason` 白名單：只接受 `end_turn` 文字與 `tool_use` 工具；截斷、filter、
+  malformed tool use、reason/content 不一致都拒絕。
 
 Hugging Face adapter 新增的測試涵蓋：
 
@@ -303,6 +309,13 @@ Hugging Face 四工具 live smoke；本次修正環境沒有 `HF_TOKEN`，沒有
 `148 passed, 19 skipped, 52 subtests passed`。受影響 Ruff、compileall、diff check 與
 secret pattern scan 通過；全 repo Ruff 的 22 個 findings 與 base 相同。Nova Lite
 synthetic live tool-use 已通過，細節見 AWS POC 證據。
+
+2026-08-01 PR #17 review 修正：Bedrock／live-smoke focused
+`23 passed, 3 subtests passed`，Agent／Demo／MCP 合併 focused
+`52 passed, 14 subtests passed`，完整 suite
+`156 passed, 19 skipped, 55 subtests passed`。四個 Bedrock 新檔已通過 Ruff check 與
+format check，且納入 PostgreSQL CI targeted list；Nova Lite live smoke 在
+`stopReason` 白名單後重新成功。
 
 2026-08-01 Bedrock × MCP E2E：harness focused `4 passed`，Bedrock adapter + E2E
 `19 passed`，AgentRunner／Demo／MCP regression `29 passed, 11 subtests passed`，完整

@@ -27,8 +27,8 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 | PostgreSQL | 已在真實 PostgreSQL 16.14 通過 loader、讀取與 async 案件 workflow transaction 測試 | 實作最小權限與正式 RDS 連線 |
 | Service Layer | 已完成唯讀查詢／媒合、派單／接單與 memory／async PostgreSQL repository | 正式登入、時段保留與排程衝突 |
 | MCP Tools | 已完成四個唯讀 Tool 與記憶體內 protocol tests；寫入仍未公開 | 先做真實模型 eval；外部 Agent 確有需求時才加受限寫入 Tool |
-| Agent | 已完成核心迴圈、MCP Client、Mock 多輪與 Hugging Face adapter contract | 固定 HF eval 後再實作 BedrockModelClient |
-| AWS | 尚未串接，且目前沒有比賽憑證 | 拿到帳號、Region 與額度後才做雲端整合 |
+| Agent | 已完成核心迴圈、MCP Client、Mock／HF／Bedrock adapter 與 Bedrock 四工具 live 閉環 | 固定 HF／Bedrock eval matrix |
+| AWS | Bedrock 與短效 AgentCore Runtime synthetic POC 已驗證並 cleanup | AgentCore Gateway、外部 MCP、RDS 與正式部署 |
 | Web / FastAPI | 已完成本機雙端 P2、人工 Checklist、無障礙基線與可選 PostgreSQL 案件持久化；唯讀服務資料仍使用 Demo repository | 正式登入、固定模型 eval、時段保留與公開部署 |
 | Web 讀取 adapter | 目前服務、地區、表單與媒合固定使用 `DemoReadRepository` | 可設定切換 Demo／PostgreSQL repository |
 
@@ -37,8 +37,8 @@ PR #13 最終本機完整結果為 `105 passed, 15 skipped, 43 subtests passed`�
 [實作索引](implementation-index.md)的最近驗證為準。這些測試已驗證資料清洗、
 Service Layer、MCP 協定、Mock／HF adapter contract、Checklist 競態保護，以及
 本機雙端 Web 流程；
-仍不代表正式身分驗證、Bedrock、語音或 AWS 部署已
-端到端完成。
+仍不代表正式身分驗證、語音、Gateway、RDS 或正式 AWS 部署已端到端完成；
+AgentCore Runtime 目前只驗證 synthetic、process-local MCP 的短效 POC。
 
 ## 一句話如何變成資料庫查詢
 
@@ -121,7 +121,7 @@ Tool、Service Layer 與 SQL。
 |---|---|---|
 | Amazon Bedrock | 對話理解、欄位抽取、選擇工具、案件摘要；不負責 SQL 與資料寫入 | P0，拿到憑證後先接 |
 | AgentCore Gateway | 對外提供統一 MCP endpoint，讓自家 Agent 或 Lumine one 能列出並呼叫白名單工具 | P1，對齊工作坊 |
-| AgentCore Runtime | 託管自製 Agent 或 FastMCP Server；本機階段不需要 | P1，拿到環境後部署 |
+| AgentCore Runtime | 託管自製 Agent 或 FastMCP Server；短效 synthetic direct-code POC 已通過並清除 | P1，下一步接 Gateway／外部 transport |
 | Amazon RDS for PostgreSQL | 正式環境的 PostgreSQL；本機仍用同版 PostgreSQL 開發 | P1，部署時再換連線字串 |
 | Amazon S3 | 私有保存報修照片；資料庫只存 object key，前端用短效 presigned URL 上傳或查看 | P1，有照片功能才接 |
 | IAM | 讓 Runtime、Gateway、Lambda、S3、RDS 之間以最小權限存取 | P0，部署時必做 |
@@ -221,11 +221,11 @@ role。AWS SDK 會從標準 credential provider chain 取得身分，不需要�
    `get_consultation_form`，並通過真實 PostgreSQL 測試。
 2. 已把同一批函式包成 FastMCP Tools，並通過本機 MCP client protocol tests。
 3. 已用 Mock Model 跑完「輸入 -> tool call -> tool result -> 回覆」迴圈。
-4. 拿到 AWS 憑證後實作 `BedrockModelClient`，不改迴圈、工具與資料庫邏輯。
+4. 已實作 `BedrockModelClient`，不改迴圈、工具與資料庫邏輯；Nova Lite live 通過。
 5. 已完成派單／接單 P0：確認、冪等、授權、audit 與狀態轉換。
 6. 已新增 PostgreSQL transaction repository；取得 AWS 環境後切到 RDS 連線。
 7. 加入正式登入與 RBAC。
-8. 部署 Agent / MCP Server 到 AgentCore Runtime，接上 Gateway。
+8. 已完成短效 AgentCore Runtime synthetic POC；下一步才接 Gateway／外部 MCP。
 9. 有照片需求再接 S3；有餘裕才把一支工具改成 Lambda target。
 10. 最後才評估是否真的需要 API Gateway。
 

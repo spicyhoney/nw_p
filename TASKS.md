@@ -1,6 +1,6 @@
 # 專案待辦
 
-最後更新：2026-07-30
+最後更新：2026-08-01
 
 本檔只記錄尚未完成的工作。已完成且通過驗證的功能移到
 [實作索引](docs/implementation-index.md)，目前接手狀態則記在
@@ -21,14 +21,14 @@
 | DATA-001 | Todo | 讓 Web 讀取路徑可選 Demo 或 PostgreSQL repository | 目前 Web 的查詢資料來自 Demo repository；接上清洗後的正式資料才能證明相同服務契約可支援持久化與部署環境 | 未分配 | 已載入 clean schema 的測試 PostgreSQL | `WEB_READ_REPOSITORY=demo\|postgres` 有明確 fail-fast 設定；Web 的服務、地點、表單與媒合能以相同契約查 PostgreSQL |
 | AI-001 | Todo | 建立固定 Hugging Face 評估矩陣 | 單次成功對話不足以判斷模型可靠度；固定案例可在更換 prompt、模型或 provider 時發現服務辨識與 Tool Call 的退化 | 未分配 | 可用的 `HF_TOKEN`，live 測試不進預設 CI | 正常需求、模糊服務、缺地點、多地點及 provider error 都有可重跑結果與報告 |
 | MCP-001 | Todo | 驗證 Streamable HTTP MCP 的外部 Client 流程 | 命題希望智慧管家可調用生活服務工具；目前的 process-local MCP 尚不能證明 Kiro、AgentCore 或其他外部 Client 能互通 | 未分配 | 本機 PostgreSQL 測試資料庫或受控測試 repository | 外部 Client 完成 `tools/list` 與四個唯讀 `tools/call`，留下命令、結果與錯誤案例 |
+| AWS-001 | In progress | 完成 AgentCore Gateway／外部 MCP 整合 | Bedrock ModelClient 與可清理的 AgentCore Runtime synthetic POC 已完成；仍需證明受管理 Runtime 可透過標準 MCP endpoint 使用既有工具 | Codex（Runtime POC） | MCP-001、Gateway 權限與部署架構決策 | Runtime 證據已留存且資源已清除；Gateway 可呼叫標準 MCP endpoint，且不改既有 Agent／Tool／Service 契約 |
 | DEPLOY-001 | Todo | 準備可攜式部署與公開 HTTPS 操作手冊 | 評審與組員需要在非開發者電腦上重現 Demo；部署、健康檢查與回復程序可避免作品只在單一本機可用 | 未分配 | 最終部署環境規格 | 有可重跑的 build、啟動、health check、環境變數與 rollback 步驟；不提交密鑰 |
 
 ## Blocked
 
 | ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 阻擋條件 | 完成條件 |
 |---|---|---|---|---|---|---|
-| AWS-001 | Blocked | 實作 Bedrock ModelClient 與 AgentCore Gateway／Runtime adapter | 比賽環境預計使用 AWS；完成 adapter 才能保留既有 Agent／MCP 契約，同時把本機 HF 模型替換成 Bedrock 與 AgentCore | 未分配 | 主辦方 AWS 帳號、Region、模型權限與額度 | Agent 透過 Bedrock 選擇既有工具，Gateway 可呼叫標準 MCP endpoint |
-| AWS-002 | Blocked | 建立 RDS、IAM 與 CloudWatch 雲端基線 | 正式案件需要持久化、最小權限與可觀測性；目前記憶體模式無法支援重啟復原、權限稽核與營運除錯 | 未分配 | AWS 網路、角色與 RDS 建立權限 | migration 可套用至測試 RDS，服務採最小權限，log 不含密鑰或完整個資 |
+| AWS-002 | Blocked | 建立正式 RDS、IAM 與 CloudWatch 雲端基線 | Runtime POC 已驗證短效執行角色與安全 log，但正式案件仍需要持久化、最小權限與可觀測性 | 未分配 | AWS 網路、角色、RDS 建立權限與正式部署架構 | migration 可套用至測試 RDS，服務採最小權限，log 不含密鑰或完整個資 |
 
 ## P1
 

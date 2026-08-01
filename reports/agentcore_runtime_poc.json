@@ -1,0 +1,105 @@
+{
+  "started_at_utc": "2026-08-01T08:58:53+00:00",
+  "finished_at_utc": "2026-08-01T09:00:00+00:00",
+  "region": "us-west-2",
+  "model_id": "amazon.nova-lite-v1:0",
+  "runtime_name": "nw_p_runtime_poc",
+  "runtime_id": "nw_p_runtime_poc-u4UhS4EYaz",
+  "tags": {
+    "Project": "nw_p",
+    "Purpose": "agentcore-runtime-poc",
+    "ManagedBy": "codex",
+    "ExpiresAt": "2026-08-01T11:00:00+00:00"
+  },
+  "invocation": {
+    "timestamp_utc": "2026-08-01T08:59:47+00:00",
+    "timestamp_taipei": "2026-08-01T16:59:47+08:00",
+    "region": "us-west-2",
+    "model_id": "amazon.nova-lite-v1:0",
+    "redacted_input": "[synthetic repair request with public location names]",
+    "redacted_output": "[synthetic service/location/form/provider summary; no case or booking created]",
+    "output_character_count": 154,
+    "stop_reason": "completed",
+    "bedrock_request_count": 4,
+    "minimum_request_interval_seconds": 1.1,
+    "observed_request_intervals_seconds": [
+      1.303,
+      1.102,
+      1.102
+    ],
+    "mcp_transport": "process-local MCP ClientSession",
+    "tool_use_trace": [
+      {
+        "name": "search_services",
+        "arguments": {
+          "query": "[synthetic repair issue]"
+        },
+        "result": {
+          "ok": true,
+          "mcp_is_error": false,
+          "count": 1
+        }
+      },
+      {
+        "name": "resolve_location",
+        "arguments": {
+          "district_name": "大安區",
+          "county_name": "台北市"
+        },
+        "result": {
+          "ok": true,
+          "mcp_is_error": false
+        }
+      },
+      {
+        "name": "get_consultation_form",
+        "arguments": {
+          "service_id": 17
+        },
+        "result": {
+          "ok": true,
+          "mcp_is_error": false
+        }
+      },
+      {
+        "name": "match_service_providers",
+        "arguments": {
+          "service_id": 17,
+          "location_id": "DEMO-63000030"
+        },
+        "result": {
+          "ok": true,
+          "mcp_is_error": false,
+          "count": 2,
+          "data_source": "synthetic"
+        }
+      }
+    ],
+    "status": "passed",
+    "execution_environment": "Amazon Bedrock AgentCore Runtime",
+    "aws_resources_created_by_invocation": []
+  },
+  "logs": {
+    "log_group": "/aws/bedrock-agentcore/runtimes/nw_p_runtime_poc-u4UhS4EYaz-DEFAULT",
+    "event_count": 1,
+    "started_marker": false,
+    "passed_marker": true,
+    "credential_or_private_key_patterns": 0,
+    "full_provider_payload_markers": 0
+  },
+  "cleanup": {
+    "cleanup_errors": [],
+    "runtime_count_after_cleanup": 0,
+    "s3_bucket_exists_after_cleanup": false,
+    "iam_role_exists_after_cleanup": false,
+    "cleanup_passed": true,
+    "independent_cli_verification": {
+      "runtime_count": 0,
+      "workload_identity_count": 0,
+      "poc_bucket_count": 0,
+      "poc_log_group_count": 0,
+      "iam_role_not_found": true
+    }
+  },
+  "failure_type": null
+}

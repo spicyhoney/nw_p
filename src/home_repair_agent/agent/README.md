@@ -1,8 +1,8 @@
 # Agent 對話迴圈實作說明
 
 狀態：本機核心迴圈、終端 Demo、Hugging Face 與 Bedrock adapter contract 已驗證；
-Bedrock 已完成四個唯讀 MCP Tools 的 synthetic live 閉環，固定評估矩陣與
-AgentCore 部署尚待驗證
+Bedrock 已完成四個唯讀 MCP Tools 的 synthetic live 閉環，同一閉環也已在短效
+AgentCore Runtime 驗證並完整 cleanup；固定評估矩陣與 Gateway 尚待驗證
 
 最後更新：2026-08-01
 
@@ -253,6 +253,22 @@ Bedrock request start 至少相隔 1.1 秒，並只輸出遮罩後 I/O 與 synth
 1.437 秒，四工具皆成功、最終 `stop_reason=completed`、AWS 持久資源建立數為 0。
 完整證據見 [Bedrock × MCP E2E](../../../docs/ENGINEER_LOG-aws-bedrock-mcp-e2e.md)。
 
+### AgentCore Runtime 短效 POC
+
+`agentcore_runtime_entrypoint.py` 只接受固定 `synthetic_repair_v1`，拒絕任意 prompt；
+它在 AgentCore Runtime 內重用相同 `BedrockModelClient`、`AgentRunner`、process-local
+MCP、`ReadServiceLayer` 與 `DemoReadRepository`。`scripts/agentcore_runtime_poc.py`
+負責 ARM64 direct-code packaging、最小 IAM、私有 S3、deploy、invoke、遮罩 log 檢查
+與 `finally` cleanup。
+
+2026-08-01 `us-west-2`／Nova Lite live invoke 完成四工具，4 次 Bedrock request 的
+間隔為 1.303／1.102／1.102 秒；log 有 passed marker，credential／private-key 與完整
+provider payload pattern 都是 0。Runtime、workload identity、S3、CloudWatch log group
+與 IAM role 經腳本及獨立 CLI 兩次確認皆為 0／不存在，因此沒有持續運行資源。
+這仍是 synthetic、process-local MCP 與 Demo repository，不等於 Gateway、RDS、Web
+或正式派單已上線。完整證據見
+[AgentCore Runtime POC](../../../docs/ENGINEER_LOG-aws-agentcore-runtime-poc.md)。
+
 ## 測試
 
 執行：
@@ -327,7 +343,7 @@ form／match 的 ID 必須來自更早 ModelTurn 的成功 ToolResult；同輪�
 
 - 可重複的 Hugging Face 固定 LLM tool-selection eval、延遲與額度紀錄。
 - 可重複的 Bedrock 固定 tool-selection eval、延遲與額度紀錄。
-- AgentCore Runtime / Gateway 部署與 IAM 驗證。
+- AgentCore Gateway、Streamable HTTP MCP 與外部 Client 驗證。
 - FastAPI／瀏覽器 Demo UI、Speech-to-Text、Text-to-Speech 與前端麥克風。
 - 回答自動對映到任意表單 topic 的 LLM slot filling。
 - Rule-based Mock 尚未把表單自由文字自動轉成含時區的媒合參數。

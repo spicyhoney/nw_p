@@ -21,7 +21,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
-| AgentCore Runtime / Gateway 部署 | 未執行；本輪範圍無既有 deployment artifact，且最小 direct-code 流程需要本輪禁止建立的 S3 artifact | 尚無 | [AWS 架構](architecture.md)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | 兩個允許 Region 的 Runtime count 均為 0 |
+| AgentCore Runtime / Gateway 部署 | Runtime synthetic direct-code POC 已驗證並 cleanup；Gateway 待做 | `agentcore_runtime_entrypoint.py`、`scripts/agentcore_runtime_poc.py` | [AWS 架構](architecture.md)、[Runtime POC 證據](ENGINEER_LOG-aws-agentcore-runtime-poc.md) | deploy／四工具 invoke／CloudWatch／cleanup；AWS 資源獨立複驗皆為 0 |
 
 ## 目前可執行的閉環
 
@@ -78,7 +78,25 @@ Amazon Nova Lite -> AgentRunner -> MCPToolClient -> FastMCP Server
 2026-08-01 live run 實際完成四個唯讀 Tool 並取得 synthetic 候選；這不等同外部
 Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時段。
 
+相同閉環也已在短效 AgentCore Runtime 執行：
+
+```text
+IAM-authenticated invoke -> AgentCore Runtime -> Nova Lite -> AgentRunner
+  -> process-local MCP -> DemoReadRepository -> redacted result -> cleanup
+```
+
+Runtime 只接受固定 synthetic scenario；deploy 後完成四工具與 CloudWatch 檢查，
+隨即刪除 Runtime、workload identity、S3、IAM role 與 log group。它仍不是 Gateway、
+Streamable HTTP、RDS 或正式 Web 部署。
+
 ## 最近驗證
+
+- 2026-08-01：新增 synthetic-only AgentCore Runtime direct-code POC。`us-west-2`
+  Nova Lite 在 Runtime 內完成四工具，4 次 request interval 為
+  1.303／1.102／1.102 秒；log credential／provider payload pattern 為 0。
+  Runtime、workload identity、S3、IAM role 與 CloudWatch log group 已 cleanup，
+  腳本及獨立 CLI 複驗皆為 0／不存在。focused `38 passed, 7 subtests passed`，
+  完整 `175 passed, 19 skipped, 59 subtests passed`。
 
 - 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
   `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與

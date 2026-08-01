@@ -627,6 +627,18 @@ const MEDIA_ALLOWED_TYPES = new Set([
   "image/webp",
 ]);
 const MEDIA_MAX_BYTES = 8 * 1024 * 1024;
+const MEDIA_FLOW_LOCKED_STATES = new Set([
+  "matched",
+  "no_candidates",
+  "dispatch_pending",
+  "provider_accepted",
+  "provider_rejected",
+]);
+const MEDIA_CASE_SUBMITTED_STATES = new Set([
+  "dispatch_pending",
+  "provider_accepted",
+  "provider_rejected",
+]);
 
 async function loadMediaProvider() {
   if (store.session?.provider?.key) {
@@ -701,6 +713,10 @@ async function handleMediaUpload(event) {
   if (!store.session || store.mediaBusy || !isHuggingFaceMediaAvailable()) {
     return;
   }
+  if (isMediaFlowLocked()) {
+    setMediaStatus(mediaFlowLockedMessage());
+    return;
+  }
   if (!store.session.active_task?.branch) {
     setMediaStatus("請先確認水電修繕分支，再上傳圖片。");
     return;
@@ -773,6 +789,17 @@ async function confirmMediaAnalysis(event) {
   event.preventDefault();
   const media = currentMedia();
   if (!store.session || !media || store.mediaBusy) {
+    return;
+  }
+  if (isMediaFlowLocked()) {
+    store.mediaEditorExpanded = false;
+    renderMedia();
+    setMediaStatus(mediaFlowLockedMessage());
+    announce("圖片分析已鎖定，未送出重新確認要求。");
+    revealConversationSection(
+      elements.mediaConfirmedCard,
+      elements.mediaConfirmedTitle,
+    );
     return;
   }
   if (!store.session.active_task?.branch) {
@@ -866,7 +893,14 @@ function renderMedia() {
   const available = isHuggingFaceMediaAvailable();
   const branchReady = Boolean(store.session.active_task?.branch);
   const blocked = store.mediaBusy || isSessionMutationBlocked() || !branchReady;
+  const mediaFlowLocked = isMediaFlowLocked();
+  const mediaCaseSubmitted = MEDIA_CASE_SUBMITTED_STATES.has(
+    store.session.state,
+  );
   const confirmed = analysis?.confirmed === true;
+  if (mediaFlowLocked) {
+    store.mediaEditorExpanded = false;
+  }
 
   elements.mediaSection.hidden = !branchReady && !media;
   elements.mediaMode.textContent = available
@@ -874,14 +908,16 @@ function renderMedia() {
     : "圖片分析目前不可用（Mock／Bedrock／未設定）";
   elements.mediaMode.classList.toggle("media-mode--unavailable", !available);
   elements.mediaUploadForm.hidden = Boolean(media) || !branchReady;
-  elements.mediaFile.disabled = blocked || !available;
-  elements.mediaConsent.disabled = blocked || !available;
-  elements.mediaUploadButton.disabled = blocked || !available;
+  elements.mediaFile.disabled = blocked || !available || mediaFlowLocked;
+  elements.mediaConsent.disabled = blocked || !available || mediaFlowLocked;
+  elements.mediaUploadButton.disabled = blocked || !available || mediaFlowLocked;
   elements.mediaUploadButton.textContent = store.mediaBusy ? "處理中…" : "上傳並分析";
   if (!available && !media && !store.mediaBusy) {
     setMediaStatus("此 session 使用 Mock、Bedrock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
   } else if (!branchReady && !media && !store.mediaBusy) {
     setMediaStatus("請先確認水電修繕分支，圖片控制才會開放。");
+  } else if (mediaFlowLocked && !store.mediaBusy) {
+    setMediaStatus(mediaFlowLockedMessage());
   }
 
   const previewSource = media ? mediaImagePath() : store.previewObjectUrl;
@@ -892,7 +928,7 @@ function renderMedia() {
   } else {
     elements.mediaPreview.removeAttribute("src");
   }
-  elements.mediaRemoveButton.disabled = blocked || !media;
+  elements.mediaRemoveButton.disabled = blocked || !media || mediaCaseSubmitted;
 
   elements.mediaConfirmedCard.hidden = !confirmed;
   if (confirmed) {
@@ -900,23 +936,28 @@ function renderMedia() {
     elements.mediaConfirmedService.textContent =
       store.session.service?.name || analysis.service_query || "已驗證服務";
     elements.mediaConfirmedSummary.textContent = analysis.problem_summary || "—";
-    elements.mediaConfirmedNextStep.textContent = mediaNextStepText();
-    elements.mediaEditToggle.disabled = blocked;
+    elements.mediaConfirmedNextStep.textContent = mediaFlowLocked
+      ? mediaFlowLockedMessage()
+      : mediaNextStepText();
+    elements.mediaEditToggle.disabled = blocked || mediaFlowLocked;
     elements.mediaEditToggle.setAttribute(
       "aria-expanded",
       String(store.mediaEditorExpanded),
     );
-    elements.mediaEditToggle.textContent = store.mediaEditorExpanded
-      ? "收合編輯區"
-      : "展開編輯並重新確認";
-    elements.mediaConfirmedRemove.disabled = blocked || !media;
+    elements.mediaEditToggle.textContent = mediaFlowLocked
+      ? "圖片分析已鎖定"
+      : store.mediaEditorExpanded
+        ? "收合編輯區"
+        : "展開編輯並重新確認";
+    elements.mediaConfirmedRemove.disabled =
+      blocked || !media || mediaCaseSubmitted;
   } else {
     elements.mediaConfirmedPreview.removeAttribute("src");
     store.mediaEditorExpanded = false;
   }
 
   elements.mediaAnalysisForm.hidden =
-    !analysis || (confirmed && !store.mediaEditorExpanded);
+    !analysis || mediaFlowLocked || (confirmed && !store.mediaEditorExpanded);
   if (!analysis) {
     return;
   }
@@ -932,13 +973,16 @@ function renderMedia() {
       ? analysis.safety_warnings.join("\n")
       : analysis.safety_warnings || "";
   }
+  elements.mediaServiceQuery.disabled = blocked || mediaFlowLocked;
+  elements.mediaProblemSummary.disabled = blocked || mediaFlowLocked;
+  elements.mediaSafetyWarnings.disabled = blocked || mediaFlowLocked;
   const confidence = Number(analysis.confidence);
   elements.mediaConfidence.textContent = Number.isFinite(confidence)
     ? `信心 ${Math.round(confidence * 100)}%${analysis.uncertain ? " · 需要確認" : ""}`
     : analysis.uncertain
       ? "需要確認"
       : "待確認";
-  elements.mediaConfirmButton.disabled = blocked;
+  elements.mediaConfirmButton.disabled = blocked || mediaFlowLocked;
   elements.mediaConfirmButton.textContent = confirmed
     ? store.mediaBusy
       ? "重新確認中…"
@@ -956,6 +1000,20 @@ function mediaNextStepText() {
     return "圖片結果已保存；請繼續在對話中補充需求。";
   }
   return "下一步：請在對話中提供完整縣市與行政區，系統不會自行猜測地點。";
+}
+
+function isMediaFlowLocked() {
+  return (
+    Object.keys(store.session?.answers || {}).length > 0 ||
+    MEDIA_FLOW_LOCKED_STATES.has(store.session?.state)
+  );
+}
+
+function mediaFlowLockedMessage() {
+  if (MEDIA_CASE_SUBMITTED_STATES.has(store.session?.state)) {
+    return "案件已送出，圖片分析已鎖定；若需調整圖片，請重新開始新諮詢。";
+  }
+  return "摘要或媒合流程已開始，圖片分析已鎖定；可移除圖片並繼續目前流程，若要更換或重新分析圖片，請重新開始新諮詢。";
 }
 
 function setMediaBusy(value, message = "") {
@@ -1227,6 +1285,17 @@ function renderMessages() {
 function toggleMediaEditor() {
   const analysis = currentMedia()?.analysis;
   if (!analysis?.confirmed || store.mediaBusy) {
+    return;
+  }
+  if (isMediaFlowLocked()) {
+    store.mediaEditorExpanded = false;
+    renderMedia();
+    setMediaStatus(mediaFlowLockedMessage());
+    announce("圖片分析已鎖定，無法重新編輯或確認。");
+    revealConversationSection(
+      elements.mediaConfirmedCard,
+      elements.mediaConfirmedTitle,
+    );
     return;
   }
   store.mediaEditorExpanded = !store.mediaEditorExpanded;

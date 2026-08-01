@@ -57,6 +57,7 @@ from home_repair_agent.backend.repair_conversation import (
     is_supported_water_repair_text,
     route_repair_branch,
 )
+from home_repair_agent.web.location_names import TAIWAN_DISTRICT_NAMES
 from home_repair_agent.web.models import (
     ActiveConsultationTaskView,
     AnswerValue,
@@ -125,7 +126,6 @@ WATER_SHUTOFF_BRANCHES = (
     RepairBranch.TOILET_ISSUE.value,
     RepairBranch.PIPE_ISSUE.value,
 )
-LOCATION_DESCRIPTION_PATTERN = re.compile(r"[\u3400-\u9fff]{1,12}(?:縣|市|區|鄉|鎮)")
 LOCATION_CORRECTION_PATTERN = re.compile(
     r"(?:改成|改為|改到|更正(?:成|為|到)?|換成|其實(?:是|在)|"
     r"不是.+(?:而是|才是)|地點(?:是|在|改|換)|服務地點)"
@@ -133,6 +133,7 @@ LOCATION_CORRECTION_PATTERN = re.compile(
 LOCATION_CLAUSE_BOUNDARY_PATTERN = re.compile(r"[,，。；;!?！？\n]")
 LOCATION_EXCLUSION_BEFORE_DISTRICT_PATTERN = re.compile(
     r"(?:除(?:了)?|排除|(?:我)?(?:不|沒(?:有)?)住(?:在)?|"
+    r"(?:我)?(?:並)?不在|(?:我)?不是(?:要)?(?:去|到)|"
     r"(?:先)?不要(?:用|選擇?|考慮)?|別(?:用|選擇?|考慮)?)\s*$"
 )
 LOCATION_EXCLUSION_AFTER_DISTRICT_PATTERN = re.compile(
@@ -162,6 +163,9 @@ TAIWAN_COUNTY_NAMES = (
     "澎湖縣",
     "金門縣",
     "連江縣",
+)
+TAIWAN_DISTRICT_REFERENCE_PATTERN = re.compile(
+    rf"(?:{'|'.join(re.escape(name) for name in sorted(TAIWAN_DISTRICT_NAMES, key=lambda value: (-len(value), value)))})(?!域)"
 )
 
 
@@ -1868,7 +1872,15 @@ def _authoritative_user_texts(record: _SessionRecord) -> tuple[str, ...]:
 
 
 def _contains_location_description(user_text: str) -> bool:
-    return LOCATION_DESCRIPTION_PATTERN.search(user_text) is not None
+    normalized = _normalize_taiwan_text(user_text)
+    return (
+        any(county in normalized for county in TAIWAN_COUNTY_NAMES)
+        or TAIWAN_DISTRICT_REFERENCE_PATTERN.search(normalized) is not None
+    )
+
+
+def _district_references(text: str) -> tuple[str, ...]:
+    return tuple(match.group(0) for match in TAIWAN_DISTRICT_REFERENCE_PATTERN.finditer(text))
 
 
 def _normalize_taiwan_text(value: str) -> str:
@@ -2003,34 +2015,52 @@ def _location_arguments_have_user_provenance(
     if county not in evidence_text or district not in evidence_text:
         return False
     latest_district_input = next(
-        (text for text in reversed(record.location_inputs) if district in text),
+        (
+            text
+            for text in reversed(record.location_inputs)
+            if district in _district_references(text)
+        ),
         None,
     )
     if latest_district_input is None or not _has_affirmative_district_reference(
         latest_district_input,
         district,
+        county=county,
     ):
         return False
-    without_counties = evidence_text
-    for known_county in TAIWAN_COUNTY_NAMES:
-        without_counties = without_counties.replace(known_county, " ")
-    without_confirmed_district = without_counties.replace(district, " ")
-    conflicting_district_mentions = {
-        re.sub(r"^[我住位於服務地點地址請要在到為成改是或和跟與]+", "", mention)
-        for mention in re.findall(
-            r"[\u3400-\u9fff]{1,4}(?:區|鄉|鎮|市)(?!域)",
-            without_confirmed_district,
-        )
-    }
-    return not any(conflicting_district_mentions)
+    for text in record.location_inputs:
+        for known_district in _district_references(text):
+            if known_district != district and _has_affirmative_district_reference(
+                text,
+                known_district,
+                county=county,
+            ):
+                return False
+    return True
 
 
-def _has_affirmative_district_reference(text: str, district: str) -> bool:
-    matches = tuple(re.finditer(re.escape(district), text))
+def _has_affirmative_district_reference(
+    text: str,
+    district: str,
+    *,
+    county: str | None = None,
+) -> bool:
+    matches = tuple(
+        match
+        for match in TAIWAN_DISTRICT_REFERENCE_PATTERN.finditer(text)
+        if match.group(0) == district
+    )
     if not matches:
         return False
     match = matches[-1]
-    prefix_clause = LOCATION_CLAUSE_BOUNDARY_PATTERN.split(text[: match.start()])[-1]
+    reference_start = match.start()
+    if county:
+        county_matches = tuple(re.finditer(re.escape(county), text[: match.start()]))
+        if county_matches:
+            county_match = county_matches[-1]
+            if not text[county_match.end() : match.start()].strip():
+                reference_start = county_match.start()
+    prefix_clause = LOCATION_CLAUSE_BOUNDARY_PATTERN.split(text[:reference_start])[-1]
     suffix_clause = LOCATION_CLAUSE_BOUNDARY_PATTERN.split(
         text[match.end() :],
         maxsplit=1,

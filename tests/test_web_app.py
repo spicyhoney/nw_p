@@ -2029,6 +2029,199 @@ class WebToolProvenanceTests(unittest.TestCase):
                     self.assertIsNone(result["consultation_form"])
                     self.assertFalse(result["can_submit_form"])
 
+    def test_negated_full_location_rejects_the_complete_tool_trace_atomically(
+        self,
+    ) -> None:
+        messages = (
+            "我不在臺北市大安區，馬桶無法沖水",
+            "我並不在臺北市大安區，馬桶無法沖水",
+            "我不是要去臺北市大安區，馬桶無法沖水",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                model = ScriptedModelClient(
+                    [
+                        ModelTurn.use_tools(
+                            ToolCall(
+                                call_id="negated-full-location-search",
+                                name="search_services",
+                                arguments={"query": "馬桶無法沖水", "limit": 5},
+                            )
+                        ),
+                        ModelTurn.use_tools(
+                            ToolCall(
+                                call_id="negated-full-location-resolve",
+                                name="resolve_location",
+                                arguments={
+                                    "county_name": "臺北市",
+                                    "district_name": "大安區",
+                                },
+                            )
+                        ),
+                        ModelTurn.use_tools(
+                            ToolCall(
+                                call_id="negated-full-location-form",
+                                name="get_consultation_form",
+                                arguments={"service_id": 17},
+                            )
+                        ),
+                        ModelTurn.answer("地點與表單已完成驗證。"),
+                    ]
+                )
+                with (
+                    patch(
+                        "home_repair_agent.web.app._resolve_model_client",
+                        return_value=(model, "scripted negated full location model"),
+                    ),
+                    TestClient(create_app(reference_time=self.reference_time)) as client,
+                ):
+                    session_id = self._create_session(client)
+                    result = self._propose_and_confirm(
+                        client,
+                        session_id=session_id,
+                        messages=(message,),
+                        branch="toilet_issue",
+                    )
+
+                    self.assertEqual("clarifying", result["state"], result)
+                    self.assertIsNone(result["location"])
+                    self.assertIsNone(result["consultation_form"])
+                    self.assertFalse(result["can_submit_form"])
+                    self.assertEqual(
+                        [
+                            "search_services",
+                            "resolve_location",
+                            "get_consultation_form",
+                        ],
+                        [item["name"] for item in result["tool_trace"][-3:]],
+                    )
+                    self.assertEqual(
+                        [True, False, False],
+                        [item["ok"] for item in result["tool_trace"][-3:]],
+                    )
+                    record = client.app.state.web_sessions._sessions[session_id]
+                    self.assertEqual({}, record.answers)
+                    self.assertEqual(2, len(record.conversation.messages))
+                    self.assertIsInstance(record.conversation.messages[0], UserMessage)
+                    self.assertIsInstance(record.conversation.messages[1], AssistantMessage)
+                    self.assertFalse(
+                        any(
+                            isinstance(
+                                item,
+                                (AssistantToolCalls, ToolResultMessage),
+                            )
+                            for item in record.conversation.messages
+                        )
+                    )
+
+                    blocked = client.post(
+                        f"/api/sessions/{session_id}/form",
+                        json={
+                            "answers": {},
+                            "preferred_start": "2026-08-01T13:00:00+08:00",
+                            "preferred_end": "2026-08-01T17:00:00+08:00",
+                        },
+                    )
+                    self.assertEqual(409, blocked.status_code, blocked.text)
+                    self.assertEqual(
+                        "FORM_NOT_READY",
+                        blocked.json()["error"]["code"],
+                    )
+                    self.assertEqual({}, record.answers)
+
+    def test_negated_location_does_not_poison_a_later_affirmative_location(
+        self,
+    ) -> None:
+        model = ScriptedModelClient(
+            [
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="negated-location-first",
+                        name="resolve_location",
+                        arguments={
+                            "county_name": "臺北市",
+                            "district_name": "大安區",
+                        },
+                    )
+                ),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="negated-location-first-form",
+                        name="get_consultation_form",
+                        arguments={"service_id": 17},
+                    )
+                ),
+                ModelTurn.answer("請提供實際服務地點。"),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="affirmative-location-second",
+                        name="resolve_location",
+                        arguments={
+                            "county_name": "臺北市",
+                            "district_name": "信義區",
+                        },
+                    )
+                ),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="affirmative-location-second-form",
+                        name="get_consultation_form",
+                        arguments={"service_id": 17},
+                    )
+                ),
+                ModelTurn.answer("地點與表單已完成驗證。"),
+            ]
+        )
+
+        def resolve_location(*, county_name: str, district_name: str) -> ResolvedLocation:
+            suffix = "DAAN" if district_name == "大安區" else "XINYI"
+            return ResolvedLocation(
+                location_id=f"TEST-{suffix}",
+                county_name=county_name,
+                district_name=district_name,
+                full_name=f"{county_name}{district_name}",
+            )
+
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "scripted corrected provenance model"),
+            ),
+            patch(
+                "home_repair_agent.backend.services.ReadServiceLayer.resolve_location",
+                side_effect=resolve_location,
+            ),
+            TestClient(create_app(reference_time=self.reference_time)) as client,
+        ):
+            session_id = self._create_session(client)
+            rejected = self._propose_and_confirm(
+                client,
+                session_id=session_id,
+                messages=("我不在臺北市大安區，馬桶無法沖水",),
+                branch="toilet_issue",
+            )
+            self.assertEqual("clarifying", rejected["state"], rejected)
+            self.assertIsNone(rejected["location"])
+            self.assertEqual(
+                [False, False],
+                [item["ok"] for item in rejected["tool_trace"][-2:]],
+            )
+
+            completed = client.post(
+                f"/api/sessions/{session_id}/messages",
+                json={"text": "我在臺北市信義區"},
+            )
+
+            self.assertEqual(200, completed.status_code, completed.text)
+            body = completed.json()
+            self.assertEqual("awaiting_form", body["state"], body)
+            self.assertEqual("臺北市信義區", body["location"]["full_name"])
+            self.assertEqual(
+                [True, True],
+                [item["ok"] for item in body["tool_trace"][-2:]],
+            )
+            self.assertTrue(body["can_submit_form"])
+
     def test_problem_negation_after_district_preserves_location_provenance(self) -> None:
         cases = (
             ("臺北市大安區馬桶無法沖水", "toilet_issue"),
@@ -2080,6 +2273,109 @@ class WebToolProvenanceTests(unittest.TestCase):
                         result["consultation_form"]["form_key"],
                     )
                     self.assertTrue(result["can_submit_form"])
+
+    def test_non_location_noun_suffix_does_not_conflict_with_admin_district(
+        self,
+    ) -> None:
+        model = ScriptedModelClient(
+            [
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="noun-suffix-location",
+                        name="resolve_location",
+                        arguments={
+                            "county_name": "臺北市",
+                            "district_name": "大安區",
+                        },
+                    )
+                ),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="noun-suffix-form",
+                        name="get_consultation_form",
+                        arguments={"service_id": 17},
+                    )
+                ),
+                ModelTurn.answer("地點與表單已完成驗證。"),
+            ]
+        )
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "scripted controlled location-name model"),
+            ),
+            TestClient(create_app(reference_time=self.reference_time)) as client,
+        ):
+            session_id = self._create_session(client)
+            result = self._propose_and_confirm(
+                client,
+                session_id=session_id,
+                messages=("臺北市大安區附近超市的插座沒電",),
+                branch="electrical_issue",
+            )
+
+            self.assertEqual("awaiting_form", result["state"], result)
+            self.assertEqual("臺北市大安區", result["location"]["full_name"])
+            self.assertEqual(
+                "repair_form_v1",
+                result["consultation_form"]["form_key"],
+            )
+            self.assertTrue(result["can_submit_form"])
+            self.assertEqual(
+                ["resolve_location", "get_consultation_form"],
+                [item["name"] for item in result["tool_trace"][-2:]],
+            )
+            self.assertEqual(
+                [True, True],
+                [item["ok"] for item in result["tool_trace"][-2:]],
+            )
+
+    def test_model_cannot_choose_one_of_multiple_same_county_districts(self) -> None:
+        model = ScriptedModelClient(
+            [
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="picked-same-county-district",
+                        name="resolve_location",
+                        arguments={
+                            "county_name": "臺北市",
+                            "district_name": "大安區",
+                        },
+                    )
+                ),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="picked-same-county-form",
+                        name="get_consultation_form",
+                        arguments={"service_id": 17},
+                    )
+                ),
+                ModelTurn.answer("已選擇第一個地點。"),
+            ]
+        )
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "scripted same-county ambiguity model"),
+            ),
+            TestClient(create_app(reference_time=self.reference_time)) as client,
+        ):
+            session_id = self._create_session(client)
+            result = self._propose_and_confirm(
+                client,
+                session_id=session_id,
+                messages=("臺北市大安區或信義區插座沒電",),
+                branch="electrical_issue",
+            )
+
+            self.assertEqual("clarifying", result["state"], result)
+            self.assertIsNone(result["location"])
+            self.assertIsNone(result["consultation_form"])
+            self.assertFalse(result["can_submit_form"])
+            self.assertEqual(
+                [False, False],
+                [item["ok"] for item in result["tool_trace"][-2:]],
+            )
 
     def test_explicit_same_county_correction_replaces_old_district_evidence(self) -> None:
         model = ScriptedModelClient(

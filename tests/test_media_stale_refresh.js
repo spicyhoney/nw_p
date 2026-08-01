@@ -75,6 +75,8 @@ function analysis(revision, serviceQuery, problemSummary, confirmed = false) {
 function session(mediaId, mediaAnalysis) {
   return {
     session_id: "session-stale-media",
+    state: "awaiting_form",
+    answers: {},
     active_task: { branch: "faucet_leak" },
     service: { name: "水電修繕" },
     location: null,
@@ -269,6 +271,45 @@ async function run() {
   assert.equal(retriedPayload.service_query, "最新服務建議");
   assert.equal(documentStub.activeElement, fakeElements.mediaConfirmedTitle);
   console.log("media stale refresh DOM regression: passed");
+
+  const requestCountBeforeLockChecks = requests.length;
+  vm.runInContext(
+    `
+      store.session.answers = { issue_description: "synthetic saved answer" };
+      store.session.state = "awaiting_summary_confirmation";
+      store.mediaEditorExpanded = true;
+      renderMedia();
+    `,
+    context,
+  );
+
+  assert.equal(vm.runInContext("store.mediaEditorExpanded", context), false);
+  assert.equal(fakeElements.mediaEditToggle.disabled, true);
+  assert.equal(fakeElements.mediaEditToggle.textContent, "圖片分析已鎖定");
+  assert.equal(fakeElements.mediaEditToggle.attributes.get("aria-expanded"), "false");
+  assert.equal(fakeElements.mediaAnalysisForm.hidden, true);
+  assert.equal(fakeElements.mediaServiceQuery.disabled, true);
+  assert.equal(fakeElements.mediaProblemSummary.disabled, true);
+  assert.equal(fakeElements.mediaSafetyWarnings.disabled, true);
+  assert.equal(fakeElements.mediaConfirmButton.disabled, true);
+  assert.match(fakeElements.mediaConfirmedNextStep.textContent, /已鎖定/);
+  assert.match(fakeElements.mediaConfirmedNextStep.textContent, /重新開始/);
+  assert.doesNotMatch(
+    fakeElements.mediaConfirmedNextStep.textContent,
+    /移除圖片再重新上傳/,
+  );
+
+  vm.runInContext("toggleMediaEditor()", context);
+  await vm.runInContext(
+    "confirmMediaAnalysis({ preventDefault() {} })",
+    context,
+  );
+
+  assert.equal(requests.length, requestCountBeforeLockChecks);
+  assert.equal(vm.runInContext("store.mediaEditorExpanded", context), false);
+  assert.match(fakeElements.mediaStatus.textContent, /已鎖定/);
+  assert.equal(documentStub.activeElement, fakeElements.mediaConfirmedTitle);
+  console.log("media flow lock DOM regression: passed");
 }
 
 run().catch((error) => {

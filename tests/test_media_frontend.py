@@ -55,7 +55,7 @@ class MediaFrontendContractTests(unittest.TestCase):
         self.assertIn("analysis?.confirmed", self.app)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM behavior checks")
-    def test_stale_analysis_confirmation_refreshes_the_latest_session(self) -> None:
+    def test_media_confirmation_refresh_and_flow_lock_use_real_dom_behavior(self) -> None:
         result = subprocess.run(
             ["node", str(STALE_REFRESH_TEST)],
             check=False,
@@ -66,6 +66,7 @@ class MediaFrontendContractTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("media stale refresh DOM regression: passed", result.stdout)
+        self.assertIn("media flow lock DOM regression: passed", result.stdout)
 
     def test_confirmed_analysis_has_a_safe_summary_and_explicit_reedit_path(self) -> None:
         for control in (

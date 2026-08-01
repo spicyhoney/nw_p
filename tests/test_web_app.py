@@ -18,6 +18,7 @@ from home_repair_agent.agent.models import (
     ModelTurn,
     ToolCall,
     ToolResultMessage,
+    ToolTraceEntry,
     UserMessage,
 )
 from home_repair_agent.backend.models import ResolvedLocation
@@ -1463,6 +1464,7 @@ class WebToolProvenanceTests(unittest.TestCase):
         *,
         session_id: str,
         messages: tuple[str, ...],
+        branch: str = "faucet_leak",
     ) -> dict[str, object]:
         proposal = None
         for text in messages:
@@ -1477,7 +1479,7 @@ class WebToolProvenanceTests(unittest.TestCase):
             raise AssertionError("at least one message is required")
         confirmation = client.post(
             f"/api/sessions/{session_id}/branch/confirm",
-            json={"branch": "faucet_leak", "confirm": True},
+            json={"branch": branch, "confirm": True},
         )
         if confirmation.status_code != 200:
             raise AssertionError(confirmation.text)
@@ -1611,6 +1613,53 @@ class WebToolProvenanceTests(unittest.TestCase):
             self.assertFalse(result["can_submit_form"])
             self.assertIn("完整行政區", result["messages"][-1]["text"])
 
+    def test_failed_location_trace_is_invalid_but_remains_recoverable(self) -> None:
+        model = ScriptedModelClient([ModelTurn.answer("請提供完整行政區。")])
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "scripted recoverable location model"),
+            ),
+            TestClient(create_app(reference_time=self.reference_time)) as client,
+        ):
+            session_id = self._create_session(client)
+            result = self._propose_and_confirm(
+                client,
+                session_id=session_id,
+                messages=("臺北市", "水龍頭漏水"),
+            )
+            self.assertEqual("clarifying", result["state"])
+            service = client.app.state.web_sessions
+            record = service._sessions[session_id]
+
+            application = service._apply_agent_trace(
+                record,
+                [
+                    ToolTraceEntry(
+                        call_id="failed-incomplete-location",
+                        name="resolve_location",
+                        arguments={"county_name": "臺北市"},
+                        mcp_is_error=True,
+                        result={
+                            "ok": False,
+                            "data": None,
+                            "error": {
+                                "code": "INVALID_TOOL_ARGUMENTS",
+                                "message": "synthetic safe failure",
+                                "details": {},
+                            },
+                        },
+                    )
+                ],
+                commit_allowed=True,
+            )
+
+            self.assertFalse(application.valid)
+            self.assertTrue(application.recoverable_rejection)
+            self.assertTrue(application.location_required)
+            self.assertIsNone(record.location)
+            self.assertIsNone(record.consultation_form)
+
     def test_invalid_trace_is_atomic_and_error_state_blocks_form_write(self) -> None:
         model = ScriptedModelClient(
             [
@@ -1692,6 +1741,104 @@ class WebToolProvenanceTests(unittest.TestCase):
             )
             self.assertEqual(409, blocked.status_code, blocked.text)
             self.assertEqual("AGENT_TURN_NOT_VERIFIED", blocked.json()["error"]["code"])
+
+    def _assert_allowed_tool_failure_is_atomic(self, *, mcp_is_error: bool) -> None:
+        marker_query = "forced allowed-tool failure"
+        model = ScriptedModelClient(
+            [
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="staged-location",
+                        name="resolve_location",
+                        arguments={
+                            "county_name": "臺北市",
+                            "district_name": "大安區",
+                        },
+                    )
+                ),
+                ModelTurn.use_tools(
+                    ToolCall(
+                        call_id="failed-allowed-tool",
+                        name="search_services",
+                        arguments={"query": marker_query, "limit": 5},
+                    )
+                ),
+                ModelTurn.answer("工具流程已結束。"),
+            ]
+        )
+        with (
+            patch(
+                "home_repair_agent.web.app._resolve_model_client",
+                return_value=(model, "scripted allowed-tool failure model"),
+            ),
+            TestClient(create_app(reference_time=self.reference_time)) as client,
+        ):
+            tool_client = client.app.state.web_sessions._tool_client
+            original_call = tool_client.call_tool
+
+            async def failing_call(*, name, arguments):
+                execution = await original_call(name=name, arguments=arguments)
+                if name != "search_services" or arguments.get("query") != marker_query:
+                    return execution
+                if mcp_is_error:
+                    return execution.model_copy(update={"mcp_is_error": True})
+                payload = deepcopy(execution.payload)
+                payload.update(
+                    {
+                        "ok": False,
+                        "data": None,
+                        "error": {
+                            "code": "SYNTHETIC_TOOL_FAILURE",
+                            "message": "synthetic safe failure",
+                            "details": {},
+                        },
+                    }
+                )
+                return execution.model_copy(update={"payload": payload})
+
+            with patch.object(tool_client, "call_tool", side_effect=failing_call):
+                session_id = self._create_session(client)
+                result = self._propose_and_confirm(
+                    client,
+                    session_id=session_id,
+                    messages=("臺北市大安區水龍頭漏水",),
+                )
+
+            self.assertEqual("error", result["state"])
+            self.assertIsNone(result["location"])
+            self.assertIsNone(result["consultation_form"])
+            self.assertFalse(result["can_submit_form"])
+            self.assertEqual(
+                [True, False],
+                [item["ok"] for item in result["tool_trace"][-2:]],
+            )
+            record = client.app.state.web_sessions._sessions[session_id]
+            self.assertEqual(2, len(record.conversation.messages))
+            self.assertIsInstance(record.conversation.messages[0], UserMessage)
+            self.assertIsInstance(record.conversation.messages[1], AssistantMessage)
+            self.assertFalse(
+                any(
+                    isinstance(message, (AssistantToolCalls, ToolResultMessage))
+                    for message in record.conversation.messages
+                )
+            )
+
+            blocked = client.post(
+                f"/api/sessions/{session_id}/form",
+                json={
+                    "answers": {},
+                    "preferred_start": "2026-08-01T13:00:00+08:00",
+                    "preferred_end": "2026-08-01T17:00:00+08:00",
+                },
+            )
+            self.assertEqual(409, blocked.status_code, blocked.text)
+            self.assertEqual("AGENT_TURN_NOT_VERIFIED", blocked.json()["error"]["code"])
+
+    def test_success_then_mcp_error_rejects_trace_atomically(self) -> None:
+        self._assert_allowed_tool_failure_is_atomic(mcp_is_error=True)
+
+    def test_success_then_ok_false_rejects_trace_atomically(self) -> None:
+        self._assert_allowed_tool_failure_is_atomic(mcp_is_error=False)
 
     def test_wrong_form_service_id_is_rejected_without_partial_location(self) -> None:
         model = ScriptedModelClient(
@@ -1881,6 +2028,58 @@ class WebToolProvenanceTests(unittest.TestCase):
                     self.assertIsNone(result["location"])
                     self.assertIsNone(result["consultation_form"])
                     self.assertFalse(result["can_submit_form"])
+
+    def test_problem_negation_after_district_preserves_location_provenance(self) -> None:
+        cases = (
+            ("臺北市大安區馬桶無法沖水", "toilet_issue"),
+            ("臺北市大安區插座沒電", "electrical_issue"),
+        )
+        for message, branch in cases:
+            with self.subTest(message=message):
+                model = ScriptedModelClient(
+                    [
+                        ModelTurn.use_tools(
+                            ToolCall(
+                                call_id="affirmative-location",
+                                name="resolve_location",
+                                arguments={
+                                    "county_name": "臺北市",
+                                    "district_name": "大安區",
+                                },
+                            )
+                        ),
+                        ModelTurn.use_tools(
+                            ToolCall(
+                                call_id="affirmative-location-form",
+                                name="get_consultation_form",
+                                arguments={"service_id": 17},
+                            )
+                        ),
+                        ModelTurn.answer("地點與表單已完成驗證。"),
+                    ]
+                )
+                with (
+                    patch(
+                        "home_repair_agent.web.app._resolve_model_client",
+                        return_value=(model, "scripted affirmative location model"),
+                    ),
+                    TestClient(create_app(reference_time=self.reference_time)) as client,
+                ):
+                    session_id = self._create_session(client)
+                    result = self._propose_and_confirm(
+                        client,
+                        session_id=session_id,
+                        messages=(message,),
+                        branch=branch,
+                    )
+
+                    self.assertEqual("awaiting_form", result["state"], result)
+                    self.assertEqual("臺北市大安區", result["location"]["full_name"])
+                    self.assertEqual(
+                        "repair_form_v1",
+                        result["consultation_form"]["form_key"],
+                    )
+                    self.assertTrue(result["can_submit_form"])
 
     def test_explicit_same_county_correction_replaces_old_district_evidence(self) -> None:
         model = ScriptedModelClient(

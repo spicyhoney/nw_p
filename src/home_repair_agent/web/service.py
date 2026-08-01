@@ -131,7 +131,14 @@ LOCATION_CORRECTION_PATTERN = re.compile(
     r"不是.+(?:而是|才是)|地點(?:是|在|改|換)|服務地點)"
 )
 LOCATION_CLAUSE_BOUNDARY_PATTERN = re.compile(r"[,，。；;!?！？\n]")
-LOCATION_EXCLUSION_PATTERN = re.compile(r"(?:不|非|沒|無|別|排除|以外|除外|之外|除(?:了)?|錯|取消)")
+LOCATION_EXCLUSION_BEFORE_DISTRICT_PATTERN = re.compile(
+    r"(?:除(?:了)?|排除|(?:我)?(?:不|沒(?:有)?)住(?:在)?|"
+    r"(?:先)?不要(?:用|選擇?|考慮)?|別(?:用|選擇?|考慮)?)\s*$"
+)
+LOCATION_EXCLUSION_AFTER_DISTRICT_PATTERN = re.compile(
+    r"^\s*(?:以外|除外|之外|"
+    r"(?:不(?:是|算)|(?:並)?非)(?:我的)?(?:服務)?地點)"
+)
 TAIWAN_COUNTY_NAMES = (
     "基隆市",
     "臺北市",
@@ -1076,7 +1083,7 @@ class WebSessionService:
                     problem_summary=_problem_summary(record),
                     image_path=record.media.relative_path if media_is_current else None,
                     image_analysis=(
-                        CaseImageAnalysis.model_validate(record.image_analysis.model_dump())
+                        _case_image_analysis(record.image_analysis)
                         if media_is_current and record.image_analysis is not None
                         else None
                     ),
@@ -1274,7 +1281,9 @@ class WebSessionService:
                 ]
             )
         record.messages.append(self._message("assistant", reply))
-        if result.stop_reason != "completed" or not application.valid:
+        if result.stop_reason != "completed" or (
+            not application.valid and not application.recoverable_rejection
+        ):
             record.state = "error"
         else:
             record.state = self._derive_state(record)
@@ -1501,6 +1510,7 @@ class WebSessionService:
         staged_form = record.consultation_form
         trace_is_valid = True
         recoverable_rejection = False
+        fatal_rejection = False
         location_required = False
         trace_views: list[ToolTraceView] = []
 
@@ -1509,6 +1519,29 @@ class WebSessionService:
             ok = is_allowed and entry.result.get("ok") is True and not entry.mcp_is_error
             if not is_allowed:
                 trace_is_valid = False
+                fatal_rejection = True
+            elif not ok:
+                trace_is_valid = False
+                recoverable_tool_failure = (
+                    entry.name == "resolve_location"
+                    and (
+                        staged_service is None
+                        or not _location_arguments_have_user_provenance(
+                            record,
+                            entry.arguments,
+                        )
+                    )
+                ) or (
+                    entry.name == "get_consultation_form"
+                    and staged_service is not None
+                    and entry.arguments.get("service_id") == staged_service.service.service_id
+                    and staged_location is None
+                )
+                if recoverable_tool_failure:
+                    recoverable_rejection = True
+                    location_required = True
+                else:
+                    fatal_rejection = True
             elif entry.name == "resolve_location" and (
                 staged_service is None
                 or not _location_arguments_have_user_provenance(
@@ -1525,6 +1558,7 @@ class WebSessionService:
             ):
                 ok = False
                 trace_is_valid = False
+                fatal_rejection = True
             elif entry.name == "get_consultation_form" and staged_location is None:
                 ok = False
                 recoverable_rejection = True
@@ -1537,6 +1571,7 @@ class WebSessionService:
                         if service is None or record.confirmed_branch is None:
                             ok = False
                             trace_is_valid = False
+                            fatal_rejection = True
                         else:
                             staged_service = _merge_verified_service_state(
                                 staged_service,
@@ -1570,6 +1605,7 @@ class WebSessionService:
                         ):
                             ok = False
                             trace_is_valid = False
+                            fatal_rejection = True
                         else:
                             staged_source_form = form
                             staged_form = _project_form(
@@ -1579,6 +1615,7 @@ class WebSessionService:
                 except Exception:  # noqa: BLE001 - invalid tool payload is not exposed
                     ok = False
                     trace_is_valid = False
+                    fatal_rejection = True
             trace_views.append(
                 ToolTraceView(
                     name=entry.name,
@@ -1603,7 +1640,7 @@ class WebSessionService:
 
         return _TraceApplicationResult(
             valid=trace_is_valid,
-            recoverable_rejection=recoverable_rejection,
+            recoverable_rejection=recoverable_rejection and not fatal_rejection,
             location_required=location_required,
         )
 
@@ -1998,8 +2035,10 @@ def _has_affirmative_district_reference(text: str, district: str) -> bool:
         text[match.end() :],
         maxsplit=1,
     )[0]
-    clause = f"{prefix_clause}{district}{suffix_clause}"
-    return LOCATION_EXCLUSION_PATTERN.search(clause) is None
+    return (
+        LOCATION_EXCLUSION_BEFORE_DISTRICT_PATTERN.search(prefix_clause) is None
+        and LOCATION_EXCLUSION_AFTER_DISTRICT_PATTERN.match(suffix_clause) is None
+    )
 
 
 def _location_result_matches_arguments(
@@ -2441,6 +2480,18 @@ def _problem_summary(record: _SessionRecord) -> str:
         else ""
     )
     return "｜".join(part for part in (branch_label, description_text, image_text) if part)[:1000]
+
+
+def _case_image_analysis(analysis: ImageAnalysisView) -> CaseImageAnalysis:
+    return CaseImageAnalysis(
+        service_query=analysis.service_query,
+        problem_summary=analysis.problem_summary,
+        safety_warnings=list(analysis.safety_warnings),
+        confidence=analysis.confidence,
+        uncertain=analysis.uncertain,
+        confirmed=analysis.confirmed,
+        correction=analysis.correction,
+    )
 
 
 def _dispatch_status_message(dispatch: ConsumerCaseView) -> str:

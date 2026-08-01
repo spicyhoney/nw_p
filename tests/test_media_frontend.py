@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "src" / "home_repair_agent" / "web" / "static"
+STALE_REFRESH_TEST = Path(__file__).with_name("test_media_stale_refresh.js")
 
 
 class MediaFrontendContractTests(unittest.TestCase):
@@ -51,14 +54,18 @@ class MediaFrontendContractTests(unittest.TestCase):
         self.assertIn("analysis_revision: media.analysis.analysis_revision", self.app)
         self.assertIn("analysis?.confirmed", self.app)
 
+    @unittest.skipUnless(shutil.which("node"), "Node.js is required for DOM behavior checks")
     def test_stale_analysis_confirmation_refreshes_the_latest_session(self) -> None:
-        self.assertIn('error.code = apiError?.code || ""', self.app)
-        self.assertIn(
-            'confirmError.code === "IMAGE_CONFIRMATION_STALE"',
-            self.app,
+        result = subprocess.run(
+            ["node", str(STALE_REFRESH_TEST)],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
         )
-        self.assertIn("已載入最新圖片分析", self.app)
-        self.assertIn("store.session = latest", self.app)
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("media stale refresh DOM regression: passed", result.stdout)
 
     def test_confirmed_analysis_has_a_safe_summary_and_explicit_reedit_path(self) -> None:
         for control in (

@@ -628,6 +628,27 @@ class MediaWebTests(unittest.TestCase):
         ]
         self.assertEqual([], remaining_files)
 
+    def test_confirmed_image_dispatch_projects_case_analysis_for_provider(self) -> None:
+        matched = self.prepare_match()
+        dispatched = self.dispatch(matched, "SYN-PROVIDER-001")
+        case_id = dispatched["dispatch"]["case_id"]
+        assigned = {"X-Demo-Provider-Id": "SYN-PROVIDER-001"}
+
+        detail = self.client.get(f"/api/provider/cases/{case_id}", headers=assigned)
+        image = self.client.get(
+            f"/api/provider/cases/{case_id}/image",
+            headers=assigned,
+        )
+
+        self.assertEqual(200, detail.status_code, detail.text)
+        self.assertEqual(200, image.status_code, image.text)
+        self.assertTrue(dispatched["dispatch"]["has_image"])
+        self.assertTrue(detail.json()["has_image"])
+        analysis = detail.json()["image_analysis"]
+        self.assertTrue(analysis["confirmed"])
+        self.assertEqual("水龍頭接縫附近疑似滲水", analysis["problem_summary"])
+        self.assertNotIn("analysis_revision", analysis)
+
     def test_provider_image_access_obeys_assignment_and_status(self) -> None:
         matched = self.prepare_match()
         first = self.dispatch(matched, "SYN-PROVIDER-001")

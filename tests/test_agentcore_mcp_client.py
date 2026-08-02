@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+import time
 import unittest
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -44,13 +47,17 @@ class FakeCredentials:
         *,
         expiry_time: datetime | None = None,
         failure_detail: str | None = None,
+        delay_seconds: float = 0.0,
     ) -> None:
         self._expiry_time = expiry_time
         self.failure_detail = failure_detail
+        self.delay_seconds = delay_seconds
         self.freeze_count = 0
 
     def get_frozen_credentials(self) -> FakeFrozenCredentials:
         self.freeze_count += 1
+        if self.delay_seconds:
+            time.sleep(self.delay_seconds)
         if self.failure_detail is not None:
             raise RuntimeError(self.failure_detail)
         return FakeFrozenCredentials()
@@ -96,6 +103,7 @@ class FakeMCPClientSession:
         self.initialize_failure: str | None = None
         self.list_failure: str | None = None
         self.call_failure: str | None = None
+        self.cancel_initialize = False
         self.result_is_error = False
         self.calls: list[tuple[str, dict[str, object]]] = []
 
@@ -108,6 +116,8 @@ class FakeMCPClientSession:
 
     async def initialize(self) -> None:
         self.events.append("initialize")
+        if self.cancel_initialize:
+            raise asyncio.CancelledError()
         if self.initialize_failure is not None:
             raise RuntimeError(self.initialize_failure)
 
@@ -152,6 +162,7 @@ class FakeConnectionFactories:
         self.requested_url: str | None = None
         self.received_auth: httpx.Auth | None = None
         self.received_timeout: httpx.Timeout | None = None
+        self.log_transport_url = False
 
     def http_client_factory(
         self,
@@ -171,6 +182,8 @@ class FakeConnectionFactories:
     ) -> FakeTransport:
         del http_client
         self.requested_url = url
+        if self.log_transport_url:
+            logging.getLogger("httpx").info("HTTP Request: POST %s", url)
         return FakeTransport(self.events)
 
     def client_session_factory(
@@ -240,11 +253,32 @@ class AgentCoreMCPSettingsTests(unittest.TestCase):
             signed_request = next(iter(auth.auth_flow(request)))
             self.assertIn("authorization", signed_request.headers)
 
-        self.assertEqual(3, session.get_count)
-        self.assertEqual(3, credentials.freeze_count)
+        self.assertEqual(2, session.get_count)
+        self.assertEqual(2, credentials.freeze_count)
 
 
 class AgentCoreMCPToolClientTests(unittest.IsolatedAsyncioTestCase):
+    async def test_async_sigv4_refresh_does_not_block_the_event_loop(self) -> None:
+        credentials = FakeCredentials(delay_seconds=0.08)
+        auth = AgentCoreSigV4Auth(
+            credential_session=FakeBotoSession(credentials),
+            region="us-west-2",
+        )
+        request = httpx.Request(
+            "POST",
+            "https://example.invalid/invocations",
+            content=b"{}",
+        )
+
+        async def sign() -> httpx.Request:
+            return await anext(auth.async_auth_flow(request))
+
+        signing = asyncio.create_task(sign())
+        await asyncio.wait_for(asyncio.sleep(0.01), timeout=0.04)
+        signed = await signing
+
+        self.assertIn("authorization", signed.headers)
+
     async def test_initialize_list_call_and_close_use_existing_mapping(self) -> None:
         factories = FakeConnectionFactories()
         client = _client(factories)
@@ -318,6 +352,43 @@ class AgentCoreMCPToolClientTests(unittest.IsolatedAsyncioTestCase):
             ],
             factories.events,
         )
+
+    async def test_initialize_cancellation_closes_every_entered_context(self) -> None:
+        factories = FakeConnectionFactories()
+        factories.session.cancel_initialize = True
+
+        with self.assertRaises(asyncio.CancelledError):
+            async with _client(factories):
+                self.fail("a cancelled initialization must not yield a client")
+
+        self.assertEqual(
+            [
+                "http_enter",
+                "transport_enter",
+                "session_enter",
+                "initialize",
+                "session_exit",
+                "transport_exit",
+                "http_exit",
+            ],
+            factories.events,
+        )
+
+    async def test_transport_logs_redact_runtime_identifier(self) -> None:
+        factories = FakeConnectionFactories()
+        factories.log_transport_url = True
+        runtime_arn = _synthetic_runtime_arn()
+        account_id = runtime_arn.split(":")[4]
+
+        with self.assertLogs("httpx", level="INFO") as captured:
+            async with _client(factories):
+                pass
+
+        output = "\n".join(captured.output)
+        self.assertNotIn(runtime_arn, output)
+        self.assertNotIn(account_id, output)
+        self.assertNotIn("synthetic-test", output)
+        self.assertIn("[REDACTED]", output)
 
     async def test_expired_credentials_fail_before_transport_without_details(self) -> None:
         factories = FakeConnectionFactories()

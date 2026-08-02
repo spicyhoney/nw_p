@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import math
 import os
 from collections.abc import Callable, Mapping
@@ -23,6 +25,11 @@ from home_repair_agent.agent.models import ToolDefinition, ToolExecutionResult
 _AGENTCORE_REGION = "us-west-2"
 _AGENTCORE_SERVICE = "bedrock-agentcore"
 _DEFAULT_TIMEOUT_SECONDS = 30.0
+_SENSITIVE_TRANSPORT_LOGGERS = (
+    "httpx",
+    "httpcore",
+    "mcp.client.streamable_http",
+)
 
 HttpClientFactory = Callable[..., AbstractAsyncContextManager[Any]]
 TransportFactory = Callable[..., AbstractAsyncContextManager[tuple[Any, Any, Any]]]
@@ -105,6 +112,10 @@ class AgentCoreSigV4Auth(httpx.Auth):
             raise AgentCoreMCPConfigurationError("AgentCore Remote MCP configuration is invalid.")
         self._credential_session = credential_session
         self._region = region
+
+    def validate_credentials(self) -> None:
+        """Fail closed without blocking an async caller's event loop."""
+
         self._get_frozen_credentials()
 
     def _get_frozen_credentials(self) -> Any:
@@ -130,33 +141,94 @@ class AgentCoreSigV4Auth(httpx.Auth):
     def auth_flow(self, request: httpx.Request):
         try:
             credentials = self._get_frozen_credentials()
-            stale_headers = {
-                "authorization",
-                "x-amz-date",
-                "x-amz-security-token",
-            }
-            headers = {
-                key: value
-                for key, value in request.headers.items()
-                if key.lower() not in stale_headers
-            }
-            aws_request = AWSRequest(
-                method=request.method,
-                url=str(request.url),
-                data=request.content,
-                headers=headers,
-            )
-            SigV4Auth(credentials, _AGENTCORE_SERVICE, self._region).add_auth(aws_request)
-            for header in stale_headers:
-                if header in request.headers:
-                    del request.headers[header]
-            for key, value in aws_request.headers.items():
-                request.headers[key] = value
+            self._sign_request(request, credentials)
         except AgentCoreMCPError:
             raise
         except Exception:  # noqa: BLE001 - signer details must not escape this boundary.
             raise AgentCoreMCPError("AWS request signing failed.") from None
         yield request
+
+    async def async_auth_flow(self, request: httpx.Request):
+        try:
+            await request.aread()
+            credentials = await asyncio.to_thread(self._get_frozen_credentials)
+            self._sign_request(request, credentials)
+        except AgentCoreMCPError:
+            raise
+        except Exception:  # noqa: BLE001 - signer details must not escape this boundary.
+            raise AgentCoreMCPError("AWS request signing failed.") from None
+        yield request
+
+    def _sign_request(self, request: httpx.Request, credentials: Any) -> None:
+        stale_headers = {
+            "authorization",
+            "x-amz-date",
+            "x-amz-security-token",
+        }
+        headers = {
+            key: value for key, value in request.headers.items() if key.lower() not in stale_headers
+        }
+        aws_request = AWSRequest(
+            method=request.method,
+            url=str(request.url),
+            data=request.content,
+            headers=headers,
+        )
+        SigV4Auth(credentials, _AGENTCORE_SERVICE, self._region).add_auth(aws_request)
+        for header in stale_headers:
+            if header in request.headers:
+                del request.headers[header]
+        for key, value in aws_request.headers.items():
+            request.headers[key] = value
+
+
+class _SensitiveEndpointLogFilter(logging.Filter):
+    """Redact the Runtime identifier from dependency log records."""
+
+    def __init__(self, settings: AgentCoreMCPSettings) -> None:
+        super().__init__()
+        runtime_arn = settings.runtime_arn.get_secret_value()
+        arn_parts = runtime_arn.split(":", 5)
+        resource = arn_parts[5]
+        self._tokens = tuple(
+            sorted(
+                {
+                    runtime_arn,
+                    quote(runtime_arn, safe=""),
+                    arn_parts[4],
+                    resource,
+                    resource.removeprefix("runtime/"),
+                },
+                key=len,
+                reverse=True,
+            )
+        )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.msg = self._redact(record.msg)
+        if isinstance(record.args, tuple):
+            record.args = tuple(self._redact(value) for value in record.args)
+        elif isinstance(record.args, dict):
+            record.args = {key: self._redact(value) for key, value in record.args.items()}
+        return True
+
+    def _redact(self, value: object) -> object:
+        text = value if isinstance(value, str) else str(value)
+        redacted = text
+        for token in self._tokens:
+            redacted = redacted.replace(token, "[REDACTED]")
+        return redacted if redacted != text else value
+
+
+def _install_sensitive_log_filter(
+    stack: AsyncExitStack,
+    settings: AgentCoreMCPSettings,
+) -> None:
+    log_filter = _SensitiveEndpointLogFilter(settings)
+    for logger_name in _SENSITIVE_TRANSPORT_LOGGERS:
+        logger = logging.getLogger(logger_name)
+        logger.addFilter(log_filter)
+        stack.callback(logger.removeFilter, log_filter)
 
 
 class AgentCoreMCPToolClient:
@@ -191,10 +263,12 @@ class AgentCoreMCPToolClient:
 
         stack = AsyncExitStack()
         try:
+            _install_sensitive_log_filter(stack, self._settings)
             auth = AgentCoreSigV4Auth(
                 credential_session=self._boto3_session,
                 region=self._settings.region,
             )
+            await asyncio.to_thread(auth.validate_credentials)
             http_client = await stack.enter_async_context(
                 self._http_client_factory(
                     auth=auth,
@@ -212,6 +286,9 @@ class AgentCoreMCPToolClient:
                 self._client_session_factory(read_stream, write_stream)
             )
             await mcp_session.initialize()
+        except asyncio.CancelledError:
+            await _close_quietly(stack)
+            raise
         except AgentCoreMCPError:
             await _close_quietly(stack)
             raise

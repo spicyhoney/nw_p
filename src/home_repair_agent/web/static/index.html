@@ -188,7 +188,7 @@
         >
           <div>
             <p class="eyebrow">修繕分支 · 必須人工確認</p>
-            <h2 id="routing-title">請先選擇本次處理項目</h2>
+            <h2 id="routing-title" tabindex="-1">請先選擇本次處理項目</h2>
           </div>
           <p id="routing-guidance"></p>
           <div id="routing-options" class="routing-options"></div>
@@ -382,6 +382,19 @@
             </span>
             <span id="voice-status" role="status" aria-live="polite"></span>
           </p>
+          <button
+            id="image-mode-button"
+            class="voice-button media-mode-button"
+            type="button"
+            aria-controls="media-section"
+            aria-expanded="false"
+            aria-label="開啟圖片上傳與分析"
+            title="開啟圖片上傳與分析"
+            hidden
+            disabled
+          >
+            圖片
+          </button>
           <button
             id="voice-button"
             class="voice-button"

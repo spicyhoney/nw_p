@@ -278,6 +278,125 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual(0, self.vision.calls)
         self.assertEqual([], os.listdir(self.media_root.name))
 
+    def test_image_first_requires_branch_then_analysis_confirmation(self) -> None:
+        session = self.create_session()
+        session_id = session["session_id"]
+
+        upload = self.client.post(
+            f"/api/sessions/{session_id}/image",
+            files={"file": ("repair.png", _png_bytes(), "image/png")},
+            data={"external_processing_confirmed": "true"},
+        )
+
+        self.assertEqual(200, upload.status_code, upload.text)
+        uploaded = upload.json()
+        media = uploaded["media"]
+        analysis = media["analysis"]
+        self.assertIsNone(uploaded["active_task"]["branch"])
+        self.assertEqual(
+            "faucet_leak",
+            uploaded["repair_routing"]["pending_branch"],
+        )
+        self.assertIsNone(media["branch"])
+        self.assertFalse(analysis["confirmed"])
+        self.assertIsNone(uploaded["service"])
+        self.assertIsNone(uploaded["location"])
+        self.assertIsNone(uploaded["consultation_form"])
+        self.assertEqual([], uploaded["candidates"])
+        self.assertFalse(uploaded["can_send_message"])
+
+        early_confirmation = self.client.post(
+            f"/api/sessions/{session_id}/image/confirm",
+            json={
+                "media_id": media["media_id"],
+                "analysis_revision": analysis["analysis_revision"],
+                "service_query": analysis["service_query"],
+                "problem_summary": analysis["problem_summary"],
+                "safety_warnings": analysis["safety_warnings"],
+            },
+        )
+        self.assertEqual(409, early_confirmation.status_code, early_confirmation.text)
+        self.assertEqual(
+            "IMAGE_BRANCH_CONFIRMATION_REQUIRED",
+            early_confirmation.json()["error"]["code"],
+        )
+
+        branch = self.client.post(
+            f"/api/sessions/{session_id}/branch/confirm",
+            json={"branch": "faucet_leak", "confirm": True},
+        )
+        self.assertEqual(200, branch.status_code, branch.text)
+        branched = branch.json()
+        self.assertEqual("faucet_leak", branched["active_task"]["branch"])
+        self.assertEqual("faucet_leak", branched["media"]["branch"])
+        self.assertFalse(branched["media"]["analysis"]["confirmed"])
+        self.assertIsNone(branched["location"])
+        self.assertIsNone(branched["consultation_form"])
+        self.assertEqual([], branched["candidates"])
+        self.assertFalse(branched["can_send_message"])
+
+        confirmed = self.client.post(
+            f"/api/sessions/{session_id}/image/confirm",
+            json={
+                "media_id": media["media_id"],
+                "analysis_revision": analysis["analysis_revision"],
+                "service_query": analysis["service_query"],
+                "problem_summary": analysis["problem_summary"],
+                "safety_warnings": analysis["safety_warnings"],
+            },
+        )
+        self.assertEqual(200, confirmed.status_code, confirmed.text)
+        confirmed_session = confirmed.json()
+        self.assertTrue(confirmed_session["media"]["analysis"]["confirmed"])
+        self.assertEqual("image_confirmed", confirmed_session["service_source"])
+        self.assertIsNone(confirmed_session["consultation_form"])
+        self.assertTrue(confirmed_session["can_send_message"])
+
+        location = self.client.post(
+            f"/api/sessions/{session_id}/messages",
+            json={"text": "臺北市大安區"},
+        )
+        self.assertEqual(200, location.status_code, location.text)
+        located = location.json()
+        self.assertEqual("臺北市大安區", located["location"]["full_name"])
+        self.assertEqual("repair_form_v1", located["consultation_form"]["form_key"])
+        self.assertEqual([], located["candidates"])
+
+    def test_removing_an_image_first_upload_cancels_its_branch_proposal(self) -> None:
+        session = self.create_session()
+        session_id = session["session_id"]
+        upload = self.client.post(
+            f"/api/sessions/{session_id}/image",
+            files={"file": ("repair.png", _png_bytes(), "image/png")},
+            data={"external_processing_confirmed": "true"},
+        )
+        self.assertEqual(200, upload.status_code, upload.text)
+        self.assertIsNotNone(upload.json()["repair_routing"])
+
+        removed = self.client.delete(f"/api/sessions/{session_id}/image")
+
+        self.assertEqual(200, removed.status_code, removed.text)
+        body = removed.json()
+        self.assertIsNone(body["media"])
+        self.assertIsNone(body["repair_routing"])
+        self.assertIsNone(body["active_task"])
+        self.assertTrue(body["can_send_message"])
+        remaining_files = [
+            filename for root, _dirs, files in os.walk(self.media_root.name) for filename in files
+        ]
+        self.assertEqual([], remaining_files)
+
+        reupload = self.client.post(
+            f"/api/sessions/{session_id}/image",
+            files={"file": ("replacement.png", _png_bytes(), "image/png")},
+            data={"external_processing_confirmed": "true"},
+        )
+        self.assertEqual(200, reupload.status_code, reupload.text)
+        self.assertEqual(
+            "faucet_leak",
+            reupload.json()["repair_routing"]["pending_branch"],
+        )
+
     def test_vlm_failure_cleans_up_the_uploaded_file_without_fallback(self) -> None:
         session = self.prepare_confirmed_branch()
         self.vision.fail = True

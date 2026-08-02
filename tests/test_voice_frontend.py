@@ -59,7 +59,7 @@ class VoiceFrontendContractTests(unittest.TestCase):
 
     def test_voice_button_preserves_reachable_composer_layout(self) -> None:
         self.assertIn(".message-composer--voice", self.css)
-        self.assertIn("64px minmax(0, 1fr) 48px", self.css)
+        self.assertIn("64px 64px minmax(0, 1fr) 48px", self.css)
         self.assertIn("height: 48px", self.css)
         self.assertIn("max-height: clamp(48px, 18dvh, 128px)", self.css)
 

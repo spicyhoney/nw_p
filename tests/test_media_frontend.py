@@ -20,6 +20,9 @@ class MediaFrontendContractTests(unittest.TestCase):
         cls.provider_styles = (STATIC_DIR / "provider.css").read_text(encoding="utf-8")
 
     def test_consumer_image_controls_are_labeled_and_constrained(self) -> None:
+        self.assertIn('id="image-mode-button"', self.index)
+        self.assertIn('aria-controls="media-section"', self.index)
+        self.assertIn('aria-label="開啟圖片上傳與分析"', self.index)
         self.assertIn('id="media-file"', self.index)
         self.assertIn('accept="image/jpeg,image/png,image/webp"', self.index)
         self.assertIn('id="media-external-consent"', self.index)
@@ -28,6 +31,9 @@ class MediaFrontendContractTests(unittest.TestCase):
         self.assertIn('aria-live="polite"', self.index)
         self.assertIn("MEDIA_MAX_BYTES = 8 * 1024 * 1024", self.app)
         self.assertIn("validateMediaFile", self.app)
+        self.assertIn("function openImageMode()", self.app)
+        self.assertIn("store.mediaModeExpanded = true", self.app)
+        self.assertNotIn("請先確認水電修繕分支，再上傳圖片", self.app)
 
     def test_upload_requires_huggingface_and_explicit_consent(self) -> None:
         self.assertIn("health.model_provider", self.app)
@@ -96,14 +102,18 @@ class MediaFrontendContractTests(unittest.TestCase):
     def test_session_reset_clears_unsubmitted_local_media_state(self) -> None:
         self.assertIn("resetTransientConversationUi", self.app)
         self.assertIn("clearPreviewObjectUrl();", self.app)
+        self.assertIn("store.mediaModeExpanded = false", self.app)
         self.assertIn('elements.mediaFile.value = ""', self.app)
         self.assertIn("elements.mediaConsent.checked = false", self.app)
         self.assertIn('elements.mediaPreview?.removeAttribute("src")', self.app)
 
     def test_media_transitions_move_focus_to_the_next_available_control(self) -> None:
         self.assertIn(
-            "revealConversationSection(\n      elements.mediaAnalysisForm,\n"
-            "      elements.mediaServiceQuery,",
+            "elements.mediaAnalysisForm,\n        elements.mediaServiceQuery,",
+            self.app,
+        )
+        self.assertIn(
+            "revealConversationSection(elements.routingSection, elements.routingTitle)",
             self.app,
         )
         self.assertIn(

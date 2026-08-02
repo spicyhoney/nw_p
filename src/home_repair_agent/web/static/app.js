@@ -55,6 +55,7 @@ const store = {
   mediaBusy: false,
   previewObjectUrl: "",
   lastMessageSignature: "",
+  mediaModeExpanded: false,
   mediaEditorExpanded: false,
   formSignature: "",
   visibleFormSignature: "",
@@ -87,6 +88,7 @@ function bindElements() {
   elements.missingFieldsList = document.querySelector("#missing-fields-list");
   elements.sharedSlotsWarning = document.querySelector("#shared-slots-warning");
   elements.routingSection = document.querySelector("#routing-section");
+  elements.routingTitle = document.querySelector("#routing-title");
   elements.routingGuidance = document.querySelector("#routing-guidance");
   elements.routingOptions = document.querySelector("#routing-options");
   elements.routingReject = document.querySelector("#routing-reject");
@@ -103,6 +105,7 @@ function bindElements() {
   elements.messageForm = document.querySelector("#message-form");
   elements.messageInput = document.querySelector("#message-input");
   elements.sendButton = document.querySelector("#send-button");
+  elements.imageModeButton = document.querySelector("#image-mode-button");
   elements.voiceButton = document.querySelector("#voice-button");
   elements.voiceDisclosure = document.querySelector("#voice-disclosure");
   elements.voiceStatus = document.querySelector("#voice-status");
@@ -195,6 +198,7 @@ function bindEvents() {
   elements.cancelDispatch.addEventListener("click", cancelDispatch);
   elements.confirmDispatch.addEventListener("click", confirmDispatch);
   elements.messageInput.addEventListener("input", resizeMessageInput);
+  elements.imageModeButton.addEventListener("click", openImageMode);
   elements.voiceButton.addEventListener("click", toggleVoiceRecording);
   elements.mediaUploadForm.addEventListener("submit", handleMediaUpload);
   elements.mediaFile.addEventListener("change", handleMediaFileChange);
@@ -290,6 +294,9 @@ async function confirmBranch(branch, confirm = true) {
     return;
   }
   const sessionId = store.session.session_id;
+  const hadPendingImage = Boolean(
+    currentMedia() && !store.session.active_task?.branch,
+  );
   const request = sessionResponses.begin(sessionId);
   setBusy(true, confirm ? "正在確認修繕分支。" : "正在保留原修繕分支。");
   try {
@@ -309,6 +316,17 @@ async function confirmBranch(branch, confirm = true) {
         ? `已確認${branchLabel(branch)}，請繼續核對地點與表單。`
         : "未套用候選分支。",
     );
+    if (confirm && currentMedia()?.analysis && !currentMedia().analysis.confirmed) {
+      setMediaStatus("修繕分支已確認；請核對或更正圖片建議，再確認套用。");
+      revealConversationSection(
+        elements.mediaAnalysisForm,
+        elements.mediaServiceQuery,
+      );
+    } else if (!confirm && hadPendingImage) {
+      store.mediaEditorExpanded = false;
+      setMediaStatus("圖片與分類建議已移除，可重新上傳或改用文字、語音。");
+      revealConversationSection(elements.mediaSection, elements.mediaFile);
+    }
   } catch (error) {
     showAlert(error.message);
   } finally {
@@ -683,7 +701,7 @@ const VOICE_MIME_CANDIDATES = [
 ];
 
 function renderVoiceInput() {
-  if (!elements.voiceButton || !elements.messageForm) {
+  if (!elements.voiceButton || !elements.imageModeButton || !elements.messageForm) {
     return;
   }
   const available = isHuggingFaceMediaAvailable();
@@ -693,6 +711,13 @@ function renderVoiceInput() {
   const canSend = Boolean(store.session?.can_send_message);
 
   elements.messageForm.classList.toggle("message-composer--voice", available);
+  elements.imageModeButton.hidden = !available;
+  elements.imageModeButton.disabled =
+    !available || !canSend || (otherBusy && !recording && !transcribing);
+  elements.imageModeButton.setAttribute(
+    "aria-expanded",
+    String(available && (store.mediaModeExpanded || Boolean(currentMedia()))),
+  );
   elements.voiceButton.hidden = !available;
   elements.voiceDisclosure.hidden = !available;
   elements.voiceButton.disabled =
@@ -716,6 +741,15 @@ function renderVoiceInput() {
   if (!available) {
     setVoiceStatus("");
   }
+}
+
+function openImageMode() {
+  if (!isHuggingFaceMediaAvailable() || isSessionMutationBlocked()) {
+    return;
+  }
+  store.mediaModeExpanded = true;
+  renderMedia();
+  revealConversationSection(elements.mediaSection, elements.mediaFile);
 }
 
 function setVoiceStatus(message) {
@@ -1050,10 +1084,6 @@ async function handleMediaUpload(event) {
     setMediaStatus(mediaFlowLockedMessage());
     return;
   }
-  if (!store.session.active_task?.branch) {
-    setMediaStatus("請先確認水電修繕分支，再上傳圖片。");
-    return;
-  }
   const file = elements.mediaFile.files?.[0];
   const error = file ? validateMediaFile(file) : "請先選擇一張圖片。";
   if (error) {
@@ -1073,17 +1103,31 @@ async function handleMediaUpload(event) {
   setMediaBusy(true, "正在上傳圖片並等待 Hugging Face 分析結果…");
   try {
     const response = await api(mediaImagePath(), { method: "POST", body });
+    store.mediaModeExpanded = true;
     store.mediaEditorExpanded = true;
     await applyMediaResponse(response);
     elements.mediaFile.value = "";
     elements.mediaConsent.checked = false;
     clearPreviewObjectUrl();
-    setMediaStatus("圖片分析完成。請先核對或更正建議，再確認套用。");
-    announce("圖片分析完成，請核對或更正結果。");
-    revealConversationSection(
-      elements.mediaAnalysisForm,
-      elements.mediaServiceQuery,
+    const branchReady = Boolean(store.session.active_task?.branch);
+    setMediaStatus(
+      branchReady
+        ? "圖片分析完成。請核對或更正建議，再確認套用。"
+        : "圖片已提出分類建議；請先確認修繕分支，再核對圖片內容。",
     );
+    announce(
+      branchReady
+        ? "圖片分析完成，請核對或更正結果。"
+        : "圖片已提出分類建議，等待你先確認修繕分支。",
+    );
+    if (branchReady) {
+      revealConversationSection(
+        elements.mediaAnalysisForm,
+        elements.mediaServiceQuery,
+      );
+    } else {
+      revealConversationSection(elements.routingSection, elements.routingTitle);
+    }
   } catch (uploadError) {
     setMediaStatus(uploadError.message);
   } finally {
@@ -1225,7 +1269,8 @@ function renderMedia() {
   const analysis = media?.analysis || null;
   const available = isHuggingFaceMediaAvailable();
   const branchReady = Boolean(store.session.active_task?.branch);
-  const blocked = store.mediaBusy || isSessionMutationBlocked() || !branchReady;
+  const uploadBlocked = store.mediaBusy || isSessionMutationBlocked();
+  const analysisBlocked = uploadBlocked || !branchReady;
   const mediaFlowLocked = isMediaFlowLocked();
   const mediaCaseSubmitted = MEDIA_CASE_SUBMITTED_STATES.has(
     store.session.state,
@@ -1235,20 +1280,23 @@ function renderMedia() {
     store.mediaEditorExpanded = false;
   }
 
-  elements.mediaSection.hidden = !branchReady && !media;
+  elements.mediaSection.hidden =
+    !available || (!store.mediaModeExpanded && !media);
   elements.mediaMode.textContent = available
     ? "Hugging Face 外部分析"
     : "圖片分析目前不可用（Mock／Bedrock／未設定）";
   elements.mediaMode.classList.toggle("media-mode--unavailable", !available);
-  elements.mediaUploadForm.hidden = Boolean(media) || !branchReady;
-  elements.mediaFile.disabled = blocked || !available || mediaFlowLocked;
-  elements.mediaConsent.disabled = blocked || !available || mediaFlowLocked;
-  elements.mediaUploadButton.disabled = blocked || !available || mediaFlowLocked;
+  elements.mediaUploadForm.hidden = Boolean(media);
+  elements.mediaFile.disabled = uploadBlocked || !available || mediaFlowLocked;
+  elements.mediaConsent.disabled = uploadBlocked || !available || mediaFlowLocked;
+  elements.mediaUploadButton.disabled = uploadBlocked || !available || mediaFlowLocked;
   elements.mediaUploadButton.textContent = store.mediaBusy ? "處理中…" : "上傳並分析";
   if (!available && !media && !store.mediaBusy) {
     setMediaStatus("此 session 使用 Mock、Bedrock 或未設定模型；圖片不會上傳，也不會改用其他模式處理。");
   } else if (!branchReady && !media && !store.mediaBusy) {
-    setMediaStatus("請先確認水電修繕分支，圖片控制才會開放。");
+    setMediaStatus("可先上傳圖片；分析後仍需確認修繕分支與圖片建議。");
+  } else if (!branchReady && media && !store.mediaBusy) {
+    setMediaStatus("圖片已提出分類建議；請先確認修繕分支，再核對圖片內容。");
   } else if (mediaFlowLocked && !store.mediaBusy) {
     setMediaStatus(mediaFlowLockedMessage());
   }
@@ -1261,7 +1309,8 @@ function renderMedia() {
   } else {
     elements.mediaPreview.removeAttribute("src");
   }
-  elements.mediaRemoveButton.disabled = blocked || !media || mediaCaseSubmitted;
+  elements.mediaRemoveButton.disabled =
+    uploadBlocked || !media || mediaCaseSubmitted;
 
   elements.mediaConfirmedCard.hidden = !confirmed;
   if (confirmed) {
@@ -1272,7 +1321,7 @@ function renderMedia() {
     elements.mediaConfirmedNextStep.textContent = mediaFlowLocked
       ? mediaFlowLockedMessage()
       : mediaNextStepText();
-    elements.mediaEditToggle.disabled = blocked || mediaFlowLocked;
+    elements.mediaEditToggle.disabled = analysisBlocked || mediaFlowLocked;
     elements.mediaEditToggle.setAttribute(
       "aria-expanded",
       String(store.mediaEditorExpanded),
@@ -1283,7 +1332,7 @@ function renderMedia() {
         ? "收合編輯區"
         : "展開編輯並重新確認";
     elements.mediaConfirmedRemove.disabled =
-      blocked || !media || mediaCaseSubmitted;
+      uploadBlocked || !media || mediaCaseSubmitted;
   } else {
     elements.mediaConfirmedPreview.removeAttribute("src");
     store.mediaEditorExpanded = false;
@@ -1306,16 +1355,16 @@ function renderMedia() {
       ? analysis.safety_warnings.join("\n")
       : analysis.safety_warnings || "";
   }
-  elements.mediaServiceQuery.disabled = blocked || mediaFlowLocked;
-  elements.mediaProblemSummary.disabled = blocked || mediaFlowLocked;
-  elements.mediaSafetyWarnings.disabled = blocked || mediaFlowLocked;
+  elements.mediaServiceQuery.disabled = analysisBlocked || mediaFlowLocked;
+  elements.mediaProblemSummary.disabled = analysisBlocked || mediaFlowLocked;
+  elements.mediaSafetyWarnings.disabled = analysisBlocked || mediaFlowLocked;
   const confidence = Number(analysis.confidence);
   elements.mediaConfidence.textContent = Number.isFinite(confidence)
     ? `信心 ${Math.round(confidence * 100)}%${analysis.uncertain ? " · 需要確認" : ""}`
     : analysis.uncertain
       ? "需要確認"
       : "待確認";
-  elements.mediaConfirmButton.disabled = blocked || mediaFlowLocked;
+  elements.mediaConfirmButton.disabled = analysisBlocked || mediaFlowLocked;
   elements.mediaConfirmButton.textContent = confirmed
     ? store.mediaBusy
       ? "重新確認中…"
@@ -2432,6 +2481,7 @@ function revealConversationSection(section, focusTarget) {
 function resetTransientConversationUi() {
   cancelVoiceCapture();
   clearPreviewObjectUrl();
+  store.mediaModeExpanded = false;
   store.mediaEditorExpanded = false;
   store.formSignature = "";
   store.visibleFormSignature = "";

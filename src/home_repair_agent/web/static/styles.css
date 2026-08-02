@@ -1075,7 +1075,7 @@ a:focus-visible {
 }
 
 .message-composer--voice {
-  grid-template-columns: 58px minmax(0, 1fr) 42px;
+  grid-template-columns: 58px 58px minmax(0, 1fr) 42px;
 }
 
 .privacy-note {
@@ -1108,6 +1108,11 @@ a:focus-visible {
   border-color: #a52a1f;
   background: #fff0ed;
   color: #8b1d14;
+}
+
+.media-mode-button[aria-expanded="true"] {
+  border-color: var(--teal-dark);
+  background: #d7efea;
 }
 
 .voice-button:disabled {
@@ -1552,7 +1557,7 @@ a:focus-visible {
 }
 
 .message-composer--voice {
-  grid-template-columns: 64px minmax(0, 1fr) 48px;
+  grid-template-columns: 64px 64px minmax(0, 1fr) 48px;
 }
 
 .privacy-note {

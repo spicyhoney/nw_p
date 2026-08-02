@@ -372,7 +372,7 @@ class WebSessionService:
                     code="IMAGE_ANALYSIS_UNAVAILABLE",
                     message="圖片分析只在 Hugging Face AI 模式提供；目前不會自動降級或模擬。",
                 )
-            self._require_media_flow_open(record)
+            self._require_media_intake_open(record)
             if external_processing_confirmed is not True:
                 raise WebSessionInputError(
                     code="EXTERNAL_PROCESSING_CONFIRMATION_REQUIRED",
@@ -411,6 +411,36 @@ class WebSessionService:
                     message="圖片已安全移除，但圖片分析發生非預期錯誤，請稍後重試。",
                 ) from error
 
+            image_routing: RepairRoutingResult | None = None
+            image_need_text: str | None = None
+            if record.confirmed_branch is None:
+                image_need_text = _image_routing_text(result)
+                image_routing = route_repair_branch(image_need_text)
+                image_candidates = _routing_candidates(image_routing)
+                if image_routing.safety_stop:
+                    _delete_media_quietly(storage, new_media)
+                    raise WebSessionInputError(
+                        code="IMAGE_SAFETY_CONFIRMATION_REQUIRED",
+                        message=(
+                            "圖片可能涉及安全風險，尚未保存；請改用文字或語音描述，"
+                            "由你確認內容後再繼續。"
+                        ),
+                    )
+                if (
+                    image_routing.unsupported
+                    or image_routing.non_target_service
+                    or image_routing.cross_service
+                    or len(image_candidates) != 1
+                ):
+                    _delete_media_quietly(storage, new_media)
+                    raise WebSessionInputError(
+                        code="IMAGE_BRANCH_AMBIGUOUS",
+                        message=(
+                            "圖片不足以唯一判斷修繕分支，尚未保存；"
+                            "請改用文字或語音描述一項水電問題。"
+                        ),
+                    )
+
             previous_media = record.media
             if previous_media is not None:
                 try:
@@ -430,12 +460,6 @@ class WebSessionService:
                     finally:
                         _delete_media_quietly(storage, new_media)
                     raise _media_storage_web_error(error) from error
-            if record.confirmed_branch is None:  # guarded by _require_media_flow_open
-                _delete_media_quietly(storage, new_media)
-                raise WebSessionConflictError(
-                    code="IMAGE_BRANCH_CONFIRMATION_REQUIRED",
-                    message="請先確認修繕分支，再上傳或分析圖片。",
-                )
             if previous_media is not None:
                 _drop_media_service_evidence(record, previous_media.media_id)
             record.media = new_media
@@ -446,6 +470,19 @@ class WebSessionService:
                 confirmed=False,
                 correction=None,
             )
+            if image_routing is not None and image_need_text is not None:
+                record.original_need = image_need_text
+                record.routing = image_routing
+                record.replacement_pending = False
+                record.replacement_text = None
+                record.messages.append(
+                    self._message(
+                        "assistant",
+                        "圖片只提出初步分類建議；請先確認修繕分支，"
+                        "再核對圖片分析內容。確認前不會媒合或派單。",
+                    )
+                )
+                record.state = "routing_pending"
             self._invalidate_summary(record)
             return await self._to_view(record)
 
@@ -473,6 +510,7 @@ class WebSessionService:
                 )
             storage = self._require_media_storage()
             removed_media = record.media
+            removed_unbound_media = record.confirmed_branch is None and record.media_branch is None
             try:
                 _delete_media(storage, removed_media)
             except MediaStorageError as error:
@@ -481,6 +519,18 @@ class WebSessionService:
             record.media_branch = None
             record.image_analysis = None
             _drop_media_service_evidence(record, removed_media.media_id)
+            if removed_unbound_media:
+                record.original_need = None
+                record.routing = None
+                record.replacement_pending = False
+                record.replacement_text = None
+                record.messages.append(
+                    self._message(
+                        "assistant",
+                        "圖片已移除，尚未確認的分類建議也已取消。",
+                    )
+                )
+                record.state = self._derive_state(record)
             self._invalidate_summary(record)
             return await self._to_view(record)
 
@@ -742,6 +792,25 @@ class WebSessionService:
             label = BRANCH_LABELS[confirmation.branch]
             if confirmation.confirm is not True:
                 was_replacement = record.replacement_pending
+                removed_pending_media = False
+                if (
+                    not was_replacement
+                    and record.confirmed_branch is None
+                    and record.media is not None
+                    and record.media_branch is None
+                ):
+                    storage = self._require_media_storage()
+                    removed_media = record.media
+                    try:
+                        _delete_media(storage, removed_media)
+                    except MediaStorageError as error:
+                        raise _media_storage_web_error(error) from error
+                    _drop_media_service_evidence(record, removed_media.media_id)
+                    record.media = None
+                    record.media_branch = None
+                    record.image_analysis = None
+                    record.original_need = None
+                    removed_pending_media = True
                 record.routing = None
                 record.replacement_pending = False
                 record.replacement_text = None
@@ -752,7 +821,11 @@ class WebSessionService:
                             "assistant",
                             "已保留原修繕分支。"
                             if was_replacement
-                            else "尚未選定分支，請重新描述或選擇。",
+                            else (
+                                "圖片與分類建議已移除，請改用文字、語音或重新上傳圖片。"
+                                if removed_pending_media
+                                else "尚未選定分支，請重新描述或選擇。"
+                            ),
                         ),
                     ]
                 )
@@ -782,6 +855,8 @@ class WebSessionService:
                 record.original_need = need_text
             else:
                 record.confirmed_branch = confirmation.branch
+                if record.media is not None and record.media_branch is None:
+                    record.media_branch = confirmation.branch
 
             _merge_verified_service(
                 record,
@@ -814,7 +889,14 @@ class WebSessionService:
                 )
                 record.state = self._derive_state(record)
             else:
-                agent_need = label if replacement_has_location else need_text
+                pending_image_confirmation = (
+                    record.media is not None
+                    and record.image_analysis is not None
+                    and not record.image_analysis.confirmed
+                )
+                agent_need = (
+                    label if replacement_has_location or pending_image_confirmation else need_text
+                )
                 await self._run_agent_turn(record, f"水電修繕需求：{agent_need}")
                 if replacement_has_location:
                     record.messages.append(
@@ -1385,16 +1467,11 @@ class WebSessionService:
             messages=[self._message("assistant", GREETING)],
         )
 
-    def _require_media_flow_open(self, record: _SessionRecord) -> None:
+    def _require_media_intake_open(self, record: _SessionRecord) -> None:
         if record.safety_stopped:
             raise WebSessionConflictError(
                 code="SAFETY_STOP_ACTIVE",
                 message="此諮詢已因安全風險停止，不能上傳或處理圖片。",
-            )
-        if record.confirmed_branch is None:
-            raise WebSessionConflictError(
-                code="IMAGE_BRANCH_CONFIRMATION_REQUIRED",
-                message="請先確認修繕分支，再上傳或分析圖片。",
             )
         if record.answers or record.state in {
             "matched",
@@ -1406,6 +1483,14 @@ class WebSessionService:
             raise WebSessionConflictError(
                 code="MEDIA_FLOW_LOCKED",
                 message="摘要或案件流程已開始；請修改前移除摘要資料或重新開始。",
+            )
+
+    def _require_media_flow_open(self, record: _SessionRecord) -> None:
+        self._require_media_intake_open(record)
+        if record.confirmed_branch is None:
+            raise WebSessionConflictError(
+                code="IMAGE_BRANCH_CONFIRMATION_REQUIRED",
+                message="請先確認修繕分支，再確認圖片分析內容。",
             )
 
     @staticmethod
@@ -1809,6 +1894,12 @@ def _routing_candidates(result: RepairRoutingResult) -> tuple[RepairBranch, ...]
         if branch not in candidates:
             candidates.append(branch)
     return tuple(candidates)
+
+
+def _image_routing_text(result: VisionAnalysisResult) -> str:
+    """Build the smallest VLM-derived text used only for branch proposal validation."""
+
+    return f"{result.service_query}。{result.problem_summary}"
 
 
 def _routing_message(

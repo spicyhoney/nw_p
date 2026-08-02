@@ -262,7 +262,13 @@
     {
       "agent_eligible": true,
       "cleaning_rule": "define_versioned_water_repair_form",
-      "config": {},
+      "config": {
+        "applicable_issue_categories": [
+          "faucet_leak",
+          "toilet_issue",
+          "pipe_issue"
+        ]
+      },
       "form_key": "repair_form_v1",
       "input_type": "single_select",
       "is_required": true,

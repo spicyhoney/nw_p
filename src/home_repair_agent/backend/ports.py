@@ -14,8 +14,7 @@ from home_repair_agent.backend.models import (
 class ReadRepository(Protocol):
     """Data-access contract used by the read-only Service Layer."""
 
-    def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]:
-        ...
+    def search_services(self, *, query: str, limit: int) -> list[ServiceSummary]: ...
 
     def find_locations(
         self,
@@ -24,11 +23,9 @@ class ReadRepository(Protocol):
         county_base: str,
         district_name: str,
         district_base: str,
-    ) -> list[ResolvedLocation]:
-        ...
+    ) -> list[ResolvedLocation]: ...
 
-    def list_consultation_forms(self, *, service_id: int) -> list[ConsultationForm]:
-        ...
+    def list_consultation_forms(self, *, service_id: int) -> list[ConsultationForm]: ...
 
     def list_available_provider_slots(
         self,
@@ -38,5 +35,4 @@ class ReadRepository(Protocol):
         preferred_start: datetime | None,
         preferred_end: datetime | None,
         candidate_limit: int,
-    ) -> list[AvailableProviderSlot]:
-        ...
+    ) -> list[AvailableProviderSlot]: ...

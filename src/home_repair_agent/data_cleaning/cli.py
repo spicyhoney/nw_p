@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 import os
+from datetime import date
 from pathlib import Path
 
 from .pipeline import run_pipeline
 from .postgres import load_pipeline_outputs
 
-
-DATASET_DIRECTORY = (
-    "(統一資訊) 命題數據集 - 2026 雲湧智生："
-    "臺灣生成式 AI 應用黑客松競賽"
-)
+DATASET_DIRECTORY = "(統一資訊) 命題數據集 - 2026 雲湧智生：臺灣生成式 AI 應用黑客松競賽"
 
 
 def build_parser(project_root: Path) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Run the reproducible B+ data-cleaning pipeline."
-    )
+    parser = argparse.ArgumentParser(description="Run the reproducible B+ data-cleaning pipeline.")
     parser.add_argument(
         "--source-dir",
         type=Path,

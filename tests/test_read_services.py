@@ -130,9 +130,7 @@ class StubReadRepository:
         *,
         service_id: int,
     ) -> list[ConsultationForm]:
-        self.calls.append(
-            ("list_consultation_forms", {"service_id": service_id})
-        )
+        self.calls.append(("list_consultation_forms", {"service_id": service_id}))
         return self.form_results
 
     def list_available_provider_slots(

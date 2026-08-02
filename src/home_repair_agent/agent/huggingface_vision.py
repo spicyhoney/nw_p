@@ -309,9 +309,7 @@ def _parse_positive_int(
     try:
         parsed = int(raw_value)
     except ValueError as error:
-        raise HuggingFaceVisionConfigurationError(
-            f"{name} must be a positive integer."
-        ) from error
+        raise HuggingFaceVisionConfigurationError(f"{name} must be a positive integer.") from error
     if parsed <= 0:
         raise HuggingFaceVisionConfigurationError(f"{name} must be a positive integer.")
     return parsed
@@ -336,9 +334,7 @@ def _parse_analysis_response(response: object) -> VisionAnalysisResult:
             "Hugging Face vision response is not valid analysis JSON."
         ) from error
     if not isinstance(payload, dict):
-        raise HuggingFaceVisionResponseError(
-            "Hugging Face vision analysis must be a JSON object."
-        )
+        raise HuggingFaceVisionResponseError("Hugging Face vision analysis must be a JSON object.")
     try:
         return VisionAnalysisResult.model_validate(payload)
     except ValidationError as error:

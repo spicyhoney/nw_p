@@ -7,6 +7,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -20,6 +21,7 @@ if sys.platform == "win32":
     # psycopg async connections require a selector-based loop on Windows.
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+from home_repair_agent.agent.agentcore_mcp_client import create_agentcore_mcp_tool_client
 from home_repair_agent.agent.demo import (
     TAIPEI_TIMEZONE,
     DemoReadRepository,
@@ -28,6 +30,7 @@ from home_repair_agent.agent.demo import (
 from home_repair_agent.agent.huggingface_vision import HuggingFaceVisionClient
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
+from home_repair_agent.agent.ports import ToolClient
 from home_repair_agent.backend.case_models import (
     CaseStatus,
     DemoProviderIdentity,
@@ -49,6 +52,7 @@ from home_repair_agent.web.demo_case_repository import DemoCaseWorkflowRepositor
 from home_repair_agent.web.models import (
     ApiErrorBody,
     ApiErrorResponse,
+    BranchConfirmRequest,
     ChecklistKey,
     ChecklistUpdateRequest,
     DemoProviderIdentityListView,
@@ -61,6 +65,8 @@ from home_repair_agent.web.models import (
     ProviderDecisionRequest,
     ProviderView,
     SessionView,
+    SpeechTranscriptionView,
+    SummaryConfirmRequest,
 )
 from home_repair_agent.web.service import (
     WEB_CHAT_TOOL_NAMES,
@@ -71,6 +77,14 @@ from home_repair_agent.web.service import (
     WebSessionNotFoundError,
     WebSessionService,
     WebSessionUpstreamError,
+)
+from home_repair_agent.web.speech import (
+    MAX_SPEECH_UPLOAD_BYTES,
+    HuggingFaceGradioSpeechToTextClient,
+    SpeechToTextInputError,
+    SpeechToTextPort,
+    SpeechToTextRequestError,
+    SpeechToTextResponseError,
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -87,6 +101,62 @@ DEMO_PROVIDER_IDENTITIES = (
 )
 DEMO_PROVIDER_IDS = frozenset(identity.provider_id for identity in DEMO_PROVIDER_IDENTITIES)
 DemoProviderHeader = Annotated[str, Header(alias="X-Demo-Provider-Id")]
+IPAddress = IPv4Address | IPv6Address
+
+
+def _resolve_demo_ip_allowlist() -> tuple[frozenset[IPAddress], bool] | None:
+    """Read the opt-in public Demo allowlist without accepting ranges or hostnames."""
+
+    raw_allowed_ips = os.getenv("DEMO_ALLOWED_IPS")
+    raw_trust_cf = os.getenv("DEMO_TRUST_CF_CONNECTING_IP")
+    trust_cf_connecting_ip = False
+    if raw_trust_cf is not None:
+        normalized_trust = raw_trust_cf.strip().lower()
+        if normalized_trust not in {"true", "false"}:
+            raise RuntimeError("DEMO_TRUST_CF_CONNECTING_IP must be true or false")
+        trust_cf_connecting_ip = normalized_trust == "true"
+
+    if raw_allowed_ips is None:
+        if trust_cf_connecting_ip:
+            raise RuntimeError("DEMO_TRUST_CF_CONNECTING_IP=true requires DEMO_ALLOWED_IPS")
+        return None
+
+    values = raw_allowed_ips.split(",")
+    if not values or any(not value.strip() for value in values):
+        raise RuntimeError("DEMO_ALLOWED_IPS must contain comma-separated exact IP addresses")
+
+    allowed_ips: set[IPAddress] = set()
+    for value in values:
+        try:
+            allowed_ips.add(ip_address(value.strip()))
+        except ValueError as error:
+            raise RuntimeError(
+                "DEMO_ALLOWED_IPS must contain comma-separated exact IP addresses"
+            ) from error
+    return frozenset(allowed_ips), trust_cf_connecting_ip
+
+
+def _request_ip(
+    request: Request,
+    *,
+    trust_cf_connecting_ip: bool,
+) -> IPAddress | None:
+    """Resolve a request IP, trusting Cloudflare only across a loopback hop."""
+
+    if request.client is None:
+        return None
+    try:
+        direct_ip = ip_address(request.client.host)
+    except ValueError:
+        return None
+
+    forwarded_value = request.headers.get("CF-Connecting-IP")
+    if trust_cf_connecting_ip and direct_ip.is_loopback and forwarded_value is not None:
+        try:
+            return ip_address(forwarded_value.strip())
+        except ValueError:
+            return None
+    return direct_ip
 
 
 def _resolve_case_repository() -> CaseWorkflowRepository:
@@ -105,12 +175,61 @@ def _resolve_case_repository() -> CaseWorkflowRepository:
     raise RuntimeError("WEB_CASE_REPOSITORY must be one of: memory, postgres")
 
 
+def _resolve_media_provider(model_provider_key: str) -> str | None:
+    """Resolve rich-media inference independently from the text model.
+
+    Existing Hugging Face text mode keeps its media behavior for backwards
+    compatibility.  Other text providers must explicitly opt in so Bedrock or
+    Mock mode can never silently start sending media to an external service.
+    """
+
+    configured = os.getenv("WEB_MEDIA_PROVIDER")
+    if configured is None:
+        return "huggingface" if model_provider_key == "huggingface" else None
+    media_provider = configured.strip().lower()
+    if media_provider == "none":
+        return None
+    if media_provider == "huggingface":
+        return media_provider
+    raise RuntimeError("WEB_MEDIA_PROVIDER must be one of: none, huggingface")
+
+
+@asynccontextmanager
+async def _tool_client_context(
+    repository: DemoReadRepository,
+) -> AsyncIterator[ToolClient]:
+    """Create the configured read-only tool transport without fallback.
+
+    Case workflow writes deliberately remain local to the web process.  The
+    AgentCore transport is only the existing read-only MCP tool surface.
+    """
+
+    transport = os.getenv("TOOL_TRANSPORT", "local").strip().lower()
+    if transport == "local":
+        mcp_server = create_mcp_server(ReadServiceLayer(repository))
+        async with create_connected_server_and_client_session(
+            mcp_server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            yield MCPToolClient(mcp_session)
+        return
+
+    if transport == "agentcore_remote_mcp":
+        async with create_agentcore_mcp_tool_client() as tool_client:
+            yield tool_client
+        return
+
+    raise RuntimeError("TOOL_TRANSPORT must be one of: local, agentcore_remote_mcp")
+
+
 def create_app(
     *,
     session_service: WebSessionService | None = None,
     case_workflow: CaseWorkflowService | None = None,
     reference_time: datetime | None = None,
+    speech_to_text_client: SpeechToTextPort | None = None,
 ) -> FastAPI:
+    demo_ip_allowlist = _resolve_demo_ip_allowlist()
     if (
         session_service is not None
         and case_workflow is not None
@@ -130,6 +249,12 @@ def create_app(
         if session_service is not None:
             app.state.web_sessions = session_service
             app.state.case_workflow = session_service.case_workflow
+            app.state.speech_to_text = speech_to_text_client
+            app.state.media_provider = (
+                "huggingface"
+                if speech_to_text_client is not None and session_service.image_analysis_available
+                else None
+            )
             yield
             return
 
@@ -138,9 +263,17 @@ def create_app(
             os.getenv("MODEL_PROVIDER", "mock"),
         ).strip()
         model_client, provider_label = _resolve_model_client(provider_key)
+        media_provider_key = _resolve_media_provider(provider_key)
         media_storage = LocalMediaStorage()
         vision_client = (
-            HuggingFaceVisionClient.from_environment() if provider_key == "huggingface" else None
+            HuggingFaceVisionClient.from_environment()
+            if media_provider_key == "huggingface"
+            else None
+        )
+        speech_client = speech_to_text_client or (
+            HuggingFaceGradioSpeechToTextClient.from_environment()
+            if media_provider_key == "huggingface"
+            else None
         )
         repository = DemoReadRepository(reference_time=reference_time)
         workflow = (
@@ -151,12 +284,7 @@ def create_app(
                 now=now,
             )
         )
-        mcp_server = create_mcp_server(ReadServiceLayer(repository))
-        async with create_connected_server_and_client_session(
-            mcp_server,
-            raise_exceptions=True,
-        ) as mcp_session:
-            tool_client = MCPToolClient(mcp_session)
+        async with _tool_client_context(repository) as tool_client:
             app.state.web_sessions = WebSessionService(
                 runner=AgentRunner(
                     model_client=model_client,
@@ -168,13 +296,15 @@ def create_app(
                 provider=ProviderView(
                     key=provider_key,
                     label=provider_label,
-                    is_external=provider_key == "huggingface",
+                    is_external=provider_key in {"huggingface", "bedrock"},
                 ),
                 now=now,
                 media_storage=media_storage,
                 vision_client=vision_client,
             )
             app.state.case_workflow = workflow
+            app.state.speech_to_text = speech_client
+            app.state.media_provider = media_provider_key
             yield
 
     app = FastAPI(
@@ -185,6 +315,28 @@ def create_app(
         openapi_url="/api/openapi.json",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def enforce_demo_ip_allowlist(request: Request, call_next: Any) -> Any:
+        if demo_ip_allowlist is None:
+            return await call_next(request)
+
+        allowed_ips, trust_cf_connecting_ip = demo_ip_allowlist
+        request_ip = _request_ip(
+            request,
+            trust_cf_connecting_ip=trust_cf_connecting_ip,
+        )
+        if request_ip is not None and (request_ip.is_loopback or request_ip in allowed_ips):
+            return await call_next(request)
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": {
+                    "code": "DEMO_IP_NOT_ALLOWED",
+                    "message": "This Demo is restricted to approved networks.",
+                }
+            },
+        )
 
     @app.exception_handler(WebSessionNotFoundError)
     async def handle_not_found(
@@ -273,7 +425,10 @@ def create_app(
 
     @app.get("/api/health", response_model=HealthView)
     async def health(request: Request) -> HealthView:
-        return HealthView(model_provider=_session_service(request).provider.key)
+        return HealthView(
+            model_provider=_session_service(request).provider.key,
+            media_provider=getattr(request.app.state, "media_provider", None),
+        )
 
     @app.post(
         "/api/sessions",
@@ -286,6 +441,55 @@ def create_app(
     @app.get("/api/sessions/{session_id}", response_model=SessionView)
     async def get_session(session_id: str, request: Request) -> SessionView:
         return await _session_service(request).get_session(session_id)
+
+    @app.post(
+        "/api/sessions/{session_id}/speech/transcribe",
+        response_model=SpeechTranscriptionView,
+    )
+    async def transcribe_session_audio(
+        session_id: str,
+        request: Request,
+        file: Annotated[UploadFile, File()],
+        external_processing_confirmed: Annotated[bool, Form()],
+    ) -> SpeechTranscriptionView:
+        await _session_service(request).get_session(session_id)
+        speech_client = getattr(request.app.state, "speech_to_text", None)
+        if speech_client is None:
+            raise WebSessionConflictError(
+                code="VOICE_INPUT_UNAVAILABLE",
+                message="語音輸入服務尚未設定；系統不會改用 Mock 或其他供應商。",
+            )
+        if not external_processing_confirmed:
+            raise WebSessionInputError(
+                code="VOICE_EXTERNAL_CONSENT_REQUIRED",
+                message="請先明確同意將這段測試錄音送至外部 Hugging Face Space。",
+            )
+        try:
+            content = await file.read(MAX_SPEECH_UPLOAD_BYTES + 1)
+        finally:
+            await file.close()
+        try:
+            transcript = await speech_client.transcribe(
+                content,
+                content_type=file.content_type or "",
+            )
+        except SpeechToTextInputError as error:
+            raise WebSessionInputError(
+                code="INVALID_VOICE_AUDIO",
+                message=(
+                    "無法處理這段錄音；請使用瀏覽器支援的 WebM、Ogg、MP4、WAV 或 "
+                    "MP3，且大小不超過 6 MB。"
+                ),
+            ) from error
+        except (SpeechToTextRequestError, SpeechToTextResponseError) as error:
+            raise WebSessionUpstreamError(
+                code="VOICE_TRANSCRIPTION_FAILED",
+                message=("台語語音辨識服務目前無法完成處理，沒有改用 Mock；請稍後再試或改用文字。"),
+            ) from error
+        return SpeechTranscriptionView(
+            text=transcript.text,
+            model_id=transcript.model_id,
+        )
 
     @app.post(
         "/api/sessions/{session_id}/image",
@@ -336,6 +540,17 @@ def create_app(
         )
 
     @app.post(
+        "/api/sessions/{session_id}/branch/confirm",
+        response_model=SessionView,
+    )
+    async def confirm_session_branch(
+        session_id: str,
+        payload: BranchConfirmRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).confirm_branch(session_id, payload)
+
+    @app.post(
         "/api/sessions/{session_id}/messages",
         response_model=SessionView,
     )
@@ -356,6 +571,17 @@ def create_app(
         request: Request,
     ) -> SessionView:
         return await _session_service(request).submit_form(session_id, payload)
+
+    @app.post(
+        "/api/sessions/{session_id}/summary/confirm",
+        response_model=SessionView,
+    )
+    async def confirm_session_summary(
+        session_id: str,
+        payload: SummaryConfirmRequest,
+        request: Request,
+    ) -> SessionView:
+        return await _session_service(request).confirm_summary(session_id, payload)
 
     @app.post(
         "/api/sessions/{session_id}/dispatch",

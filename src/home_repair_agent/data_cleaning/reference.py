@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import unicodedata
-from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+from urllib.request import Request, urlopen
 
 from .source_io import write_json
-
 
 NLSC_COUNTY_URL = "https://api.nlsc.gov.tw/other/ListCounty"
 NLSC_TOWN_URL = "https://api.nlsc.gov.tw/other/ListTown1/{county_code}"
@@ -86,7 +85,7 @@ def fetch_nlsc_admin_areas() -> dict[str, Any]:
             "town_api_url_template": NLSC_TOWN_URL,
             "license": "政府資料開放授權條款第1版",
             "license_url": OPEN_DATA_LICENSE_URL,
-            "retrieved_at": datetime.now(timezone.utc).isoformat(),
+            "retrieved_at": datetime.now(UTC).isoformat(),
         },
         "counties": counties,
         "districts": districts,
@@ -159,9 +158,7 @@ def merge_locations(
                 "organizer_county_code": row["county_code"],
                 "organizer_district_code": row["code"],
                 "nlsc_county_code": external.get("nlsc_county_code") if external else None,
-                "nlsc_county_code01": (
-                    external.get("nlsc_county_code01") if external else None
-                ),
+                "nlsc_county_code01": (external.get("nlsc_county_code01") if external else None),
                 "nlsc_town_code": external.get("nlsc_town_code") if external else None,
                 "nlsc_town_code01": external.get("nlsc_town_code01") if external else None,
                 "source_type": "official_repaired",

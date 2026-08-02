@@ -32,8 +32,10 @@
 html,
 body {
   width: 100%;
+  height: 100%;
   min-height: 100%;
   margin: 0;
+  overflow: hidden;
 }
 
 body {
@@ -42,8 +44,6 @@ body {
   color: var(--ink);
   font-size: 16px;
   line-height: 1.5;
-  overflow-x: hidden;
-  overflow: hidden;
 }
 
 button,
@@ -229,6 +229,7 @@ a:focus-visible {
 
 .app-layout {
   height: calc(100vh - var(--header-height));
+  height: calc(100dvh - var(--header-height));
   display: grid;
   grid-template-columns: minmax(220px, 250px) minmax(430px, 1fr) minmax(300px, 350px);
   overflow: hidden;
@@ -252,9 +253,24 @@ a:focus-visible {
 
 .conversation-pane {
   display: grid;
-  grid-template-rows: auto minmax(120px, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--surface);
   overflow: hidden;
+}
+
+.conversation-scroll-region {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-behavior: smooth;
+}
+
+.conversation-scroll-region:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
 }
 
 .candidates-pane {
@@ -576,10 +592,8 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 0;
+  min-height: 120px;
   padding: 22px 26px;
-  overflow-y: auto;
-  scroll-behavior: smooth;
 }
 
 .message {
@@ -634,11 +648,9 @@ a:focus-visible {
 }
 
 .consultation-form-section {
-  max-height: 58vh;
   padding: 22px 26px 24px;
   border-top: 4px solid var(--teal);
   background: #fbfcfc;
-  overflow-y: auto;
 }
 
 .form-description {
@@ -945,6 +957,83 @@ a:focus-visible {
   background: #f5f5f2;
 }
 
+.media-confirmed-card {
+  display: grid;
+  grid-template-columns: minmax(96px, 132px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-pale);
+}
+
+.media-confirmed-card > img {
+  width: 100%;
+  height: 104px;
+  object-fit: cover;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: white;
+}
+
+.media-confirmed-card__content {
+  min-width: 0;
+}
+
+.media-confirmed-card h3 {
+  margin: 3px 0 10px;
+  font-size: 17px;
+}
+
+.media-confirmed-details {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.media-confirmed-details div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.media-confirmed-details dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.media-confirmed-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.media-next-step,
+.form-next-step {
+  margin: 12px 0;
+  padding: 9px 10px;
+  border-left: 3px solid var(--teal);
+  background: white;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form-next-step {
+  margin-top: 0;
+  background: var(--teal-pale);
+}
+
+.media-confirmed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .media-analysis-form {
   margin-top: 16px;
   padding-top: 16px;
@@ -985,6 +1074,10 @@ a:focus-visible {
   background: white;
 }
 
+.message-composer--voice {
+  grid-template-columns: 58px 58px minmax(0, 1fr) 42px;
+}
+
 .privacy-note {
   grid-column: 1 / -1;
   margin: 0;
@@ -993,9 +1086,47 @@ a:focus-visible {
   line-height: 1.45;
 }
 
+.voice-button {
+  width: 58px;
+  height: 42px;
+  padding: 0 8px;
+  border: 1px solid var(--teal-dark);
+  border-radius: 4px;
+  background: var(--teal-pale);
+  color: var(--teal-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.voice-button:hover {
+  background: #d7efea;
+}
+
+.voice-button[aria-pressed="true"] {
+  border-color: #a52a1f;
+  background: #fff0ed;
+  color: #8b1d14;
+}
+
+.media-mode-button[aria-expanded="true"] {
+  border-color: var(--teal-dark);
+  background: #d7efea;
+}
+
+.voice-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+#voice-status:not(:empty)::before {
+  content: " · ";
+}
+
 .message-composer textarea {
   width: 100%;
-  max-height: 128px;
+  max-height: clamp(48px, 18dvh, 128px);
   min-height: 42px;
   padding: 10px 12px;
   border: 1px solid var(--line-strong);
@@ -1425,6 +1556,10 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) 48px;
 }
 
+.message-composer--voice {
+  grid-template-columns: 64px 64px minmax(0, 1fr) 48px;
+}
+
 .privacy-note {
   font-size: 13px;
 }
@@ -1438,6 +1573,12 @@ a:focus-visible {
 .send-button {
   width: 48px;
   height: 48px;
+}
+
+.voice-button {
+  width: 64px;
+  height: 48px;
+  font-size: 14px;
 }
 
 .candidate-card h3 {
@@ -1576,8 +1717,7 @@ a:focus-visible {
   }
 
   body {
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .app-header {
@@ -1665,7 +1805,7 @@ a:focus-visible {
   }
 
   .conversation-pane {
-    grid-template-rows: auto minmax(100px, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .workspace-heading,
@@ -1694,6 +1834,19 @@ a:focus-visible {
   .media-analysis-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .media-confirmed-card {
+    grid-template-columns: 1fr;
+  }
+
+  .media-confirmed-card > img {
+    width: min(100%, 220px);
+  }
+
+  .media-confirmed-details div {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 
   .media-mode,
@@ -1784,8 +1937,19 @@ a:focus-visible {
     padding-block: 16px;
   }
 
-  .consultation-form-section {
-    max-height: 62vh;
+}
+
+@media (max-height: 600px) {
+  .workspace-heading {
+    padding-block: 10px;
+  }
+
+  .message-composer {
+    padding-block: 8px;
+  }
+
+  .message-composer textarea {
+    max-height: clamp(48px, 16dvh, 72px);
   }
 }
 
@@ -1797,5 +1961,157 @@ a:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Guided single-task routing and summary confirmation */
+.task-fields {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.task-fields h3,
+.consultation-summary-section h3 {
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+
+.task-fields ul,
+.summary-answers {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.task-warning {
+  margin: 12px 0 0;
+  padding: 9px;
+  border: 1px solid #d3a648;
+  border-radius: 4px;
+  background: var(--amber-pale);
+  color: #6e4a00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.routing-section,
+.consultation-summary-section {
+  margin: 0 26px 18px;
+  padding: 18px;
+  border: 2px solid var(--teal);
+  border-radius: 6px;
+  background: var(--teal-pale);
+}
+
+.routing-section h2,
+.summary-heading h2 {
+  margin: 2px 0 0;
+  font-size: 18px;
+}
+
+.routing-section > p,
+#summary-guidance {
+  margin: 10px 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.routing-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.routing-options .primary-button,
+.routing-section > .secondary-button {
+  min-height: 48px;
+  margin-top: 8px;
+}
+
+.summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary-version {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid var(--teal-dark);
+  border-radius: 3px;
+  background: white;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.summary-details {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+}
+
+.summary-details div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgb(0 88 77 / 18%);
+}
+
+.summary-details dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.summary-details dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.consultation-summary-section > .primary-button {
+  min-height: 48px;
+}
+
+@media (max-width: 860px) {
+  .routing-section,
+  .consultation-summary-section {
+    margin-inline: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .routing-section,
+  .consultation-summary-section {
+    margin: 0 14px 14px;
+    padding: 14px;
+  }
+
+  .routing-options {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary-version {
+    align-self: flex-start;
+  }
+
+  .summary-details div {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 }

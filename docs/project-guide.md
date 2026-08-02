@@ -1,6 +1,6 @@
 # 專案白話指南
 
-最後更新：2026-07-30
+最後更新：2026-08-02
 
 這份文件回答五個問題：我們做了什麼、AI 用在哪裡、資料庫怎麼被查詢、廠商如何
 接案，以及想修改某個功能時應先看哪裡。實際完成狀態以
@@ -19,10 +19,27 @@
 6. 指派廠商在後台接受或拒絕；接案後才揭露完整 synthetic 聯絡資料並建立
    `SYN-ORDER-*` Demo 訂單。
 
-目前本機雙端流程已能執行，案件 repository 可選記憶體或 PostgreSQL。Web 與
-Terminal Demo 的服務／地點／表單讀取固定使用 `DemoReadRepository`；獨立 MCP
-Server 與 PostgreSQL 整合測試使用 `PostgresReadRepository`，Web 讀取切換列為
-P0 待辦。AWS、正式登入、真實個資與真實廠商仍未完成。
+目前本機雙端流程已能執行，案件 repository 可選記憶體或 PostgreSQL。比賽期間曾以
+Amazon Nova Lite、`BedrockModelClient` 與 AgentCore Remote MCP 完成 Browser 四工具
+閉環，程式與遮罩 evidence 已保留。但這不等於目前仍有可用的 AWS endpoint 或公開
+網站；正式登入、真實個資、真實廠商、RDS 與公開 Web hosting 都不在目前成果內。
+
+## 競賽定位與展示亮點
+
+我們不是只做一個「輸入關鍵字就列出師傅」的搜尋框，而是把水電報修拆成一條可驗證、
+可人工掌控的智慧管家流程：
+
+1. 引導式多輪對話：資訊不足時追問地點與修繕細節，不偷偷猜縣市、服務或表單答案。
+2. 五種修繕分支：水龍頭、馬桶、水管、電氣與其他問題共用單一 Active Task，切換分支
+   前需要確認。
+3. 人工決策邊界：AI 可以整理需求、查表單與推薦候選；Checklist、摘要確認與派單仍由
+   使用者操作。
+4. AWS 工具閉環：Bedrock 負責理解與選工具，AgentCore Runtime 暴露四個唯讀 MCP
+   Tools，Service Layer 驗證 canonical ID 與媒合規則。
+5. 高齡友善入口：台語／國語語音辨識已整合至 Web，輸出繁中供使用者修改後送出；
+   實體麥克風 smoke 仍在進行，且不宣稱台語 TTS 已完成。
+6. 資料可信度：主辦方原始資料、人工設定與 synthetic Demo 資料都有來源標籤，展示
+   時不把模擬資料說成真實營運資料。
 
 ## 每一層負責什麼
 
@@ -31,7 +48,7 @@ P0 待辦。AWS、正式登入、真實個資與真實廠商仍未完成。
 | Web UI | 消費者與廠商看到的畫面 | 顯示對話、表單、候選、案件與接案控制 |
 | FastAPI | 網頁後端入口 | 接收 HTTP 請求、驗證格式、呼叫共用服務；不寫 SQL |
 | AgentRunner | 對話流程控制器 | 把訊息、工具規格與結果交給模型，控制最多呼叫次數與工具白名單 |
-| ModelClient | 語言理解 | 目前可選 Mock 或 Hugging Face；未來才是 Bedrock |
+| ModelClient | 語言理解 | 可選 Mock、Hugging Face 或 Amazon Bedrock；缺設定時 fail fast，不靜默換模型 |
 | MCP | Agent 的標準工具協定 | 讓模型只能呼叫名稱與參數明確的工具，不接受任意 SQL |
 | Service Layer | 商業規則唯一來源 | 查詢、媒合、確認、冪等、權限、稽核與合法狀態轉換 |
 | Repository | 資料存取 adapter | 把 Service 的固定操作轉成 SQL 或記憶體操作 |
@@ -44,7 +61,8 @@ P0 待辦。AWS、正式登入、真實個資與真實廠商仍未完成。
 
 ## 目前架構
 
-實線是已完成路徑；虛線是未來 AWS／外部整合。
+實線是已驗證的元件或路徑。AgentCore 的 live 驗證目前使用 synthetic 資料，並不代表
+Web、資料庫與所有周邊服務都已上雲。
 
 ```mermaid
 flowchart LR
@@ -53,10 +71,12 @@ flowchart LR
 
     API --> Session["WebSessionService"]
     Session --> Agent["AgentRunner"]
-    Agent --> Model["Mock / Hugging Face ModelClient"]
-    Agent --> Client["MCPToolClient"]
-    Client --> MCP["FastMCP Server<br/>四個唯讀 Tools"]
-    MCP --> ReadService["ReadServiceLayer"]
+    Agent --> Model["ModelClient"]
+    Model --> MockHF["Mock / Hugging Face"]
+    Model --> Bedrock["Amazon Bedrock<br/>Nova Lite 已 live 驗證"]
+    Agent --> LocalClient["本機 MCPToolClient"]
+    LocalClient --> LocalMCP["in-process FastMCP<br/>四個唯讀 Tools"]
+    LocalMCP --> ReadService["ReadServiceLayer"]
     ReadService --> DemoRepo["DemoReadRepository<br/>Web / Terminal Demo"]
     DemoRepo --> DemoCatalog[("synthetic Demo seed<br/>服務／地點／表單")]
 
@@ -69,9 +89,12 @@ flowchart LR
     CaseService --> CaseRepo["Memory 或 async PostgreSQL<br/>CaseWorkflowRepository"]
     CaseRepo --> Workflow[("案件／訂單／冪等／audit")]
 
-    External["Lumine one／外部 Agent"] -. "尚未完成外部驗證" .-> Gateway["AgentCore Gateway"]
-    Gateway -. "未部署" .-> Standalone
-    Bedrock["Amazon Bedrock"] -. "未實作 adapter" .-> Agent
+    Agent --> Remote["AgentCore Runtime<br/>Remote MCP READY／live 驗證"]
+    Remote --> RemoteMCP["四個唯讀 MCP Tools"]
+    RemoteMCP --> RemoteService["ReadServiceLayer"]
+    RemoteService --> RemoteRepo["DemoReadRepository<br/>synthetic-only"]
+
+    Voice["台語／國語 STT<br/>已整合；待實體 mic smoke"] --> API
 ```
 
 完整的 AWS 角色與未來部署方式見[系統與 AWS 架構](architecture.md)。
@@ -79,37 +102,35 @@ flowchart LR
 ## 消費者流程
 
 聊天查詢與按鈕寫入是兩條不同路徑。模型可以查資料和追問，但不能代替使用者
-勾選 Checklist，也不能自己派單。
+確認修繕分支、勾選 Checklist、確認最新摘要或派單。每個 session 只維護一項
+Active Task；如果使用者改談另一種問題，系統先詢問是否取代，不會偷偷混合兩份表單。
 
 ```mermaid
-sequenceDiagram
-    actor User as 消費者
-    participant Web as Web / FastAPI
-    participant Agent as AgentRunner
-    participant MCP as MCP Tools
-    participant Service as Service Layer
-    participant DB as Repository / PostgreSQL
-
-    User->>Web: 描述水電問題與地點
-    Web->>Agent: 傳入訊息與 session
-    Agent->>MCP: search_services / resolve_location
-    MCP->>Service: 結構化查詢
-    Service->>DB: 固定 repository 操作
-    DB-->>Service: 服務與行政區資料
-    Service-->>MCP: 結構化結果
-    MCP-->>Agent: Tool result
-    Agent->>MCP: get_consultation_form
-    MCP-->>Agent: 彈性表單
-    Agent-->>Web: 回覆與 structured session
-    Web-->>User: 顯示表單與人工 Checklist
-    User->>Web: 自行填表並核對
-    Web->>MCP: match_service_providers
-    MCP-->>Web: synthetic 候選與推薦理由
-    User->>Web: 選擇廠商並明確確認派單
-    Web->>Service: submit_case confirmed=true
-    Service->>DB: transaction 寫入案件、冪等與 audit
-    Web-->>User: pending_provider
+flowchart TD
+    Start["文字／可選語音輸入<br/>描述水電問題"] --> Danger{"每輪優先檢查：<br/>有漏電、起火、瓦斯或人身危險？"}
+    Danger -- "是" --> Stop["安全提醒並停止一般媒合"]
+    Danger -- "否" --> Propose["提出修繕分支建議<br/>faucet / toilet / pipe / electrical / other"]
+    Propose --> Confirm{"使用者確認分支？"}
+    Confirm -- "否／資訊不足" --> Clarify["顯示 alternatives 並追問"]
+    Clarify --> Danger
+    Confirm -- "是" --> Location{"縣市＋行政區完整？"}
+    Location -- "否" --> AskLocation["追問完整地點；不預設臺北市"]
+    AskLocation --> Location
+    Location -- "是" --> Lookup["MCP 查 canonical service、location、版本化表單"]
+    Lookup --> Photo["可選：上傳照片、人工確認分析<br/>圖片變更會使舊摘要失效"]
+    Photo --> Form["顯示分支適用欄位與人工 Checklist"]
+    Form --> Summary["使用者填表，產生可修改的版本化摘要"]
+    Summary --> SummaryConfirm{"確認最新摘要？"}
+    SummaryConfirm -- "修改" --> Form
+    SummaryConfirm -- "確認" --> Match["match_service_providers<br/>顯示 synthetic 候選與理由"]
+    Match --> Dispatch{"選擇廠商並明確確認派單？"}
+    Dispatch -- "否" --> Match
+    Dispatch -- "是" --> Case["受控 Web API 建案<br/>case + idempotency + audit"]
+    Case --> Pending["pending_provider<br/>等待指定廠商接受／拒絕"]
 ```
+
+語音輸入只改變「如何把需求填進文字框」，不會繞過後面的分支確認、表單、摘要與
+派單確認。照片也只是受控建議：必須綁定目前修繕分支，未確認的模型結果不能進入案件。
 
 ## 廠商接案流程
 
@@ -188,27 +209,38 @@ Web app 與 Terminal Demo 建立的 in-process MCP Server 則使用
 - 案件、訂單、冪等與 audit 可切換到 async PostgreSQL repository。
 - 四個 MCP Tools 全部唯讀；派單與接案目前由 Web 按鈕直接呼叫
   `CaseWorkflowService`。
-- Hugging Face 是目前可用的 hosted model adapter；Bedrock、AgentCore 與 RDS
-  雲端環境仍未完成。
+- Hugging Face 與 Bedrock 都有 model adapter；Bedrock Nova Lite 已透過 Web remote
+  ToolClient 完成 AgentCore live 閉環；RDS 與公開 Web hosting 未完成。
+- 台語／國語 STT 已整合辨識與回填輸入框；實體麥克風 smoke 仍待完成，台語 TTS 仍只有
+  feasibility spike，不能在 Demo 中宣稱雙向台語語音已完成。
 - Demo contact 是 synthetic。正式個資加密、同意、保存及刪除政策仍是待辦。
 
 ## 目前已完成與尚未完成
 
-已完成：
+已完成並已納入目前基線：
 
 - B+ 資料清洗、來源標籤、品質報告及 PostgreSQL loader。
 - 服務／地點／表單／媒合 Service 與四個唯讀 MCP Tools。
-- Mock 與 Hugging Face ModelClient 契約、Agent tool loop。
+- Mock、Hugging Face 與 Bedrock ModelClient 契約、Agent tool loop。
+- Bedrock Nova Lite 經既有 AgentRunner 與 MCP／Service Layer 的四工具 live 閉環。
 - 消費者人工 Checklist、動態表單、媒合、明確確認派單。
 - 廠商案件列表、遮罩 contact、接受／拒絕與消費者狀態更新。
 - memory／async PostgreSQL 案件 repository、冪等、audit 與並行狀態保護。
 - 桌機／手機響應式與無障礙基線。
 
+也已納入目前作品集基線：
+
+- AgentCore Runtime Remote MCP 的 `initialize`、`tools/list`、四工具與 Browser live，
+  包含 service／location ID provenance 驗證。
+- 台語／國語 STT 的錄音、Breeze ASR 與繁中輸入框回填程式。
+
 尚未完成：
 
-- 固定 Hugging Face eval 矩陣與外部 HTTP MCP 驗證。
+- 固定 Hugging Face eval 矩陣。
 - Web 讀取 repository 的 Demo／PostgreSQL 可設定切換。
-- 正式登入、時段保留、真實個資政策、照片、回覆紀錄與通知。
-- Bedrock、AgentCore、RDS、IAM、CloudWatch 及公開 HTTPS 部署。
+- 可重現的公開 HTTPS 部署；repo 目前只保證本機 Mock Demo。
+- 台語／國語 STT 的完整實體麥克風品質矩陣；台語 TTS 尚未產品化。
+- 正式登入、時段保留、真實個資政策、回覆紀錄與通知。
+- RDS、正式 Web hosting、正式 authentication／RBAC 與 production 維運。
 
 完整優先順序與驗收條件請直接看 [TASKS](../TASKS.md)。

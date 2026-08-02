@@ -1,54 +1,39 @@
 # 專案待辦
 
-最後更新：2026-07-30
+最後更新：2026-08-02
 
-本檔只記錄尚未完成的工作。已完成且通過驗證的功能移到
-[實作索引](docs/implementation-index.md)，目前接手狀態則記在
-[HANDOFF](HANDOFF.md)。
+本檔只保留尚未完成的工作；已完成項目移至
+[實作索引](docs/implementation-index.md)。狀態只使用 `Todo`、`In progress`、
+`Blocked`，優先級依序為 `P0`、`P1`、`P2`。
 
-## 使用規則
+## P0：立即風險
 
-- 優先級：`P0` 是下一個可交付基線，`P1` 是核心產品補強，`P2` 是延伸體驗。
-- 狀態只使用 `Todo`、`In progress`、`Blocked`。
-- 開始工作前先填負責人；完成條件沒有證據時不得結案。
-- PR 合併後，從本檔移除已完成項目，並把程式、文件與驗證結果寫入實作索引。
-- 任務範圍或優先級改變時，同一個 commit 必須更新本檔。
+| ID | 狀態 | 工作 | 負責人 | 依賴 | 完成條件 |
+|---|---|---|---|---|---|
+| AWS-AUDIT-001 | Blocked | 登入比賽使用的 AWS 帳號，確認最終 Remote MCP Demo 沒有殘留計費資源 | 帳號持有人 | 當時的 AWS 登入權限 | AgentCore Runtime、S3 artifact、IAM role／workload identity、CloudWatch log group 皆已刪除；Billing 無非預期持續用量，留下不含 ARN／account 的確認紀錄 |
 
-## P0
+## P1：產品化缺口
 
-| ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 依賴 | 完成條件 |
-|---|---|---|---|---|---|---|
-| DATA-001 | Todo | 讓 Web 讀取路徑可選 Demo 或 PostgreSQL repository | 目前 Web 的查詢資料來自 Demo repository；接上清洗後的正式資料才能證明相同服務契約可支援持久化與部署環境 | 未分配 | 已載入 clean schema 的測試 PostgreSQL | `WEB_READ_REPOSITORY=demo\|postgres` 有明確 fail-fast 設定；Web 的服務、地點、表單與媒合能以相同契約查 PostgreSQL |
-| AI-001 | Todo | 建立固定 Hugging Face 評估矩陣 | 單次成功對話不足以判斷模型可靠度；固定案例可在更換 prompt、模型或 provider 時發現服務辨識與 Tool Call 的退化 | 未分配 | 可用的 `HF_TOKEN`，live 測試不進預設 CI | 正常需求、模糊服務、缺地點、多地點及 provider error 都有可重跑結果與報告 |
-| MCP-001 | Todo | 驗證 Streamable HTTP MCP 的外部 Client 流程 | 命題希望智慧管家可調用生活服務工具；目前的 process-local MCP 尚不能證明 Kiro、AgentCore 或其他外部 Client 能互通 | 未分配 | 本機 PostgreSQL 測試資料庫或受控測試 repository | 外部 Client 完成 `tools/list` 與四個唯讀 `tools/call`，留下命令、結果與錯誤案例 |
-| DEPLOY-001 | Todo | 準備可攜式部署與公開 HTTPS 操作手冊 | 評審與組員需要在非開發者電腦上重現 Demo；部署、健康檢查與回復程序可避免作品只在單一本機可用 | 未分配 | 最終部署環境規格 | 有可重跑的 build、啟動、health check、環境變數與 rollback 步驟；不提交密鑰 |
+| ID | 狀態 | 工作 | 負責人 | 依賴 | 完成條件 |
+|---|---|---|---|---|---|
+| DEPLOY-002 | Todo | 建立可重現的公開 HTTPS 部署 | 未分配 | hosting 與預算決策 | Mock Demo 可由公開 URL 開啟；secret 由平台管理；health check、部署與回滾有文件 |
+| AUTH-001 | Todo | 正式登入、消費者／廠商 RBAC | 未分配 | 身分提供者與資料政策 | 使用者只能讀寫授權案件；Demo header／下拉身分不再作為權限依據 |
+| PRIV-001 | Todo | 真實個資同意、加密、保存期限與刪除 | 未分配 | 法遵、KMS／secret manager、刪除政策 | 真實資料全程有同意、加密、最小揭露、到期刪除與測試 |
+| SLOT-001 | Todo | 實作真實時段保留與衝突控制 | 未分配 | 真實廠商與排程來源 | 併發選擇不能超賣；保留、逾時、取消與 audit 均有測試 |
+| DATA-001 | Todo | 讓 Web 唯讀查詢可切 Demo／PostgreSQL repository | 未分配 | 已載入 clean schema 的測試資料庫 | fail-fast 設定與 service／location／form／matching 契約在兩種 repository 一致 |
 
-## Blocked
+## P2：延伸功能
 
-| ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 阻擋條件 | 完成條件 |
-|---|---|---|---|---|---|---|
-| AWS-001 | Blocked | 實作 Bedrock ModelClient 與 AgentCore Gateway／Runtime adapter | 比賽環境預計使用 AWS；完成 adapter 才能保留既有 Agent／MCP 契約，同時把本機 HF 模型替換成 Bedrock 與 AgentCore | 未分配 | 主辦方 AWS 帳號、Region、模型權限與額度 | Agent 透過 Bedrock 選擇既有工具，Gateway 可呼叫標準 MCP endpoint |
-| AWS-002 | Blocked | 建立 RDS、IAM 與 CloudWatch 雲端基線 | 正式案件需要持久化、最小權限與可觀測性；目前記憶體模式無法支援重啟復原、權限稽核與營運除錯 | 未分配 | AWS 網路、角色與 RDS 建立權限 | migration 可套用至測試 RDS，服務採最小權限，log 不含密鑰或完整個資 |
+| ID | 狀態 | 工作 | 負責人 | 依賴 | 完成條件 |
+|---|---|---|---|---|---|
+| SESSION-001 | Todo | 持久化 Web 對話、Active Task 與人工 Checklist | 未分配 | 保存同意與刪除政策 | 可恢復獲准 session；Reset／刪除不留孤兒資料；舊回應不能覆蓋新 session |
+| PROVIDER-001 | Todo | 廠商回覆、服務進度與通知 | 未分配 | 正式身分與狀態機決策 | 指派廠商可新增受控歷程，消費者可查詢且 audit 完整 |
+| EVAL-001 | Todo | 建立固定 HF／Bedrock 品質與延遲評估 | 未分配 | provider 額度與測試資料政策 | 固定 synthetic cases、可重跑報告、失敗不放寬 no-guess gate |
+| VOICE-002 | Todo | 完成實體台語／國語麥克風評估與可選 TTS | 未分配 | 模型授權與母語者評估 | 記錄原句、轉寫、延遲；TTS 若加入須可理解且標示模型限制 |
+| SERVICE-002 | Todo | 用同一表單／Service 契約擴充第二種服務 | 未分配 | 真實產品需求與資料品質 | 不複製整套流程；新增服務有 curated schema、來源標籤、測試與安全分支 |
 
-## P1
+## 刻意不做
 
-| ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 依賴 | 完成條件 |
-|---|---|---|---|---|---|---|
-| AUTH-001 | Todo | 正式登入、廠商帳號、RBAC 與多租戶隔離 | Demo header 可被任意冒用；真實案件含聯絡資訊與廠商資料，必須確認身分並隔離不同消費者及廠商的資源 | 未分配 | 身分提供者與部署環境決策 | 不再信任 Demo header；消費者與廠商只能讀取授權資源 |
-| SCHED-001 | Todo | 保留服務時段並處理排程衝突 | 現有媒合只推薦可用時段，尚未形成真正預約；鎖定與衝突處理可避免同一廠商時段被重複承接 | 未分配 | 正式廠商與時段資料模型 | 並行預約同一時段只能有一筆成功，失敗可安全重試 |
-| PRIV-001 | Todo | 真實個資加密、同意、保存期限與刪除政策 | 目前只使用 synthetic contact；改收真實姓名、電話與地址前，必須具備同意、加密、最少保存與可刪除機制 | 未分配 | 金鑰管理與法遵決策 | AES-256-GCM／查詢 hash、金鑰不入庫，且保存與刪除行為有測試及文件 |
-| PROVIDER-001 | Todo | 廠商回覆紀錄與服務進度追蹤 | 目前廠商接受案件後流程即停止；命題要求案件狀態、回覆與服務進度，這項功能才能形成接案後的服務閉環 | 未分配 | 狀態機與通知範圍決策 | 指派廠商可新增受控回覆與進度，消費者可查看完整歷程 |
-
-## P2
-
-| ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 依賴 | 完成條件 |
-|---|---|---|---|---|---|---|
-| SESSION-001 | Todo | 持久化 Web 對話與人工 Checklist | 目前重啟程式就會遺失諮詢進度；經使用者同意後保存 session，才能支援跨次追蹤且仍可完整刪除 | 未分配 | 保存同意、期限與刪除政策 | 程式重啟後可恢復已同意保存的 session，Reset／刪除不留下孤兒資料 |
-| A11Y-001 | Todo | 語音操作與使用者字級偏好 | 命題允許語音互動並鼓勵高齡友善；語音與可調字級能降低輸入及閱讀門檻，但需防止轉寫錯誤與版面破壞 | 未分配 | 語音服務與隱私決策 | 語音轉寫須回顯確認；字級設定在桌機與手機不造成 overflow |
-| FORM-001 | Todo | 擴充更多服務類型的彈性諮詢表單 | 命題涵蓋餐廳、購物與社區服務；只有修繕表單尚不足以證明系統能依場景產生真正彈性的留資流程 | 未分配 | 第二個服務場景決策與可信資料 | 至少一個非修繕服務可完成服務辨識、專屬表單與安全結束流程 |
-
-## 暫不投入
-
-- Kiro 加分：團隊目前決定不投入，不建立回溯性或不實的使用紀錄。
-- 寫入 MCP Tool：只有 Lumine one 或其他外部 Agent 確定需要完整建案時，才另開
-  任務設計確認、身分、冪等、稽核及最小權限；現有四個 Tool 維持唯讀。
+- 不開放寫入 MCP Tool，除非未來外部 Agent 有明確需求且能滿足確認、授權、冪等與 audit。
+- 不把 synthetic 師傅、聯絡資料、時段或訂單包裝成真實商業服務。
+- 不為了增加功能數量而一次支援所有主辦方服務類型；先維持可驗證的水電修繕深度。

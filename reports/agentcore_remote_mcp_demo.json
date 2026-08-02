@@ -1,0 +1,68 @@
+{
+  "status": "passed",
+  "started_at_utc": "2026-08-02T04:24:36+00:00",
+  "finished_at_utc": "2026-08-02T04:24:43+00:00",
+  "region": "us-west-2",
+  "runtime_name": "nw_p_agentcore_remote_mcp_demo",
+  "expires_at_utc": "2026-08-02T09:09:06+00:00",
+  "tags": {
+    "Project": "nw_p",
+    "Purpose": "agentcore-remote-mcp-demo",
+    "DataClassification": "synthetic-only",
+    "ManagedBy": "kiro",
+    "ExpiresAt": "2026-08-02T09:09:06+00:00"
+  },
+  "tool_names": [
+    "get_consultation_form",
+    "match_service_providers",
+    "resolve_location",
+    "search_services"
+  ],
+  "redacted_trace": [
+    {
+      "name": "search_services",
+      "status": "passed",
+      "elapsed_ms": 469.0,
+      "provenance": "fixture_without_ids"
+    },
+    {
+      "name": "resolve_location",
+      "status": "passed",
+      "elapsed_ms": 344.0,
+      "provenance": "fixture_without_ids"
+    },
+    {
+      "name": "get_consultation_form",
+      "status": "passed",
+      "elapsed_ms": 406.0,
+      "provenance": "service_id_from_search_result"
+    },
+    {
+      "name": "match_service_providers",
+      "status": "passed",
+      "elapsed_ms": 375.0,
+      "provenance": "ids_from_prior_tool_results"
+    }
+  ],
+  "provenance": {
+    "form_used_prior_service_id": true,
+    "location_id_from_location_result": true,
+    "match_used_prior_service_and_location_ids": true,
+    "provider_data_source_synthetic": true,
+    "service_id_from_search_result": true
+  },
+  "failure_stage": null,
+  "failure_type": null,
+  "cleanup_summary": {
+    "status": "retained",
+    "attempted_resource_types": [],
+    "failed_resource_types": [],
+    "remaining_resource_types": [
+      "runtime",
+      "workload_identity",
+      "log_group",
+      "iam_role",
+      "s3_bucket"
+    ]
+  }
+}

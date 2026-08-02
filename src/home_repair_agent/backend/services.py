@@ -91,18 +91,14 @@ class ReadServiceLayer:
                 details={
                     "county_name": normalized_county,
                     "district_name": normalized_district,
-                    "candidate_location_ids": [
-                        candidate.location_id for candidate in candidates
-                    ],
+                    "candidate_location_ids": [candidate.location_id for candidate in candidates],
                 },
             )
         return candidates[0]
 
     def get_consultation_form(self, *, service_id: int) -> ConsultationForm:
         normalized_service_id = _validate_service_id(service_id)
-        forms = self._repository.list_consultation_forms(
-            service_id=normalized_service_id
-        )
+        forms = self._repository.list_consultation_forms(service_id=normalized_service_id)
         if not forms:
             raise ServiceLayerError(
                 code="FORM_NOT_FOUND",
@@ -119,9 +115,7 @@ class ReadServiceLayer:
                 details={
                     "service_id": normalized_service_id,
                     "version": latest_version,
-                    "candidate_form_keys": [
-                        form.form_key for form in latest_forms
-                    ],
+                    "candidate_form_keys": [form.form_key for form in latest_forms],
                 },
             )
         return latest_forms[0]
@@ -355,8 +349,7 @@ def _rank_provider_slots(
         fee_score = (
             1.0
             if maximum_fee == minimum_fee
-            else (maximum_fee - slot.base_inspection_fee)
-            / (maximum_fee - minimum_fee)
+            else (maximum_fee - slot.base_inspection_fee) / (maximum_fee - minimum_fee)
         )
         match_score = round(
             schedule_fit * MATCH_SCHEDULE_WEIGHT

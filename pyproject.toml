@@ -4,13 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "home-repair-agent"
-version = "0.1.0"
-description = "Home repair consultation and service matching agent for the 2026 Taiwan GenAI Hackathon."
+version = "1.0.0"
+description = "Auditable AI-assisted home-repair consultation and provider dispatch platform."
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    { name = "spicyhoney" },
+]
+keywords = ["agent", "fastapi", "mcp", "postgresql", "bedrock", "agentcore"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "pydantic>=2,<3",
 ]
+
+[project.urls]
+Repository = "https://github.com/spicyhoney/nw_p"
+Documentation = "https://github.com/spicyhoney/nw_p#readme"
 
 [project.optional-dependencies]
 data = [
@@ -22,6 +37,7 @@ app = [
     "boto3",
     "fastapi",
     "huggingface_hub>=1.24,<2",
+    "httpx>=0.27,<1",
     "mcp>=1.27,<2",
     "Pillow>=10,<13",
     "python-multipart>=0.0.20,<1",

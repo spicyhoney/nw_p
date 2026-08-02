@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import unittest
@@ -50,6 +51,57 @@ class ConsumerAccessibilityContractTests(unittest.TestCase):
         self.assertIn('aria-pressed="true"', self.html)
         self.assertIn('button.setAttribute("aria-pressed", "true")', self.javascript)
         self.assertIn("100dvh", self.css)
+
+    def test_conversation_uses_one_scroll_region_and_reachable_composer(self) -> None:
+        self.assertIn('id="conversation-scroll-region"', self.html)
+        self.assertIn('aria-label="對話內容與諮詢資訊"', self.html)
+        self.assertRegex(
+            self.html,
+            re.compile(
+                r'id="conversation-scroll-region".*id="message-list"'
+                r'.*id="summary-section".*</div>\s*<form\s+id="message-form"',
+                re.DOTALL,
+            ),
+        )
+
+        conversation_rule = re.search(r"\.conversation-pane\s*\{([^}]+)\}", self.css)
+        scroll_rule = re.search(r"\.conversation-scroll-region\s*\{([^}]+)\}", self.css)
+        message_rule = re.search(r"\.message-list\s*\{([^}]+)\}", self.css)
+        form_rule = re.search(r"\.consultation-form-section\s*\{([^}]+)\}", self.css)
+        self.assertIsNotNone(conversation_rule)
+        self.assertIsNotNone(scroll_rule)
+        self.assertIsNotNone(message_rule)
+        self.assertIsNotNone(form_rule)
+        self.assertIn(
+            "grid-template-rows: auto minmax(0, 1fr) auto",
+            conversation_rule.group(1),
+        )
+        self.assertIn("overflow-y: auto", scroll_rule.group(1))
+        self.assertNotIn("overflow-y", message_rule.group(1))
+        self.assertNotIn("overflow-y", form_rule.group(1))
+        self.assertNotIn("max-height", form_rule.group(1))
+        self.assertIn("scrollRegion.scrollTo", self.javascript)
+        self.assertNotIn("lastElementChild?.scrollIntoView", self.javascript)
+        self.assertNotIn(
+            "elements.messageList.scrollTop = elements.messageList.scrollHeight",
+            self.javascript,
+        )
+
+    def test_form_and_confirmed_media_reveal_inside_the_conversation_region(self) -> None:
+        self.assertIn('id="form-title" tabindex="-1"', self.html)
+        self.assertIn('id="form-next-step"', self.html)
+        self.assertIn('id="media-confirmed-title" tabindex="-1"', self.html)
+        self.assertIn("function revealConversationSection", self.javascript)
+        self.assertIn("scrollRegion.scrollTo", self.javascript)
+        self.assertIn("focus({ preventScroll: true })", self.javascript)
+        self.assertIn('"(prefers-reduced-motion: reduce)"', self.javascript)
+        self.assertNotIn("elements.formSection.scrollIntoView", self.javascript)
+        self.assertNotIn("elements.mediaConfirmedCard.scrollIntoView", self.javascript)
+
+    def test_short_viewports_keep_the_composer_height_bounded(self) -> None:
+        self.assertIn("max-height: clamp(48px, 18dvh, 128px)", self.css)
+        self.assertIn("@media (max-height: 600px)", self.css)
+        self.assertIn("max-height: clamp(48px, 16dvh, 72px)", self.css)
 
     def test_out_of_order_checklist_responses_do_not_replace_newer_state(self) -> None:
         node = shutil.which("node")

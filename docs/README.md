@@ -1,6 +1,6 @@
 # 專案文件入口
 
-最後更新：2026-07-30
+最後更新：2026-08-02
 
 本目錄同時保留「目前可執行系統」與「早期發想」。兩者不能混用：要回答現在
 做了什麼，請讀目前事實；歷史規劃只能用來理解決策背景。
@@ -19,6 +19,7 @@
 | [資料字典](data-dictionary.md) | PostgreSQL schema、欄位與關聯 | 修改 repository 前 |
 | [資料清洗手冊](data-cleaning-runbook.md) | B+ pipeline、重跑與載入 | 修改清洗流程前 |
 | [AI 資料 Review 清單](ai-data-review-checklist.md) | 給隊友 AI 的資料檢查方式 | Review 資料改動 |
+| [作品集整理紀錄](portfolio-release.md) | 賽後收斂範圍、驗證與刻意保留的限制 | 理解公開版如何形成 |
 
 程式模組的詳細介面、執行與測試方式放在各自 README：
 

@@ -11,15 +11,16 @@ Agent：理解需求、確認行政區、取得諮詢表單、追問缺漏資訊
 
 ## 建議閱讀順序
 
-1. [docs/project-guide.md](docs/project-guide.md)：白話架構、三條流程與重要模組。
-2. [HANDOFF.md](HANDOFF.md)：目前 branch、最近驗證與不可破壞契約。
-3. [TASKS.md](TASKS.md)：尚未完成工作、優先級、依賴與驗收。
-4. [docs/implementation-index.md](docs/implementation-index.md)：哪些功能已完成、
+1. [README.md](README.md)：作品定位、快速啟動、截圖與目前限制。
+2. [docs/project-guide.md](docs/project-guide.md)：白話架構、三條流程與重要模組。
+3. [HANDOFF.md](HANDOFF.md)：目前 branch、最近驗證與不可破壞契約。
+4. [TASKS.md](TASKS.md)：尚未完成工作、優先級、依賴與驗收。
+5. [docs/implementation-index.md](docs/implementation-index.md)：哪些功能已完成、
    程式與驗證放在哪裡。
-5. [docs/architecture.md](docs/architecture.md)：本機、MCP、FastAPI 與 AWS 的關係。
-6. [docs/data-policy.md](docs/data-policy.md)：正式、隔離、人工設定與模擬資料規則。
-7. [docs/data-dictionary.md](docs/data-dictionary.md)：PostgreSQL schema 與欄位。
-8. 正在修改之模組內的 `README.md`。
+6. [docs/architecture.md](docs/architecture.md)：本機、MCP、FastAPI 與 AWS 的關係。
+7. [docs/data-policy.md](docs/data-policy.md)：正式、隔離、人工設定與模擬資料規則。
+8. [docs/data-dictionary.md](docs/data-dictionary.md)：PostgreSQL schema 與欄位。
+9. 正在修改之模組內的 `README.md`。
 
 ## 不可破壞的邊界
 

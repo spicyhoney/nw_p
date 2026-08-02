@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
 import json
-from pathlib import Path
 import re
 import tempfile
 import unittest
+from datetime import date
+from pathlib import Path
 
 from home_repair_agent.data_cleaning.demo import build_demo_seed
 from home_repair_agent.data_cleaning.pipeline import (
@@ -16,15 +16,9 @@ from home_repair_agent.data_cleaning.pipeline import (
 from home_repair_agent.data_cleaning.reference import merge_locations
 from home_repair_agent.data_cleaning.source_io import extract_json_documents
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIR = PROJECT_ROOT / (
-    "(統一資訊) 命題數據集 - 2026 雲湧智生："
-    "臺灣生成式 AI 應用黑客松競賽"
-)
-REFERENCE_PATH = (
-    PROJECT_ROOT / "data" / "reference" / "taiwan_admin_areas.json"
-)
+SOURCE_DIR = PROJECT_ROOT / ("(統一資訊) 命題數據集 - 2026 雲湧智生：臺灣生成式 AI 應用黑客松競賽")
+REFERENCE_PATH = PROJECT_ROOT / "data" / "reference" / "taiwan_admin_areas.json"
 
 
 class SourceParsingTests(unittest.TestCase):
@@ -61,9 +55,7 @@ class PolicyTests(unittest.TestCase):
             order_rows=[],
         )
         mapping = next(
-            row
-            for row in mappings
-            if row["entity_type"] == "service" and row["source_id"] == "7"
+            row for row in mappings if row["entity_type"] == "service" and row["source_id"] == "7"
         )
 
         self.assertEqual("unresolved", mapping["mapping_status"])
@@ -131,16 +123,14 @@ class PipelineIntegrationTests(unittest.TestCase):
                 reference_date=date(2026, 8, 1),
             )
 
-            self.assertTrue(
-                result.summary["order_source_comparison"]["semantically_identical"]
-            )
+            self.assertTrue(result.summary["order_source_comparison"]["semantically_identical"])
             self.assertGreater(result.summary["unresolved_mappings"], 0)
             service_catalog = json.loads(
                 result.output_paths["service_catalog"].read_text(encoding="utf-8")
             )
-            locations = json.loads(
-                result.output_paths["locations"].read_text(encoding="utf-8")
-            )["locations"]
+            locations = json.loads(result.output_paths["locations"].read_text(encoding="utf-8"))[
+                "locations"
+            ]
             all_agent_records = [
                 *service_catalog["vendors"],
                 *service_catalog["services"],
@@ -150,9 +140,7 @@ class PipelineIntegrationTests(unittest.TestCase):
                 if record["agent_eligible"]:
                     self.assertEqual("verified", record["quality_status"])
 
-            safe_orders = result.output_paths["historical_orders"].read_text(
-                encoding="utf-8"
-            )
+            safe_orders = result.output_paths["historical_orders"].read_text(encoding="utf-8")
             self.assertNotIn("member_phone", safe_orders)
             self.assertNotIn("member_email", safe_orders)
             self.assertNotIn("member_name", safe_orders)
@@ -160,46 +148,36 @@ class PipelineIntegrationTests(unittest.TestCase):
 
 class DatabaseDocumentationTests(unittest.TestCase):
     def test_every_schema_table_and_agent_view_has_a_database_comment(self) -> None:
-        migration = (
-            PROJECT_ROOT / "sql" / "migrations" / "001_b_plus_schema.sql"
-        ).read_text(encoding="utf-8")
+        migration = (PROJECT_ROOT / "sql" / "migrations" / "001_b_plus_schema.sql").read_text(
+            encoding="utf-8"
+        )
 
-        created_schemas = set(
-            re.findall(r"CREATE SCHEMA IF NOT EXISTS ([a-z_]+);", migration)
-        )
-        commented_schemas = set(
-            re.findall(r"COMMENT ON SCHEMA ([a-z_]+) IS", migration)
-        )
+        created_schemas = set(re.findall(r"CREATE SCHEMA IF NOT EXISTS ([a-z_]+);", migration))
+        commented_schemas = set(re.findall(r"COMMENT ON SCHEMA ([a-z_]+) IS", migration))
         created_tables = set(
             re.findall(
                 r"CREATE TABLE IF NOT EXISTS ([a-z_]+\.[a-z_]+) \(",
                 migration,
             )
         )
-        commented_tables = set(
-            re.findall(r"COMMENT ON TABLE ([a-z_]+\.[a-z_]+) IS", migration)
-        )
+        commented_tables = set(re.findall(r"COMMENT ON TABLE ([a-z_]+\.[a-z_]+) IS", migration))
         created_views = set(
             re.findall(
                 r"CREATE OR REPLACE VIEW (agent\.[a-z_]+)",
                 migration,
             )
         )
-        commented_views = set(
-            re.findall(r"COMMENT ON VIEW (agent\.[a-z_]+) IS", migration)
-        )
+        commented_views = set(re.findall(r"COMMENT ON VIEW (agent\.[a-z_]+) IS", migration))
 
         self.assertEqual(created_schemas, commented_schemas)
         self.assertEqual(created_tables, commented_tables)
         self.assertEqual(created_views, commented_views)
 
     def test_database_dictionary_documents_critical_safety_rules(self) -> None:
-        dictionary = (
-            PROJECT_ROOT / "docs" / "data-dictionary.md"
-        ).read_text(encoding="utf-8")
-        checklist = (
-            PROJECT_ROOT / "docs" / "ai-data-review-checklist.md"
-        ).read_text(encoding="utf-8")
+        dictionary = (PROJECT_ROOT / "docs" / "data-dictionary.md").read_text(encoding="utf-8")
+        checklist = (PROJECT_ROOT / "docs" / "ai-data-review-checklist.md").read_text(
+            encoding="utf-8"
+        )
 
         for phrase in (
             "candidate_canonical_id",

@@ -1,220 +1,181 @@
 # 修繕小隊長
 
-2026 雲湧智生：臺灣生成式 AI 應用黑客松的雙人團隊專案。
+[![PostgreSQL CI](https://github.com/spicyhoney/nw_p/actions/workflows/postgresql-ci.yml/badge.svg)](https://github.com/spicyhoney/nw_p/actions/workflows/postgresql-ci.yml)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
+![MCP](https://img.shields.io/badge/MCP-read--only-20232A)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
-目前的 MVP 聚焦在「居家水電修繕」：使用者用自然語言描述問題後，AI Agent
-將需求結構化、查詢服務與行政區、追問缺少資訊、建立諮詢案件，並在使用者
-確認後完成服務媒合與訂單建立。
+一個把生成式 AI 放進**可驗證、可人工掌控**流程的居家水電修繕平台。消費者可用
+自然語言描述需求，系統會查詢服務、行政區、動態諮詢表單與 synthetic 師傅；只有在
+使用者確認分支、Checklist、摘要與派單後，才會建立案件。廠商端則能接受或拒絕指派，
+並依狀態查看遮罩或完整的 synthetic 聯絡資料。
 
-## MVP 情境
+本專案源自 2026「雲湧智生：臺灣生成式 AI 應用黑客松」雙人團隊作品，目前由
+[@spicyhoney](https://github.com/spicyhoney) 維護為可重現的作品集版本。
 
-輸入：
+<p><img src="docs/assets/consumer-demo.png" alt="消費者修繕諮詢介面"></p>
+<p><img src="docs/assets/provider-demo.png" alt="廠商案件工作台"></p>
 
-> 台北市大安區水龍頭漏水，週六下午可以來嗎？
+## 專案亮點
 
-預期流程：
+- **有邊界的 Agent**：模型只決定何時呼叫四個唯讀 MCP Tools，不能執行任意 SQL、
+  修改 Checklist、建立案件或直接派單。
+- **Human-in-the-loop**：修繕分支、照片建議、資料摘要與派單都有獨立人工確認點；
+  舊回應也不能覆蓋較新的 session 狀態。
+- **完整雙端流程**：消費者諮詢、媒合與派單，接到廠商工作台的接受／拒絕、聯絡資料
+  權限與 Demo 訂單狀態。
+- **可替換基礎設施**：Mock、Hugging Face、Amazon Bedrock 共用 `ModelClient`；本機
+  FastMCP 與 AgentCore Runtime Remote MCP 共用 `ToolClient` 契約；案件可存於 memory
+  或 PostgreSQL。
+- **資料品質優先**：官方資料不覆寫；斷裂關聯進 quarantine；人工補充與 synthetic
+  資料保留來源標籤，只有通過品質閘門的資料能被 Agent 查詢。
+- **可及性基線**：人工 Checklist、鍵盤操作、明顯 focus、`aria-live`、44px 觸控目標、
+  reduced motion，以及桌機／手機響應式版面。
+- **多模態入口**：選配 HF 圖片分析與台語／國語語音辨識；結果只回填建議或輸入框，
+  不會自動送出或繞過人工確認。
 
-1. 辨識地點、問題與期望時間。
-2. 查詢水電修繕服務與行政區代碼。
-3. 取得對應諮詢單，僅追問缺少的欄位。
-4. 建立諮詢案件。
-5. 依服務區域與可用時段配對模擬服務商。
-6. 經使用者確認後建立訂單。
-7. 提供案件與訂單狀態查詢。
+## 系統架構
 
-## 技術方向
+```mermaid
+flowchart LR
+    Consumer["消費者 Web"] --> API["FastAPI adapter"]
+    Provider["廠商工作台"] --> API
+    API --> Session["WebSessionService"]
+    Session --> Agent["AgentRunner"]
+    Agent --> Model["Mock / Hugging Face / Bedrock"]
+    Agent --> Client["Local / AgentCore MCP client"]
+    Client --> MCP["FastMCP：四個唯讀 Tools"]
+    MCP --> Read["ReadServiceLayer"]
+    Read --> Demo["Synthetic Demo repository"]
+    Read -. "獨立 PostgreSQL 查詢模式" .-> PGRead["PostgresReadRepository"]
+    API --> Workflow["CaseWorkflowService"]
+    Workflow --> Cases["Memory / async PostgreSQL repository"]
+```
 
-- Model：正式環境目標為 Amazon Bedrock Converse API；本機可用 Mock 或
-  Hugging Face Inference Providers
-- Agent hosting：Amazon Bedrock AgentCore Runtime（比賽環境）
-- Agent tool gateway：AgentCore Gateway / MCP
-- Backend：Python、FastAPI
-- Database：PostgreSQL；正式環境目標為 Amazon RDS for PostgreSQL
-- Object storage：Amazon S3（報修照片，選配）
-- Observability / permission：CloudWatch、IAM
-- Data pipeline：Python、Pydantic、pandas、SQLAlchemy
-- Test：pytest
+LLM 負責理解與選工具，Service Layer 負責商業規則，Repository 負責資料存取。
+FastAPI 與 MCP 都只是 adapter；這個分層讓本機 Mock Demo、PostgreSQL 測試與 AWS
+驗證可以共用相同契約，而不把規則散落在 prompt 或前端。
 
-主辦方資料不會用來重新訓練基礎模型。Agent 會透過受控的 MCP Tools 或 API
-查詢清洗後的 PostgreSQL。
+詳細元件、AWS 已驗證證據與未完成邊界見[系統架構](docs/architecture.md)。
 
-目前尚無比賽 AWS 憑證，因此先以 Mock Model 或可選的 Hugging Face hosted
-open model、本機 MCP Tools 與本機 PostgreSQL 開發。拿到憑證後才替換為
-Bedrock、AgentCore Gateway / Runtime、RDS 與 S3 adapter，資料清洗與 Service
-Layer 不需重寫。各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，請見
-[系統與 AWS 架構](docs/architecture.md)。
-
-## 專案結構
+## 核心流程
 
 ```text
-src/home_repair_agent/
-  data_cleaning/  原始資料解析、清洗與驗證
-  backend/        資料存取與共用商業規則
-  mcp_server/     將 Service Layer 暴露成標準 MCP Tools
-  agent/          Prompt、工具定義與 Agent 流程
-  web/            FastAPI、結構化 session 與消費者 Demo UI
-sql/              PostgreSQL migration 與資料庫說明
-data/             資料目錄與來源政策
-tests/            自動化測試
-reports/          資料品質與評估報告
-docs/             架構、計畫與競賽文件
+描述一項修繕問題
+  -> 確認五種修繕分支之一
+  -> Agent 查詢服務、完整行政區與適用表單
+  -> 使用者填寫動態表單並核對 Checklist
+  -> 確認最新摘要後媒合 synthetic 師傅
+  -> 選擇廠商並再次確認派單
+  -> 廠商 pending 時只看遮罩聯絡資料
+  -> 廠商接受後建立 SYN-ORDER-*，雙端同步狀態
 ```
 
-## 分支規則
+危險情境會顯示安全提醒；漏電、觸電、起火、瓦斯或人身危險等訊號會停止一般媒合。
+目前產品刻意只聚焦 `service_id=17` 的水電修繕，沒有用大量未完成服務來稀釋流程深度。
 
-- `main`：已確認、可重現的穩定版本。
-- `feature/data-cleaning`：資料解析、清洗、驗證與匯入。
-- `feature/agent-prototype`：使用模擬工具結果開發 Agent 對話流程。
-- `feature/backend-mcp`：PostgreSQL、FastAPI 與 MCP Tools。
-- `feature/demo-ui`：Demo 使用者介面。
-- `docs/submission`：簡報、Demo 腳本與繳交文件。
-- `fix/*`：針對明確錯誤的短期修正分支。
+## 快速啟動
 
-功能在獨立分支完成並通過測試後，透過 Pull Request 合併回 `main`。
-
-## 資料原則
-
-- 原始檔保持不變，不在清洗時覆寫。
-- 不明代碼與斷裂關聯不得自行猜測，先進入隔離區。
-- 外部補充資料與合成資料必須標示來源。
-- 個資、密碼、金鑰與 `.env` 不得提交到 GitHub。
-- Agent 只能透過範圍明確的工具存取資料，不能執行任意 SQL。
-
-詳細規則請見 [資料政策](docs/data-policy.md) 與
-[系統架構](docs/architecture.md)。
-
-## 目前狀態
-
-- [x] 完成官方資料集初步稽核
-- [x] 建立專案與協作骨架
-- [x] 建立可重複執行的 B+ 資料清洗流程
-- [x] 建立 PostgreSQL clean schema 與 Agent 安全檢視
-- [x] 在原生 Windows PostgreSQL 16.14 完成 migration、loader 與 constraints 測試
-- [x] 完成唯讀 Service Layer：服務、行政區、諮詢表單、synthetic 師傅媒合
-- [x] 完成四個唯讀 MCP Tools 與 protocol tests
-- [x] 完成可替換模型的 Agent 核心迴圈與 Mock 多輪測試
-- [x] 完成 Hugging Face hosted open-model adapter 與顯式 CLI mode
-- [x] 完成本機 Web P1：消費者諮詢／派單、廠商接單／拒絕與狀態回寫
-- [x] 完成 process-local 案件／訂單 P0 Service：確認、冪等、授權與稽核
-- [x] 將案件／訂單／冪等／audit workflow 持久化至 PostgreSQL
-- [x] 完成消費者人工 Checklist、桌機／手機響應式與無障礙基線
-- [ ] 建立固定 Hugging Face eval 與外部 HTTP MCP 驗證
-- [ ] 加入正式登入、角色授權與資料庫最小權限
-- [ ] 完成 Bedrock adapter
-- [ ] 取得比賽 AWS 環境後串接 Bedrock、AgentCore、RDS 與公開部署
-
-## 執行資料清洗
-
-第一次執行時，先取得並固定官方行政區參考資料：
+預設 Mock 模式不需要 token、AWS 或 PostgreSQL。
 
 ```powershell
-python .\scripts\fetch_admin_reference.py
-```
-
-接著執行 B+ 清洗：
-
-```powershell
-python .\scripts\clean_data.py --reference-date 2026-08-01
-```
-
-安全的核心資料會寫入 `data/processed/`，詳細檢查結果在
-`reports/data_quality.md`。含歷史訂單分析與隔離索引的本機輸出不會提交至
-GitHub。完整操作與資料流請見
-[資料清洗操作手冊](docs/data-cleaning-runbook.md)、
-[資料字典](docs/data-dictionary.md)與
-[AI 資料檢查清單](docs/ai-data-review-checklist.md)。
-
-## AI 與實作文件
-
-隊友或 AI 請依序讀 [專案白話指南](docs/project-guide.md)、
-[HANDOFF](HANDOFF.md)、[TASKS](TASKS.md)、[AI 協作入口](AGENTS.md) 與
-[實作索引](docs/implementation-index.md)。每次新增功能都必須留下「做了什麼、
-為什麼、資料流、安全邊界、測試、下一步」；功能完成後同步更新 HANDOFF、
-TASKS、實作索引及相關模組 README。
-
-## 執行唯讀 MCP Server
-
-安裝應用與資料庫依賴：
-
-```powershell
-python -m pip install -e ".[data,app,dev]"
-```
-
-設定測試用 PostgreSQL 的 `DATABASE_URL` 後，以 stdio 啟動：
-
-```powershell
-home-repair-mcp
-```
-
-或設定 `MCP_TRANSPORT=streamable-http`，endpoint 會位於
-`http://127.0.0.1:8000/mcp`。工具契約與安全設計請見
-[MCP Server 實作說明](src/home_repair_agent/mcp_server/README.md)。
-
-Agent 的模型／工具介面、多輪狀態、安全停止、Mock 限制及語音接法請見
-[Agent 對話迴圈實作說明](src/home_repair_agent/agent/README.md)。
-
-## 執行本機 Agent Demo
-
-不需要 PostgreSQL 或 AWS 即可先驗證 Agent、MCP 與 Service Layer：
-
-```powershell
-python -m home_repair_agent.agent.demo --scripted
-```
-
-移除 `--scripted` 可自行輸入對話。這個 Demo 使用明確標示的記憶體合成資料，
-會走完四個唯讀 MCP Tools 並顯示 synthetic 師傅候選；它只驗證編排流程，
-不建立案件、不保留時段，也不代表 Bedrock 的語意品質。候選時段會依啟動時間
-產生在下一個仍屬未來的星期六，不會因範例日期過期而失效。
-
-若要用 Hugging Face hosted open model 驗證真正的 tool calling，先建立具有
-Inference Providers 權限的 token，只在目前 PowerShell session 設定後啟動：
-
-```powershell
-$env:HF_TOKEN = "hf_..."
-python -m home_repair_agent.agent.demo --model-provider huggingface
-```
-
-預設模型為 `Qwen/Qwen3-4B-Instruct-2507`，可用 `HF_MODEL_ID`、
-`HF_PROVIDER`、`HF_MAX_TOKENS` 與 `HF_TIMEOUT_SECONDS` 覆寫。請求預設 60 秒
-逾時；未設定 `HF_TOKEN` 時會立即提示並停止，不會靜默切回 Mock。呼叫 hosted
-provider 需要網路、會傳送對話與 Tool 資料，並可能受帳號額度限制。
-
-## 執行本機 Web Demo
-
-Web P1 不需要 PostgreSQL 或 AWS 即可啟動，預設使用 Mock Model、記憶體
-synthetic repositories 與四個真實唯讀 MCP Tools：
-
-```powershell
+git clone https://github.com/spicyhoney/nw_p.git
+cd nw_p
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[app,data,dev]"
 home-repair-web
 ```
 
-接著開啟：
+macOS／Linux 將建立與啟用虛擬環境的兩行改為：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+啟動後開啟：
 
 - 消費者端：`http://127.0.0.1:8080/`
 - 廠商端：`http://127.0.0.1:8080/provider`
 
-可操作流程為：
+終端版 Agent smoke test：
 
-```text
-輸入需求
-  -> Agent 查詢服務、行政區與諮詢單
-  -> 手動完成動態表單與 +08:00 希望時段
-  -> MCP 媒合
-  -> 顯示 synthetic 師傅候選
-  -> 消費者選擇廠商並明確確認派單
-  -> 指派廠商 pending 時只看到遮罩聯絡資料
-  -> 廠商二次確認接受／拒絕
-  -> 接單後建立 synthetic Demo 訂單並回寫消費者狀態
+```powershell
+home-repair-agent-demo --scripted
 ```
 
-設定 `WEB_CASE_REPOSITORY=postgres` 與 `DATABASE_URL` 後，案件、訂單、
-idempotency 與 audit 會寫入 PostgreSQL；預設 `memory` 模式仍會在重新啟動後
-消失。Web session 仍只存在目前 Python process，也不會真的保留時段。廠商
-下拉選單是 Demo 身分模擬，不是正式登入。API、狀態、安全邊界與測試證據請見
-[Web P1 實作說明](src/home_repair_agent/web/README.md)與
-[派單／接單 P0](docs/provider-workflow.md)，PostgreSQL 寫入細節見
-[案件持久化](docs/postgres-case-persistence.md)。
+## Adapter 設定
 
-要用 Hugging Face hosted model 啟動時，先在目前 shell 設定 `HF_TOKEN`，
-再設定 `$env:WEB_MODEL_PROVIDER = "huggingface"`；未設定 token 會直接停止，
-不會靜默切回 Mock。
+| 目的 | 環境變數 | 可用值／說明 |
+|---|---|---|
+| 對話模型 | `WEB_MODEL_PROVIDER` | `mock`、`huggingface`、`bedrock` |
+| 唯讀工具位置 | `TOOL_TRANSPORT` | `local`、`agentcore_remote_mcp` |
+| 案件儲存 | `WEB_CASE_REPOSITORY` | `memory`、`postgres` |
+| 圖片分析 | `WEB_MEDIA_PROVIDER` | 預設停用；HF 模式需明確同意與 `HF_TOKEN` |
+| 語音辨識 | `HF_ASR_*` | 選配的台語／國語 ASR endpoint |
+
+完整設定範例在 [`.env.example`](.env.example)。所有 hosted provider 都是 fail-closed：
+缺少 token、AWS credential、Runtime ARN 或連線失敗時會停止並回報，不會靜默切回
+Mock 造成假成功。
+
+## 驗證
+
+作品集整理基線於 2026-08-02 在 Python 3.12 執行：
+
+```text
+327 passed, 17 skipped, 168 subtests passed
+Ruff check: passed
+Ruff format --check: passed
+JavaScript syntax and regression scripts: passed
+```
+
+17 個 skip 是未提供測試 PostgreSQL 或外部 live provider 時的條件式測試，不列入成功
+證據。GitHub Actions 會啟動 PostgreSQL 16 service、檢查完整 Python tree、JavaScript，
+並執行完整 pytest。
+
+本機驗證指令：
+
+```powershell
+python -m pytest -q
+python -m ruff check .
+python -m ruff format --check .
+node --check src/home_repair_agent/web/static/app.js
+node --check src/home_repair_agent/web/static/provider.js
+node tests/test_checklist_concurrency.js
+node tests/test_media_stale_refresh.js
+```
+
+## 資料與安全邊界
+
+- 官方原始資料不在本 repo 重新散布；pipeline 只寫入 `data/processed/` 與報告。
+- 不明 `service_id`、孤兒關聯、格式錯誤與疑似個資不會被猜測補值，而是隔離或遮罩。
+- Demo 師傅、聯絡資料、案件、訂單與時段全部標示為 `synthetic`。
+- 四個 MCP Tools 僅能查服務、行政區、諮詢表單與媒合候選。
+- 寫入只能經受控 Web API、確認、冪等鍵、交易與 audit；模型沒有資料庫權限。
+- `.env`、token、AWS key、Runtime ARN、真實個資與原始圖片不得提交。
+
+詳細規則見[資料政策](docs/data-policy.md)與[資料字典](docs/data-dictionary.md)。
+
+## 目前限制
+
+- Demo 身分下拉選單不是正式登入或 RBAC。
+- 沒有真實廠商、付款、通知或保證時段；媒合結果不構成正式預約。
+- Web conversation／Checklist 仍是 process-local；案件 workflow 才能切 PostgreSQL。
+- Repo 不維護公開網站或長期 AgentCore endpoint；AWS 文件記錄的是比賽期間的遮罩
+  live evidence，不代表資源目前仍存在。
+- Hugging Face、Bedrock、AgentCore 與語音服務需要各自帳號、權限、網路與可能的額度。
+
+## 導覽
+
+- [白話專案指南](docs/project-guide.md)
+- [實作索引與驗證證據](docs/implementation-index.md)
+- [Web 與 API 契約](src/home_repair_agent/web/README.md)
+- [Agent 與 provider adapters](src/home_repair_agent/agent/README.md)
+- [MCP Server 契約](src/home_repair_agent/mcp_server/README.md)
+- [資料清洗操作手冊](docs/data-cleaning-runbook.md)
+- [目前待辦](TASKS.md)
+
+完整 commit 與 PR 歷史保留兩人團隊的共同開發紀錄；目前公開版本的文件、測試與
+release 整理由 `spicyhoney` 維護。

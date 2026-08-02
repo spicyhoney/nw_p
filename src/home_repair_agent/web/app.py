@@ -7,6 +7,7 @@ import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -100,6 +101,62 @@ DEMO_PROVIDER_IDENTITIES = (
 )
 DEMO_PROVIDER_IDS = frozenset(identity.provider_id for identity in DEMO_PROVIDER_IDENTITIES)
 DemoProviderHeader = Annotated[str, Header(alias="X-Demo-Provider-Id")]
+IPAddress = IPv4Address | IPv6Address
+
+
+def _resolve_demo_ip_allowlist() -> tuple[frozenset[IPAddress], bool] | None:
+    """Read the opt-in public Demo allowlist without accepting ranges or hostnames."""
+
+    raw_allowed_ips = os.getenv("DEMO_ALLOWED_IPS")
+    raw_trust_cf = os.getenv("DEMO_TRUST_CF_CONNECTING_IP")
+    trust_cf_connecting_ip = False
+    if raw_trust_cf is not None:
+        normalized_trust = raw_trust_cf.strip().lower()
+        if normalized_trust not in {"true", "false"}:
+            raise RuntimeError("DEMO_TRUST_CF_CONNECTING_IP must be true or false")
+        trust_cf_connecting_ip = normalized_trust == "true"
+
+    if raw_allowed_ips is None:
+        if trust_cf_connecting_ip:
+            raise RuntimeError("DEMO_TRUST_CF_CONNECTING_IP=true requires DEMO_ALLOWED_IPS")
+        return None
+
+    values = raw_allowed_ips.split(",")
+    if not values or any(not value.strip() for value in values):
+        raise RuntimeError("DEMO_ALLOWED_IPS must contain comma-separated exact IP addresses")
+
+    allowed_ips: set[IPAddress] = set()
+    for value in values:
+        try:
+            allowed_ips.add(ip_address(value.strip()))
+        except ValueError as error:
+            raise RuntimeError(
+                "DEMO_ALLOWED_IPS must contain comma-separated exact IP addresses"
+            ) from error
+    return frozenset(allowed_ips), trust_cf_connecting_ip
+
+
+def _request_ip(
+    request: Request,
+    *,
+    trust_cf_connecting_ip: bool,
+) -> IPAddress | None:
+    """Resolve a request IP, trusting Cloudflare only across a loopback hop."""
+
+    if request.client is None:
+        return None
+    try:
+        direct_ip = ip_address(request.client.host)
+    except ValueError:
+        return None
+
+    forwarded_value = request.headers.get("CF-Connecting-IP")
+    if trust_cf_connecting_ip and direct_ip.is_loopback and forwarded_value is not None:
+        try:
+            return ip_address(forwarded_value.strip())
+        except ValueError:
+            return None
+    return direct_ip
 
 
 def _resolve_case_repository() -> CaseWorkflowRepository:
@@ -153,6 +210,7 @@ def create_app(
     reference_time: datetime | None = None,
     speech_to_text_client: SpeechToTextPort | None = None,
 ) -> FastAPI:
+    demo_ip_allowlist = _resolve_demo_ip_allowlist()
     if (
         session_service is not None
         and case_workflow is not None
@@ -229,6 +287,28 @@ def create_app(
         openapi_url="/api/openapi.json",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def enforce_demo_ip_allowlist(request: Request, call_next: Any) -> Any:
+        if demo_ip_allowlist is None:
+            return await call_next(request)
+
+        allowed_ips, trust_cf_connecting_ip = demo_ip_allowlist
+        request_ip = _request_ip(
+            request,
+            trust_cf_connecting_ip=trust_cf_connecting_ip,
+        )
+        if request_ip is not None and (request_ip.is_loopback or request_ip in allowed_ips):
+            return await call_next(request)
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": {
+                    "code": "DEMO_IP_NOT_ALLOWED",
+                    "message": "This Demo is restricted to approved networks.",
+                }
+            },
+        )
 
     @app.exception_handler(WebSessionNotFoundError)
     async def handle_not_found(

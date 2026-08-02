@@ -20,6 +20,7 @@ if sys.platform == "win32":
     # psycopg async connections require a selector-based loop on Windows.
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+from home_repair_agent.agent.agentcore_mcp_client import create_agentcore_mcp_tool_client
 from home_repair_agent.agent.demo import (
     TAIPEI_TIMEZONE,
     DemoReadRepository,
@@ -28,6 +29,7 @@ from home_repair_agent.agent.demo import (
 from home_repair_agent.agent.huggingface_vision import HuggingFaceVisionClient
 from home_repair_agent.agent.loop import AgentRunner
 from home_repair_agent.agent.mcp_client import MCPToolClient
+from home_repair_agent.agent.ports import ToolClient
 from home_repair_agent.backend.case_models import (
     CaseStatus,
     DemoProviderIdentity,
@@ -116,6 +118,34 @@ def _resolve_case_repository() -> CaseWorkflowRepository:
     raise RuntimeError("WEB_CASE_REPOSITORY must be one of: memory, postgres")
 
 
+@asynccontextmanager
+async def _tool_client_context(
+    repository: DemoReadRepository,
+) -> AsyncIterator[ToolClient]:
+    """Create the configured read-only tool transport without fallback.
+
+    Case workflow writes deliberately remain local to the web process.  The
+    AgentCore transport is only the existing read-only MCP tool surface.
+    """
+
+    transport = os.getenv("TOOL_TRANSPORT", "local").strip().lower()
+    if transport == "local":
+        mcp_server = create_mcp_server(ReadServiceLayer(repository))
+        async with create_connected_server_and_client_session(
+            mcp_server,
+            raise_exceptions=True,
+        ) as mcp_session:
+            yield MCPToolClient(mcp_session)
+        return
+
+    if transport == "agentcore_remote_mcp":
+        async with create_agentcore_mcp_tool_client() as tool_client:
+            yield tool_client
+        return
+
+    raise RuntimeError("TOOL_TRANSPORT must be one of: local, agentcore_remote_mcp")
+
+
 def create_app(
     *,
     session_service: WebSessionService | None = None,
@@ -169,12 +199,7 @@ def create_app(
                 now=now,
             )
         )
-        mcp_server = create_mcp_server(ReadServiceLayer(repository))
-        async with create_connected_server_and_client_session(
-            mcp_server,
-            raise_exceptions=True,
-        ) as mcp_session:
-            tool_client = MCPToolClient(mcp_session)
+        async with _tool_client_context(repository) as tool_client:
             app.state.web_sessions = WebSessionService(
                 runner=AgentRunner(
                     model_client=model_client,

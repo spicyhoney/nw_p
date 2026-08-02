@@ -1,304 +1,177 @@
 # 系統與 AWS 架構
 
-第一次閱讀本專案時，先看[專案白話指南](project-guide.md)；本頁把「已合併基線」、
-「2026-08-02 已取得的 AWS live 證據」、「最後 Demo 組裝」與「未來 production
-架構」分開說明。未完成工作以 [TASKS](../TASKS.md) 為準。
+最後更新：2026-08-02
 
-## 先說結論
+本頁區分三件事：現在任何人可重現的本機系統、比賽期間完成的 AWS live 證據，以及
+尚未實作的 production 元件。第一次閱讀可先看[專案白話指南](project-guide.md)。
 
-AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連資料庫。這個專案中：
+## 核心原則
 
-- Python data pipeline：整理主辦方資料並保留來源與品質標記。
-- PostgreSQL：保存清洗後的服務、行政區、表單、案件、媒合與訂單。
-- Service Layer：實作查詢、驗證、媒合、建案與建單等商業規則。
-- MCP Tools：把 Service Layer 包成 Agent 能安全呼叫的有限工具。
-- Amazon Bedrock：理解使用者語句、決定何時呼叫哪個工具、整理回覆。
-- Amazon Bedrock AgentCore Runtime：在 AWS 上託管 Remote MCP Server，讓本機
-  Agent 以標準 MCP `initialize`、`tools/list`、`tools/call` 呼叫四個唯讀工具。
-- AgentCore Gateway：未來若要把多個 target 統一成對外 MCP 入口再評估；目前 Demo
-  沒有使用 Gateway，不能把 Runtime 說成 Gateway。
+> LLM 負責理解與選工具；Service Layer 負責商業規則；Repository 負責保存事實。
 
-所以最重要的邊界是：
+- FastAPI 是消費者與廠商 Web 的 adapter，不是規則所在。
+- MCP 是 Agent 呼叫有限工具的協定，不是資料庫 driver。
+- Agent 看不到資料庫密碼，也不能送任意 SQL。
+- 建案、派單與接案有副作用，必須走人工確認、冪等、交易與 audit。
 
-> LLM 負責理解與決策；Tool 與 Service Layer 負責執行；PostgreSQL 負責保存事實。
-
-## 目前完成到哪裡
-
-| 層級 | 目前狀態 | 下一步 |
-|---|---|---|
-| 資料清洗 | 已完成 B+ pipeline 與品質報告 | 持續保留 provenance 與 synthetic 標示 |
-| PostgreSQL | 已在 PostgreSQL 16.14 通過 loader、讀取與 async 案件 workflow transaction 測試 | RDS 不在目前 AWS Demo 路徑 |
-| Service Layer | 已完成唯讀查詢／媒合、派單／接單與 memory／async PostgreSQL repository | 正式登入、時段保留與排程衝突 |
-| MCP Tools | 四個唯讀 Tool 已通過本機 protocol、Bedrock process-local E2E 與 AgentCore Remote MCP live 驗證 | 寫入仍由受控 Web API 執行，不公開成 MCP Tool |
-| Agent / Model | AgentRunner、Mock、HF 與 Bedrock adapter contract 已完成；Nova Lite 四工具 live 閉環通過 | 固定最終 Demo provider 與失敗處理 |
-| AgentCore Runtime | `us-west-2` synthetic-only Remote MCP 為 `READY`；`initialize`、`tools/list`、四工具與 ID provenance 均通過 | Demo 後手動 cleanup；expiry 標籤不會自動刪除 |
-| Web / FastAPI | 已完成本機雙端流程、人工 Checklist、圖片、STT 與 Browser → Bedrock → AgentCore 組裝 | 評審可連線的公開 HTTPS hosting 尚未完成 |
-| 台語／國語語音 | Breeze ASR 已整合並回填繁中輸入框；公開 HF Space 約 45–60 秒且無 SLA | 實體麥克風 smoke；TTS 不列為已完成 |
-| 未做的雲端項目 | 無 AgentCore Gateway、RDS、公開 AWS 網站、正式 auth／RBAC | 只列未來 production，不冒充本次證據 |
-
-完整測試批次、commit 與 focused evidence 以[實作索引](implementation-index.md)為準。
-目前 Browser → Bedrock → AgentCore Remote MCP 的文字路徑已完整通過；HF 圖片／STT
-則是另一個本機 Demo mode。這些證據不代表公開 AWS 網站、RDS、正式身分驗證或
-production 台語語音已完成。
-
-## 兩條已完成的 AWS live 證據
-
-目前先完成的是兩條彼此獨立的閉環；它們證明模型端與 Remote MCP 端各自可用：
+## 目前可重現架構
 
 ```mermaid
 flowchart LR
-    subgraph BedrockEvidence["證據 A：Bedrock 真實工具迴圈"]
-        Nova["Amazon Nova Lite"] <--> Runner["AgentRunner"]
-        Runner --> LocalClient["MCPToolClient"]
-        LocalClient --> LocalMCP["process-local FastMCP"]
-        LocalMCP --> LocalService["ReadServiceLayer"]
-        LocalService --> LocalRepo["DemoReadRepository"]
-        LocalRepo --> LocalMCP
-        LocalMCP --> Runner
-        Runner --> Nova
-    end
+    Consumer["消費者 Web"] --> API["FastAPI adapter"]
+    Provider["廠商 Web"] --> API
 
-    subgraph RuntimeEvidence["證據 B：AgentCore Remote MCP"]
-        Probe["Python remote client"] --> SigV4["SigV4 authentication"]
-        SigV4 --> RuntimeProof["AgentCore Runtime /mcp"]
-        RuntimeProof --> RemoteTools["initialize / list / 四工具 call"]
-        RemoteTools --> RemoteServiceProof["ReadServiceLayer"]
-        RemoteServiceProof --> RemoteRepoProof["DemoReadRepository"]
-    end
+    API --> Session["WebSessionService"]
+    Session --> Runner["AgentRunner"]
+    Runner --> Model["ModelClient"]
+    Model --> Mock["Mock"]
+    Model -. "需外部設定" .-> HF["Hugging Face"]
+    Model -. "需 AWS credential" .-> Bedrock["Amazon Bedrock"]
+
+    Runner --> Client["ToolClient"]
+    Client --> Local["local FastMCP"]
+    Client -. "需 Runtime ARN" .-> Remote["AgentCore Runtime /mcp"]
+    Local --> Tools["四個唯讀 MCP Tools"]
+    Remote --> Tools
+    Tools --> Read["ReadServiceLayer"]
+    Read --> Demo["DemoReadRepository"]
+    Read -. "獨立查詢模式" .-> PGRead["PostgresReadRepository"]
+
+    API --> Workflow["CaseWorkflowService"]
+    Workflow --> Memory["MemoryCaseWorkflowRepository"]
+    Workflow -. "WEB_CASE_REPOSITORY=postgres" .-> PGWrite["async PostgreSQL repository"]
 ```
 
-兩條底層證據之上，最終整合分支已再完成一次 Browser → Bedrock → AgentCore live
-旅程，取得 service、location、form 與兩位 synthetic 候選。
+實線是預設 Mock Demo 能直接執行的路徑；虛線 adapter 需要額外服務或 credential。
+`WEB_CASE_REPOSITORY=postgres` 只切換案件／訂單／audit 寫入，不會偷偷把唯讀
+`DemoReadRepository` 換成 PostgreSQL。
 
-## 已驗證元件與最後 Demo 組裝
+## 兩條使用者入口
+
+| 入口 | 路徑 | LLM 是否參與 |
+|---|---|---|
+| 輸入「臺北市大安區水龍頭漏水」 | Web -> Agent -> Model -> MCP -> Service -> Repository | 是，負責理解與選工具 |
+| 點擊確認摘要、派單或接案 | Web -> FastAPI -> CaseWorkflowService -> Repository | 否，直接執行受控規則 |
+
+聊天與按鈕共用 Service 契約。模型可以提出建議，但不能模擬使用者按下確認。
+
+## 四個唯讀 MCP Tools
+
+| Tool | 目的 | 主要輸出 |
+|---|---|---|
+| `search_services` | 尋找可供 Agent 使用的服務 | canonical `service_id`、名稱、來源 |
+| `resolve_location` | 解析完整縣市／行政區 | canonical `location_id`、名稱 |
+| `get_consultation_form` | 取得服務適用的最新表單 | form key、version、topics |
+| `match_service_providers` | 依服務、地點、表單與時段媒合 | synthetic 候選、時段、分數、來源 |
+
+後一個工具需要的 ID 必須來自前一個成功 ToolResult，不能由模型猜。工具先以 Pydantic
+驗證輸入，再呼叫 `ReadServiceLayer`；Tool 不自行拼 SQL。
+
+## 寫入狀態機
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft: 建立 Web session
+    draft --> matched: 表單與最新摘要均確認
+    matched --> pending: 消費者選擇廠商並確認派單
+    pending --> accepted: 指派廠商確認接受
+    pending --> rejected: 指派廠商拒絕
+    accepted --> [*]: 建立 synthetic Demo 訂單
+    rejected --> matched: 消費者可改派
+```
+
+- `pending` 只回傳遮罩 contact。
+- `accepted` 才揭露完整 synthetic contact 並建立 `SYN-ORDER-*`。
+- repository 交易同時保存 case、order、idempotency 與 audit。
+- 非指派廠商無法讀取或變更案件；廠商下拉選單只是 Demo 身分，不是正式 auth。
+
+## 資料層
+
+```text
+官方原始檔（唯讀、本 repo 不重新散布）
+  -> Python B+ pipeline
+  -> official / external_reference / manual_configuration / synthetic 標籤
+  -> verified core data + quarantine + quality report
+  -> PostgreSQL core / workflow schemas
+  -> agent.* read-only views
+```
+
+未知代碼與斷裂關聯不補猜；疑似個資不進 Agent view。AgentCore Demo 使用
+`DemoReadRepository` 的 synthetic seed，而不是冒充已部署 RDS。
+
+## AWS live 證據
+
+比賽期間曾驗證：
+
+```text
+Browser -> FastAPI -> AgentRunner -> Amazon Nova Lite
+  -> SigV4 AgentCoreMCPToolClient
+  -> AgentCore Runtime /mcp
+  -> initialize + tools/list + 四個 tools/call
+  -> ReadServiceLayer -> DemoReadRepository
+```
+
+- Region：`us-west-2`。
+- 跑通 service 17、臺北市大安區、`repair_form_v1` 與兩位 synthetic 候選。
+- Runtime ID、ARN、account、credential、完整 provider payload 與 endpoint 均未提交。
+- 遮罩 evidence 在 `reports/agentcore_remote_mcp_demo.json`，設計說明在
+  [AgentCore Remote MCP log](ENGINEER_LOG-agentcore-remote-mcp-demo.md)。
+
+這條 evidence 不代表目前有公開網站或可用 Runtime。Repo 不維護 Quick Tunnel，任何
+舊 tunnel URL、PID 或筆電路徑都已從現況文件移除。
+
+### 為什麼沒有 AgentCore Gateway
+
+目前只有一個 Remote MCP Server，Agent 可直接呼叫 AgentCore Runtime `/mcp`。Gateway
+適合統一多個 MCP、Lambda、OpenAPI 或 API Gateway target；本專案沒有多 target 需求，
+因此不把未使用的 Gateway 畫成成果。
+
+## Adapter 設定
+
+| 介面 | 預設本機 | 選配外部 adapter |
+|---|---|---|
+| `ModelClient` | `MockModelClient` | `HuggingFaceModelClient`、`BedrockModelClient` |
+| `ToolClient` | local `MCPToolClient` | `AgentCoreMCPToolClient` |
+| 唯讀 Repository | `DemoReadRepository` | `PostgresReadRepository`（獨立 MCP 組裝） |
+| 案件 Repository | memory | async PostgreSQL |
+| 圖片分析 | 停用 | Hugging Face VLM |
+| 語音辨識 | 停用／文字替代 | Hugging Face Space ASR |
+
+所有外部 adapter 都 fail closed。缺設定或連線失敗時不會降級到 Mock 並宣稱成功。
+
+## 未完成的 production 架構
 
 ```mermaid
 flowchart LR
-    User["使用者"] --> Web["本機 Web / FastAPI<br/>已驗證"]
-    Web --> Agent["AgentRunner<br/>已驗證"]
-    Agent --> Bedrock["Amazon Bedrock Nova Lite<br/>live tool-use 已驗證"]
-    Agent --> Runtime["AgentCore Runtime<br/>Remote MCP READY／live"]
-    Runtime --> Tools["四個唯讀 MCP Tools<br/>live calls 已驗證"]
-    Tools --> Service["ReadServiceLayer"]
-    Service --> DemoRepo["DemoReadRepository<br/>synthetic-only"]
-    Voice["Breeze 台語／國語 STT<br/>已整合；待實體 mic smoke"] --> Web
-    Web --> Case["CaseWorkflowService<br/>人工確認後寫入"]
-    Case --> CaseRepo["Memory / PostgreSQL<br/>本機已驗證"]
+    Public["公開 HTTPS Web"] -.-> API["部署後的 FastAPI"]
+    API -.-> Auth["正式 identity / RBAC"]
+    API -.-> Agent["Agent runtime"]
+    Agent -.-> Bedrock["Amazon Bedrock"]
+    Agent -.-> Gateway["選配 AgentCore Gateway"]
+    Gateway -.-> MCP["AgentCore Runtime MCP"]
+    API -.-> Service["Service Layer"]
+    MCP -.-> Service
+    Service -.-> RDS["Amazon RDS PostgreSQL"]
+    Service -.-> S3["加密圖片儲存"]
+    Logs["CloudWatch"] -.-> API
+    Logs -.-> MCP
 ```
 
-上圖的 AWS 文字實線已做過一次完整 browser-to-AWS E2E；網站仍跑在本機，因此不等於
-已有評審可開啟的公開 URL。
+上圖全是未完成方向：沒有公開 production hosting、正式登入／RBAC、RDS、正式圖片
+S3、付款、通知或真實時段保留。實作優先級見 [TASKS](../TASKS.md)。
 
-## 已驗證的 AWS 文字 Demo 路徑
+## 安全邊界
 
-以「台北市大安區水龍頭漏水，週六下午可以來嗎？」為例：
-
-> 以下是整合目標，不是目前完成證據；只有最終 remote ToolClient 組裝與驗收通過後，
-> 才能把這張 sequence 當成實際 E2E。
-
-```mermaid
-sequenceDiagram
-    actor User as 使用者
-    participant Web as 網頁 / FastAPI
-    participant Agent as 自製 Python Agent
-    participant Model as Amazon Bedrock
-    participant Runtime as AgentCore Runtime / Remote MCP
-    participant Tool as 四個唯讀 MCP Tools
-    participant Service as Service Layer
-    participant Repo as DemoReadRepository
-
-    User->>Web: 輸入問題
-    Web->>Agent: 訊息與 session_id
-    Agent->>Model: 對話、system prompt、可用工具定義
-    Model-->>Agent: 要求呼叫 resolve_location
-    Agent->>Runtime: MCP tools/call
-    Runtime->>Tool: resolve_location(臺北市, 大安區)
-    Tool->>Service: 驗證參數並查詢
-    Service->>Repo: 固定 repository 操作
-    Repo-->>Service: canonical location result
-    Service-->>Tool: 結構化結果
-    Tool-->>Runtime: JSON
-    Runtime-->>Agent: MCP tool result
-    Agent->>Model: 回填工具結果
-    Model-->>Agent: 要求下一個工具或產生追問
-    Agent-->>Web: 回覆與可呈現狀態
-    Web-->>User: 顯示結果
-```
-
-完整流程如下：
-
-1. FastAPI 收到文字，但不自行猜服務或直接拼 SQL。
-2. 自製 Python Agent 把對話、工具規格與規則送給 Bedrock Converse API。
-3. Bedrock 回傳一般文字，或結構化的 `toolUse` 請求。
-4. Agent 透過 remote ToolClient，以 SigV4 身分呼叫 AgentCore Runtime 的 MCP endpoint。
-5. Runtime 只暴露既有四個唯讀 FastMCP Tools；目前沒有 Gateway 或 Lambda target。
-6. Tool 用 Pydantic 驗證參數，再呼叫共用的 Service Layer。
-7. 目前 AgentCore Demo 使用 `DemoReadRepository` 的 synthetic seed；本機獨立 MCP
-   Server 另有 `PostgresReadRepository` 整合測試。兩者都不能讓 LLM 執行任意 SQL。
-8. 查詢結果沿原路回到 Bedrock，由模型轉成自然語言。
-9. 建立案件、確認預約、建立訂單等寫入操作，必須先取得使用者明確確認。
-10. 寫入操作由 Service Layer 在交易中完成，模型不能直接修改資料庫。
-
-這就是「自動查詢」的來源：Agent 決定要呼叫工具，但真正查詢的是我們寫好的
-Tool、Service Layer 與 SQL。
-
-## 聊天與按鈕是兩個入口
-
-| 使用方式 | 呼叫路徑 | 是否需要 LLM |
-|---|---|---|
-| 「我家水龍頭漏水」 | FastAPI -> Agent -> Bedrock -> MCP Tool -> Service Layer -> Repository | 需要 |
-| 點「查詢訂單」 | FastAPI -> Service Layer -> Repository | 不需要 |
-| 點「確認預約」 | FastAPI -> Service Layer -> Repository | 不需要，但需確認與權限檢查 |
-| 未來外部 Agent | 外部 Agent -> 經核准的 MCP auth／Gateway -> Tool -> Service Layer | 目前未做，不列為 Demo 完成 |
-
-兩條路共用同一套 Service Layer，所以相同輸入必須得到相同的商業結果。FastAPI
-是網頁後端，不是前端；MCP 是 Agent 的工具協定，也不是資料庫驅動程式。
-
-目前本機派單 P0 採用按鈕入口：
-
-```text
-消費者／廠商按鈕
-  -> FastAPI
-  -> CaseWorkflowService
-  -> memory 或 PostgreSQL CaseWorkflowRepository
-```
-
-這條路已驗證確認、冪等、指派廠商隔離、audit、原子狀態轉換與 PostgreSQL
-持久化，但沒有寫入 MCP Tool。正式版會把連線切到 RDS 並替換身分 adapter，
-不把規則搬進 route、LLM 或前端。完整契約見[派單／接單 P0](provider-workflow.md)。
-
-## AWS 服務各自用在哪裡
-
-| AWS 服務 | 在本專案的工作 | 目前證據／狀態 |
-|---|---|---|
-| Amazon Bedrock | 對話理解、欄位抽取、選擇工具與整理回覆；不負責 SQL 與資料寫入 | Nova Lite Converse 與四工具 live E2E 已通過 |
-| AgentCore Runtime | 託管 synthetic-only FastMCP Server | Remote MCP 曾達 READY；initialize/list/call 已通過 |
-| IAM / workload identity | Runtime execution 與呼叫端 SigV4 身分 | Demo 部署已使用；證據須遮罩 account／ARN |
-| Amazon S3 | 保存 AgentCore direct-code deployment artifact | Demo 部署已使用私有 bucket；不是報修照片 storage 的完成證據 |
-| CloudWatch Logs | Runtime log group 與除錯 | Demo 部署已建立；不得記錄 credential、完整 payload 或個資 |
-| AgentCore Gateway | 未來統一多 target MCP endpoint | 本次未建立、未使用 |
-| Amazon RDS for PostgreSQL | 未來正式環境資料庫 | 本次未建立；目前 remote MCP 用 synthetic Demo repository |
-| AWS Web hosting / API Gateway | 未來公開 Web 或一般 REST API | 本次未建立；目前網頁跑在本機 |
-
-### Runtime、AgentCore Gateway 和 API Gateway 的差別
-
-- AgentCore Runtime 可以直接執行一個 MCP Server；這是目前 live Demo 已採用的方式。
-- AgentCore Gateway 面向 Agent，適合把多個 MCP／Lambda／API target 統一成工具入口；
-  本次 Demo 沒有使用。
-- API Gateway 面向一般網頁、手機或合作廠商的 HTTP API。
-- 我們的目前 AgentCore Demo 直接呼叫 Runtime；未來確有多 target 需求才加 Gateway。
-- 網頁按鈕先走 FastAPI；只有部署方式需要公開 Lambda REST endpoint 時，才加
-  API Gateway。
-
-### 工作坊 Gateway 畫面如何對應到黑客松後擴充
-
-工作坊的例子是：
-
-```text
-Agent -> AgentCore Gateway -> check_warranty Lambda
-```
-
-若黑客松後確定需要多 target Gateway，概念上可以是：
-
-```text
-Agent -> AgentCore Gateway -> match_service_providers MCP Tool
-                           -> 另一個未來核准的唯讀 Tool
-```
-
-Gateway 能把 Lambda、API Gateway REST API、OpenAPI service 或既有 MCP Server
-統一呈現為 MCP 工具。本次 feature freeze 不新增 Gateway 或 Lambda target；未來若要
-擴充，也不能同時為同一個工具維護兩套商業邏輯。
-
-## 未來 production 目標架構（非本次完成證據）
-
-```mermaid
-flowchart LR
-    User["使用者網頁"] --> API["FastAPI 應用後端"]
-    API --> Agent["自製 Python Agent<br/>AgentCore Runtime"]
-    Agent --> Bedrock["Amazon Bedrock<br/>Converse API"]
-    Agent --> Gateway["AgentCore Gateway<br/>MCP endpoint"]
-    External["Lumine one / 外部 Agent"] --> Gateway
-    Gateway --> MCP["FastMCP Server<br/>AgentCore Runtime"]
-    Gateway -. "選配一支工具" .-> Lambda["AWS Lambda"]
-    MCP --> Service["Python Service Layer"]
-    Lambda --> Service
-    API --> Service
-    Service --> RDS["Amazon RDS<br/>PostgreSQL"]
-    Service --> S3["Amazon S3<br/>報修照片"]
-    Logs["CloudWatch"] -. "log / metrics" .- Agent
-    Logs -. "log / metrics" .- Gateway
-    Logs -. "log / metrics" .- MCP
-```
-
-FastAPI 未來可放在主辦方指定環境或可執行 Python Web service 的部署環境；目前沒有
-公開 AWS 網站。上圖中的 Gateway、RDS、正式 S3 圖片儲存與完整 CloudWatch 維運都屬
-production 方向，不應放進本次 Demo 的「已完成」清單。
-
-## Adapter 切換與 credential 邊界
-
-沒有 AWS 金鑰不會擋住目前工作。先固定四個介面：
-
-| 介面 | 本機實作 | AWS／production adapter |
-|---|---|---|
-| `ModelClient` | `MockModelClient`，回固定 tool call | `BedrockModelClient` |
-| `ToolClient` | 直接呼叫本機 FastMCP / Python tool | AgentCore Runtime remote ToolClient（已整合） |
-| `Repository` | 本機 PostgreSQL | RDS PostgreSQL |
-| `ObjectStorage` | 本機測試圖片或假 object key | S3 presigned URL |
-
-本機開發設定：
-
-```dotenv
-APP_ENV=local
-MODEL_PROVIDER=mock
-TOOL_TRANSPORT=local
-OBJECT_STORAGE=local
-```
-
-最終 Demo 的概念設定如下；實際環境變數名稱以整合後的 Web README 為準：
-
-```dotenv
-APP_ENV=competition
-MODEL_PROVIDER=bedrock
-TOOL_TRANSPORT=agentcore_runtime
-OBJECT_STORAGE=local
-```
-
-程式不得保存 `AWS_ACCESS_KEY_ID` 或 `AWS_SECRET_ACCESS_KEY`。開發者登入優先使用
-主辦方提供的暫時憑證或 AWS IAM Identity Center；部署在 AWS 上的程式使用 IAM
-role。AWS SDK 會從標準 credential provider chain 取得身分，不需要把金鑰寫進
-程式或提交到 GitHub。
-
-## 實作順序
-
-1. 已完成 Service Layer 的 `search_services`、`resolve_location`、
-   `get_consultation_form`，並通過真實 PostgreSQL 測試。
-2. 已把同一批函式包成 FastMCP Tools，並通過本機 MCP client protocol tests。
-3. 已用 Mock Model 跑完「輸入 -> tool call -> tool result -> 回覆」迴圈。
-4. 已實作 `BedrockModelClient`，並以 Nova Lite 通過 process-local MCP 四工具 live E2E。
-5. 已完成派單／接單 P0：確認、冪等、授權、audit 與狀態轉換。
-6. 已新增 PostgreSQL transaction repository；RDS 留作 production 方向。
-7. 已將 synthetic-only Remote MCP 部署到 AgentCore Runtime，並完成四工具 live 驗證。
-8. 已整合 Web remote ToolClient，完成 browser → Bedrock → AgentCore 的最終 Demo E2E。
-9. Demo 結束後執行 cleanup，避免持續計費；保留遮罩後 evidence。
-10. 正式登入、RBAC、Gateway、RDS、正式 S3 圖片儲存與 API Gateway 留待後續。
-
-## 安全與資料邊界
-
-- 原始資料保持唯讀，無法確認的資料留在 `quarantine`。
-- Agent 不取得資料庫帳密；只讀 Tool 只查 `agent.*` views，不讀 raw、staging 或
-  quarantine。
-- 寫入 Tool 只能經 Service Layer、專用資料庫角色與白名單 repository 操作正式
-  業務表。
-- `agent_eligible=false` 的服務與未解 mapping 不得出現在推薦結果。
-- 建案、預約與訂單屬於副作用操作，必須有確認、交易與 audit log。
-- LLM 不接觸完整個資；Tool 回傳遮罩資料，敏感欄位在正式環境加密保存。
-- 合成服務商、時段、案件與訂單必須保留 `source_type=synthetic`。
+- 原始資料唯讀；unknown mapping 進 quarantine。
+- `agent_eligible=false` 的資料不能出現在 Agent 查詢結果。
+- synthetic provider、時段、case、order 與 contact 必須保留來源標籤。
+- 不記錄 token、AWS key、Runtime ARN、完整圖片 bytes、真實個資或完整 provider payload。
+- hosted 圖片／語音送出前必須取得同意；輸出只作建議，仍需人工確認。
+- AWS `ExpiresAt` tag 不會自動刪除資源；賽後帳號 audit 仍列為待辦。
 
 ## 官方參考
 
 - [Amazon Bedrock Converse API](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html)
 - [AgentCore Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html)
-- [AgentCore Gateway 使用方式](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-using.html)
-- [AgentCore Gateway target 類型](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-core-concepts.html)
-- [IAM 安全最佳實務](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
-- [S3 presigned URL 上傳](https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html)
+- [AgentCore Gateway concepts](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-core-concepts.html)
+- [IAM security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)

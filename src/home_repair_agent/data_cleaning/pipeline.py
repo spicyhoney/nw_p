@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+from functools import partial
 from html import unescape
-import json
 from pathlib import Path
-import re
 from typing import Any
 
 from .demo import build_curated_repair_form, build_demo_seed
@@ -20,7 +21,6 @@ from .source_io import (
     sha256_file,
     write_json,
 )
-
 
 MASTER_FILE = "相關主檔設定.json"
 COUNTY_FILE = "縣市區域範例資料.json"
@@ -286,9 +286,7 @@ def _feedback_references(
     topic_ids: set[int] = set()
     option_ids: set[int] = set()
     contains_plaintext_pii = False
-    pii_pattern = re.compile(
-        r"(09\d{8}|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})"
-    )
+    pii_pattern = re.compile(r"(09\d{8}|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})")
 
     for row in feedback_rows:
         content = parse_json_value(row.get("feedback_content"))
@@ -401,8 +399,7 @@ def _audit_consultation(
 
     for row in relations:
         record_id = (
-            f"{row['form_id']}:{row['topic_id']}:{row['county_code']}:"
-            f"{row['district_code']}"
+            f"{row['form_id']}:{row['topic_id']}:{row['county_code']}:{row['district_code']}"
         )
         if row["topic_id"] not in topic_ids:
             issue = issues.add(
@@ -412,13 +409,11 @@ def _audit_consultation(
                 severity="error",
                 message="地區關聯引用不存在的題目",
             )
-            quarantine_reasons[
-                ("pms_topic_county_district_relation", record_id)
-            ].add(issue["issue_code"])
+            quarantine_reasons[("pms_topic_county_district_relation", record_id)].add(
+                issue["issue_code"]
+            )
 
-    feedback_topic_ids, feedback_option_ids, contains_plaintext_pii = _feedback_references(
-        feedback
-    )
+    feedback_topic_ids, feedback_option_ids, contains_plaintext_pii = _feedback_references(feedback)
     missing_feedback_topics = sorted(feedback_topic_ids - topic_ids)
     missing_feedback_options = sorted(feedback_option_ids - option_ids)
 
@@ -467,18 +462,19 @@ def _audit_consultation(
     # The supplied consultation package is one internally inconsistent test snapshot.
     for table_name, rows in tables.items():
         for index, row in enumerate(rows):
-            record_id = str(
-                row.get("id")
-                or row.get("feedback_no")
-                or (
-                    f"{row.get('form_id')}:{row.get('topic_id')}:{row.get('county_code')}:"
-                    f"{row.get('district_code')}"
-                )
-                or index
+            composite_parts = (
+                row.get("form_id"),
+                row.get("topic_id"),
+                row.get("county_code"),
+                row.get("district_code"),
             )
-            quarantine_reasons[(table_name, record_id)].add(
-                "UNUSABLE_TEST_CONSULTATION_SNAPSHOT"
+            composite_id = (
+                ":".join(str(value) for value in composite_parts)
+                if any(value is not None for value in composite_parts)
+                else None
             )
+            record_id = str(row.get("id") or row.get("feedback_no") or composite_id or index)
+            quarantine_reasons[(table_name, record_id)].add("UNUSABLE_TEST_CONSULTATION_SNAPSHOT")
 
     return [
         {
@@ -548,6 +544,27 @@ def normalize_order_items(value: Any) -> tuple[list[dict[str, Any]], str]:
     return [_safe_order_item(item, index) for index, item in enumerate(raw_items, 1)], shape
 
 
+def _record_order_issue(
+    issues: IssueCollector,
+    record_id: str,
+    error_codes: set[str],
+    warning_codes: set[str],
+    code: str,
+    severity: str,
+    message: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    issues.add(
+        source_table="mms_order_record",
+        source_record_id=record_id,
+        issue_code=code,
+        severity=severity,
+        message=message,
+        details=details,
+    )
+    (error_codes if severity == "error" else warning_codes).add(code)
+
+
 def _clean_orders(
     order_rows: list[dict[str, Any]],
     known_service_ids: set[int],
@@ -574,22 +591,13 @@ def _clean_orders(
         record_id = str(row["record_id"])
         error_codes: set[str] = set()
         warning_codes: set[str] = set()
-
-        def add_issue(
-            code: str,
-            severity: str,
-            message: str,
-            details: dict[str, Any] | None = None,
-        ) -> None:
-            issues.add(
-                source_table="mms_order_record",
-                source_record_id=record_id,
-                issue_code=code,
-                severity=severity,
-                message=message,
-                details=details,
-            )
-            (error_codes if severity == "error" else warning_codes).add(code)
+        add_issue = partial(
+            _record_order_issue,
+            issues,
+            record_id,
+            error_codes,
+            warning_codes,
+        )
 
         if row["record_id"] in duplicate_record_ids:
             add_issue("DUPLICATE_ORDER_RECORD_ID", "error", "訂單 record_id 重複")
@@ -675,11 +683,7 @@ def _clean_orders(
                     "select_json_source_redact_pii_normalize_order_items_validate_state"
                 ),
                 "quality_status": (
-                    "quarantined"
-                    if error_codes
-                    else "review"
-                    if warning_codes
-                    else "verified"
+                    "quarantined" if error_codes else "review" if warning_codes else "verified"
                 ),
                 # Historical examples have no authenticated user/case link.
                 "agent_eligible": False,
@@ -797,11 +801,7 @@ def _render_report(
 ) -> str:
     issue_code_counts = Counter(issue["issue_code"] for issue in issues)
     severity_counts = Counter(issue["severity"] for issue in issues)
-    unresolved = [
-        mapping
-        for mapping in mappings
-        if mapping["mapping_status"] == "unresolved"
-    ]
+    unresolved = [mapping for mapping in mappings if mapping["mapping_status"] == "unresolved"]
 
     lines = [
         "# B+ 資料品質報告",
@@ -822,9 +822,7 @@ def _render_report(
         "| 檔案 | SHA-256 |",
         "|---|---|",
     ]
-    lines.extend(
-        f"| `{item['file']}` | `{item['sha256']}` |" for item in source_manifest
-    )
+    lines.extend(f"| `{item['file']}` | `{item['sha256']}` |" for item in source_manifest)
     lines.extend(
         [
             "",
@@ -853,8 +851,10 @@ def _render_report(
     lines.extend(
         [
             "",
-            "外部參考來源：[內政部國土測繪中心行政區 API]"
-            "(https://data.gov.tw/dataset/102011)，資料標記為 `external_reference`。",
+            (
+                "外部參考來源：[內政部國土測繪中心行政區 API]"
+                "(https://data.gov.tw/dataset/102011)，資料標記為 `external_reference`。"
+            ),
             "",
             "## 歷史訂單處理",
             "",
@@ -873,9 +873,7 @@ def _render_report(
             "|---|---:|",
         ]
     )
-    lines.extend(
-        f"| `{code}` | {count} |" for code, count in sorted(issue_code_counts.items())
-    )
+    lines.extend(f"| `{code}` | {count} |" for code, count in sorted(issue_code_counts.items()))
     lines.extend(
         [
             "",
@@ -898,8 +896,10 @@ def _render_report(
             "",
             "## Agent 資料閘門",
             "",
-            "只有 `quality_status=verified` 且 `agent_eligible=true` 的資料可進入 "
-            "`agent` schema views。`quarantine`、歷史個資與 unresolved mapping 不會被暴露。",
+            (
+                "只有 `quality_status=verified` 且 `agent_eligible=true` 的資料可進入 "
+                "`agent` schema views。`quarantine`、歷史個資與 unresolved mapping 不會被暴露。"
+            ),
         ]
     )
     return "\n".join(lines)
@@ -928,9 +928,7 @@ def run_pipeline(
     issues = IssueCollector()
     master_tables, master_junk = load_fragmented_tables(source_dir / MASTER_FILE)
     county_tables, county_junk = load_fragmented_tables(source_dir / COUNTY_FILE)
-    consultation_tables, consultation_junk = load_fragmented_tables(
-        source_dir / CONSULTATION_FILE
-    )
+    consultation_tables, consultation_junk = load_fragmented_tables(source_dir / CONSULTATION_FILE)
     order_rows = load_json_table(source_dir / ORDER_JSON_FILE, "mms_order_record")
     order_csv_rows = load_csv_rows(source_dir / ORDER_CSV_FILE)
     external_reference = load_admin_reference(reference_path)
@@ -952,9 +950,7 @@ def run_pipeline(
 
     service_catalog = _clean_service_catalog(master_tables, master_junk, issues)
     known_service_ids = {row["service_id"] for row in service_catalog["services"]}
-    known_vendor_ids = {
-        row["service_vendor_id"] for row in service_catalog["vendors"]
-    }
+    known_vendor_ids = {row["service_vendor_id"] for row in service_catalog["vendors"]}
 
     locations, location_issues, location_summary = merge_locations(
         county_tables["sys_county"],
@@ -1013,7 +1009,7 @@ def run_pipeline(
         }
         for filename in REQUIRED_SOURCE_FILES
     ]
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(UTC).isoformat()
     full_quarantine = consultation_quarantine + order_quarantine
     issue_counts = Counter(issue["issue_code"] for issue in issues.issues)
     severity_counts = Counter(issue["severity"] for issue in issues.issues)
@@ -1032,9 +1028,7 @@ def run_pipeline(
         "issues": issues.issues,
         "quarantine_records": len(full_quarantine),
         "source_mappings": len(mappings),
-        "unresolved_mappings": sum(
-            row["mapping_status"] == "unresolved" for row in mappings
-        ),
+        "unresolved_mappings": sum(row["mapping_status"] == "unresolved" for row in mappings),
     }
 
     output_paths = {

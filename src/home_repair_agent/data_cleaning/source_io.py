@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import csv
-from decimal import Decimal, InvalidOperation
 import hashlib
 import json
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
-
 
 ORDER_NUMERIC_COLUMNS = {
     "record_id",
@@ -86,7 +85,7 @@ def load_json_table(path: Path, table_name: str) -> list[dict[str, Any]]:
     payload = json.loads(read_text(path))
     rows = payload.get(table_name)
     if not isinstance(rows, list):
-        raise ValueError(f"{path.name} does not contain a list named {table_name}")
+        raise TypeError(f"{path.name} does not contain a list named {table_name}")
     return rows
 
 

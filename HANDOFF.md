@@ -1,109 +1,70 @@
-# HANDOFF：居家修繕 Agent（nw_p）
+# HANDOFF：修繕小隊長
 
-> 更新：2026-08-02 11:55（Asia/Taipei）　更新者：Codex　機器：MSI/water
-> 規則：全文 ≤150 行；只描述現在；真實 ARN、account、token 與個資不得入檔。
+> 更新：2026-08-02（Asia/Taipei）
+> 用途：只記錄目前可接手狀態，維持 150 行內；歷史證據放在實作索引與 ENGINEER LOG。
 
-## 1. 目前狀態
+## 目前狀態
 
-- [active] 本機整合分支 `integration/final-demo` 已把 Web 圖片／台語 STT、Bedrock、
-  AgentCore Remote MCP 與安全修正組合完成；尚未 push、開 PR 或 merge。
-- [active] AWS text Demo 已真實跑通 Browser → Bedrock Nova Lite → AgentCore Runtime →
-  四個唯讀 Tools，並在 Web 顯示 2 位 synthetic 師傅。
-- [active] HF rich-media 與 AWS text 是兩個獨立 Demo 模式；目前不宣稱同一 session 同時
-  支援圖片／語音與 Bedrock。
-- [active] HF rich-media 與 AWS text 各有一個 Quick Tunnel 公開網址；8 個大會 IP 採
-  精確 allowlist，其他來源回 403。`hackathon` credential 已更新，兩個模式都正在跑。
+- 黑客松已結束；專案正在收斂為公開作品集版本，穩定目標分支為 `main`。
+- 最終程式包含消費者／廠商雙端 Web、引導式水電修繕對話、人工 Checklist、圖片建議、
+  台語／國語 STT、四個唯讀 MCP Tools、memory／async PostgreSQL 案件 repository，
+  以及 Mock、Hugging Face、Bedrock 與 AgentCore Remote MCP adapters。
+- 預設 `mock + local MCP + memory` 可在沒有 token、AWS 或 PostgreSQL 時執行完整 Demo。
+- 比賽期間的 Quick Tunnel、PID、Runtime ARN 與本機路徑都不是目前契約；不要假設任何
+  公開 URL、process 或 AWS Runtime 仍存在。
 
-## 2. 本次完成與證據
+## 最近驗證
 
-- [active] 整合 teammate snapshot `cea076c`，另補圖片 `safety_warnings` 在人工確認前即套用
-  hard-stop（commit `e3ec81b`）。
-- [active] 整合 AgentCore Runtime snapshot、Remote MCP ToolClient 與 Web transport selector：
-  `4385975`、`8157cca`、`c001736`、`135cd3c`。
-- [active] `TOOL_TRANSPORT=local|agentcore_remote_mcp`；Remote 初始化或憑證失敗會阻止
-  Web 啟動，絕不 fallback。AgentRunner 與 WebSessionService 共用同一 client；案件／派單
-  仍由本機 `CaseWorkflowService` 控制。
-- [active] AgentCore adapter 已把 credential refresh 移出 event loop、遮罩 transport log 的
-  Runtime 識別、並在 startup cancellation 時關閉已進入的 contexts。
-- [active] 本機驗證：182 passed、90 subtests；Ruff、format、compileall、Node syntax、
-  diff check 與 secret scan 通過。
-- [active] Remote invoke：initialize、tools/list、`search_services`、`resolve_location`、
-  `get_consultation_form`、`match_service_providers` 全部通過；ID 來自較早 ToolResult。
-  遮罩證據：[AgentCore report](reports/agentcore_remote_mcp_demo.json)。
-- [active] Browser live：Bedrock、service 17、臺北市大安區、`repair_form_v1`、matched；候選
-  為 synthetic A 組 94% 與 B 組 81%。未選廠商，未建立案件。
+- Python 3.12：`327 passed, 17 skipped, 168 subtests passed`。
+- `python -m ruff check .`：passed。
+- `python -m ruff format --check .`：passed。
+- 消費者與廠商 Web 在 `1280x720`、`390x844` 無水平 overflow；Mock 首頁無 console error。
+- 17 個 skip 是未提供測試 PostgreSQL 或外部 live provider 時的條件式測試，不列入成功
+  證據。GitHub CI 會提供 PostgreSQL 16 service 重跑整套測試。
 
-## 3. Demo 模式
+## 最短啟動方式
 
-### HF rich-media（圖片＋台語／國語 STT）
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[app,data,dev]"
+home-repair-web
+```
 
-- `WEB_MODEL_PROVIDER=huggingface`、`TOOL_TRANSPORT=local`。
-- 本機：`http://127.0.0.1:8093/`；公開：
-  `https://peter-scotland-gospel-graham.trycloudflare.com`。
-- Process：launcher PID 11428、server PID 40676、cloudflared PID 35296。
-- allowlist commit `e2cf9b1`；外部非核准來源實測 403，本機模擬評審 IP 實測 200。
-- 圖片只提出建議且須人工確認；STT 只回填繁中輸入框，須由使用者確認後送出。
-- 隊友正在做實體麥克風 smoke；應回報原句、辨識結果、延遲、是否可接受。
+- 消費者端：`http://127.0.0.1:8080/`
+- 廠商端：`http://127.0.0.1:8080/provider`
+- 預設不需任何 secret；完整步驟見 [README](README.md)。
 
-### AWS text（正在跑）
+## 目前產品契約
 
-- 本機：`http://127.0.0.1:8094/`；公開：
-  `https://markers-encouraged-stack-mating.trycloudflare.com`。
-- Process：launcher PID 50632、server PID 39264、cloudflared PID 17068；非核准來源
-  實測 403，本機模擬評審 IP 實測 200。
-- 設定：`WEB_MODEL_PROVIDER=bedrock`、`TOOL_TRANSPORT=agentcore_remote_mcp`。
-- 最穩定操作：輸入「臺北市大安區水龍頭漏水」→確認分支；若仍追問地點，輸入
-  「服務地點是臺北市大安區，請查詢此行政區」。
-- 希望時段必須和 Runtime synthetic availability 重疊；本次可用
-  `2026-08-08 13:00–17:00`。摘要確認後會顯示 2 位候選。
-- 停在候選畫面最能證明 AWS no-write 路徑；按「選擇此廠商」才會建立本機案件。
+1. 產品只支援 `service_id=17` 水電修繕；五分支為水龍頭、馬桶、水管、電氣與其他。
+2. 模型可以提出分支、欄位與工具呼叫，但不能替使用者勾 Checklist、確認摘要或派單。
+3. 四個 MCP Tools 僅能查服務、行政區、諮詢表單與 synthetic 媒合候選。
+4. 建案與廠商狀態轉換只經 `CaseWorkflowService`，並保留確認、冪等、交易與 audit。
+5. pending 廠商只能看遮罩聯絡資料；accepted 才能看完整 synthetic contact。
+6. Remote MCP 初始化或 provider 設定失敗時 fail closed，不得靜默 fallback。
+7. 原始資料不覆寫；斷裂 mapping 不猜；synthetic 與人工設定必須保留來源標籤。
 
-## 4. 下一步
+## 重要邊界
 
-1. [active] 等隊友完成實體台語語音 smoke，將四項結果補到
-   `docs/implementation-index.md`；不要再加功能或改 STT adapter。
-2. [active] 人工 review `integration/final-demo` 相對 `origin/main` 的完整 diff；確認後再由
-   使用者決定是否 push／開 PR／merge。
-3. [active] 請大會網路實際開啟兩個公開 URL，確認指定來源 IP 能看到頁面；目前只完成
-   非核准來源 403 與本機模擬評審 IP 200。Quick Tunnel 無 SLA，評審前須再檢查。
-4. [active] Demo 結束先關閉 cloudflared PID 35296／17068、HF PID 11428／40676、
-   AWS Web PID 50632／39264，
-   再於本 worktree 設定
-   `AWS_PROFILE=hackathon`、`AWS_DEFAULT_REGION=us-west-2`，以
-   `var\agentcore-remote-mcp\test-venv\Scripts\python.exe` 依序執行
-   `scripts\agentcore_remote_mcp_demo.py cleanup` 與 `status`；後者必須為
-   `not-deployed`。cleanup 若為 partial 不得宣稱成功。
-5. [open issue] Nova 對單獨「臺北市大安區」有一次只追問而未 tool call；受控 gate 無誤，
-   但 prompt 穩定性需另做 5 次 synthetic eval。比賽前可先用上方穩定語句。
+- 不提交 `.env`、token、AWS key、Runtime ARN、DATABASE_URL、真實個資或圖片 bytes。
+- Agent 不執行任意 SQL；MCP／FastAPI 只做 adapter，規則放 Service Layer，SQL 放 repository。
+- Demo provider、聯絡資料、時段、案件與訂單不代表真實服務或預約。
+- Web session／Checklist 仍是 process-local；只有案件 workflow 能切換至 PostgreSQL。
+- 正式登入、RBAC、付款、通知、真實廠商與時段保留尚未實作。
 
-## 5. User decisions（照做，不重新問）
+## AWS 帳務安全
 
-- [active] 產品只做 service_id=17 水電修繕；以五個 repair branches 展示，不擴清潔／
-  第二服務。（2026-08-01）
-- [active] 不再新增功能；先完成整合、流程圖、專案介紹與可重跑 Demo。（2026-08-02）
-- [active] 隊友負責實體台語語音測試；Codex 負責 AWS 文字整合與最後驗收。（2026-08-02）
-- [active] AWS 是評分重點；要能證明真實 Bedrock 與 AgentCore，不可只寫架構宣稱。
-- [active] 模型不得改 checklist、建案或派單；四個 MCP Tools 維持唯讀。
+- PR #19 的短效 direct-code Runtime POC 文件記錄 cleanup 已完成。
+- 最終 Remote MCP Demo 是在另一台筆電與比賽 AWS credential 執行；本桌機沒有 AWS
+  profile，無法重新查證帳號內是否仍有 Runtime、S3、IAM role 或 CloudWatch log group。
+- Repo 中的 `ExpiresAt` 只是一個追蹤標籤，不會自動刪除資源。帳號持有人仍須登入當時
+  AWS 帳號完成一次 console／billing audit；此項列於 [TASKS](TASKS.md)。
 
-## 6. 不可破壞邊界
+## 接手閱讀順序
 
-1. 所有 service/location/form/provider 業務事實都須來自既有 Tool／Service Layer；模型不得猜。
-2. 分支、圖片、摘要與派單都需人工確認；synthetic 必須清楚標示。
-3. 不記錄真實個資、AWS credential、Runtime ARN、完整 provider payload 或圖片 bytes。
-4. Remote MCP 失敗不得切 Mock、HF 或 local MCP；寫入仍不得放進 AgentCore Tools。
-5. 不 force/reset、不改寫隊友 branch；未經人類決定不得 merge。
-
-## 7. 環境快照
-
-- Worktree：`C:\Users\water\Desktop\AI\claude\hack松\nw_p_final_integration`。
-- AWS Web：PID 50632／39264，port 8094；必須保留
-  `PYTHONPATH=<final-integration>\src`，否則共享 editable venv 會載入錯 worktree。
-- HF Web：PID 11428／40676，port 8093；Quick Tunnel PID 35296；AWS Quick Tunnel
-  PID 17068。Quick Tunnel 無 SLA，電腦／網路／process 中斷即失效，不能保證整整
-  24 小時；正式評審前須重點檢查。
-- AgentCore：`us-west-2`、synthetic-only、短效資源；到期標籤
-  `2026-08-02T09:09:06Z`（臺北 17:09:06）。state 在 ignored
-  `var/agentcore-remote-mcp/state.json`，只能從本 worktree cleanup。
-- `ExpiresAt` 只是追蹤標籤，不會自動刪除 AWS 資源；Demo 後仍須執行上述 cleanup。
-- 公開頁面未部署到 AWS；目前是兩個短效 Quick Tunnel 連本機 Web，其中 AWS text Web
-  再連 Bedrock 與 AgentCore 後端。
+1. [README](README.md)：作品、啟動方式與限制。
+2. [TASKS](TASKS.md)：只列尚未完成項目。
+3. [實作索引](docs/implementation-index.md)：已完成且有驗證的功能。
+4. [系統架構](docs/architecture.md)：本機、PostgreSQL、Bedrock 與 AgentCore 邊界。
+5. 修改模組內的 README 與 [AGENTS](AGENTS.md)。

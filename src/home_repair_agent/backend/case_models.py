@@ -60,9 +60,7 @@ def _validate_server_relative_image_path(image_path: str | None) -> str | None:
         or (len(normalized) >= 2 and normalized[0].isalpha() and normalized[1] == ":")
         or any(segment in {"", ".", ".."} for segment in segments)
     ):
-        raise ValueError(
-            "image_path must be a non-empty server-relative path without traversal"
-        )
+        raise ValueError("image_path must be a non-empty server-relative path without traversal")
     return normalized
 
 

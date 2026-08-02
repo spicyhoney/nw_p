@@ -19,11 +19,10 @@
 6. 指派廠商在後台接受或拒絕；接案後才揭露完整 synthetic 聯絡資料並建立
    `SYN-ORDER-*` Demo 訂單。
 
-目前本機雙端流程已能執行，案件 repository 可選記憶體或 PostgreSQL。真實
-Amazon Nova Lite 已透過 `BedrockModelClient` 與 AgentCore Remote MCP 完成 Browser
-四工具閉環，程式與遮罩 evidence 已納入整合分支。但這仍不能說成「網站已部署到
-AWS」：目前只有本機 Web 連 AWS 後端。正式登入、真實個資、
-真實廠商、RDS 與公開 Web hosting 仍不在目前 Demo 證據內。
+目前本機雙端流程已能執行，案件 repository 可選記憶體或 PostgreSQL。比賽期間曾以
+Amazon Nova Lite、`BedrockModelClient` 與 AgentCore Remote MCP 完成 Browser 四工具
+閉環，程式與遮罩 evidence 已保留。但這不等於目前仍有可用的 AWS endpoint 或公開
+網站；正式登入、真實個資、真實廠商、RDS 與公開 Web hosting 都不在目前成果內。
 
 ## 競賽定位與展示亮點
 
@@ -229,7 +228,7 @@ Web app 與 Terminal Demo 建立的 in-process MCP Server 則使用
 - memory／async PostgreSQL 案件 repository、冪等、audit 與並行狀態保護。
 - 桌機／手機響應式與無障礙基線。
 
-已整合至最終分支：
+也已納入目前作品集基線：
 
 - AgentCore Runtime Remote MCP 的 `initialize`、`tools/list`、四工具與 Browser live，
   包含 service／location ID provenance 驗證。
@@ -239,8 +238,8 @@ Web app 與 Terminal Demo 建立的 in-process MCP Server 則使用
 
 - 固定 Hugging Face eval 矩陣。
 - Web 讀取 repository 的 Demo／PostgreSQL 可設定切換。
-- 評審可連線的公開 HTTPS Web URL；目前只有本機 Web 連 AWS 後端。
-- 台語／國語 STT 現場延遲 smoke；台語 TTS 尚未產品化。
+- 可重現的公開 HTTPS 部署；repo 目前只保證本機 Mock Demo。
+- 台語／國語 STT 的完整實體麥克風品質矩陣；台語 TTS 尚未產品化。
 - 正式登入、時段保留、真實個資政策、回覆紀錄與通知。
 - RDS、正式 Web hosting、正式 authentication／RBAC 與 production 維運。
 

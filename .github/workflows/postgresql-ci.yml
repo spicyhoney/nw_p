@@ -54,54 +54,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[app,data,dev]"
 
-      - name: Check affected Python files
+      - name: Check all Python files
         run: |
-          python -m ruff check \
-            scripts/bedrock_live_smoke.py \
-            scripts/bedrock_mcp_e2e.py \
-            src/home_repair_agent/agent/bedrock_model.py \
-            src/home_repair_agent/backend/case_ports.py \
-            src/home_repair_agent/backend/case_services.py \
-            src/home_repair_agent/backend/postgres_case_repository.py \
-            src/home_repair_agent/data_cleaning/postgres.py \
-            src/home_repair_agent/web/app.py \
-            src/home_repair_agent/web/demo_case_repository.py \
-            src/home_repair_agent/web/models.py \
-            src/home_repair_agent/web/service.py \
-            tests/test_bedrock_live_smoke.py \
-            tests/test_bedrock_mcp_e2e.py \
-            tests/test_bedrock_model.py \
-            tests/test_consumer_accessibility.py \
-            tests/test_postgres_case_repository.py \
-            tests/test_postgres_integration.py \
-            tests/test_web_app.py
-          python -m ruff format --check \
-            scripts/bedrock_live_smoke.py \
-            scripts/bedrock_mcp_e2e.py \
-            src/home_repair_agent/agent/bedrock_model.py \
-            src/home_repair_agent/backend/case_ports.py \
-            src/home_repair_agent/backend/case_services.py \
-            src/home_repair_agent/backend/postgres_case_repository.py \
-            src/home_repair_agent/data_cleaning/postgres.py \
-            src/home_repair_agent/web/app.py \
-            src/home_repair_agent/web/demo_case_repository.py \
-            src/home_repair_agent/web/models.py \
-            src/home_repair_agent/web/service.py \
-            tests/test_bedrock_live_smoke.py \
-            tests/test_bedrock_mcp_e2e.py \
-            tests/test_bedrock_model.py \
-            tests/test_consumer_accessibility.py \
-            tests/test_postgres_case_repository.py \
-            tests/test_postgres_integration.py \
-            tests/test_web_app.py
+          python -m ruff check .
+          python -m ruff format --check .
 
       - name: Compile Python modules
         run: python -m compileall -q src tests
 
-      - name: Check consumer JavaScript
+      - name: Check JavaScript
         run: |
           node --check src/home_repair_agent/web/static/app.js
+          node --check src/home_repair_agent/web/static/provider.js
           node tests/test_checklist_concurrency.js
+          node tests/test_media_stale_refresh.js
 
       - name: Run full test suite with PostgreSQL
         run: python -m pytest -q

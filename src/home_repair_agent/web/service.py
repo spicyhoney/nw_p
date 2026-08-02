@@ -1897,9 +1897,14 @@ def _routing_candidates(result: RepairRoutingResult) -> tuple[RepairBranch, ...]
 
 
 def _image_routing_text(result: VisionAnalysisResult) -> str:
-    """Build the smallest VLM-derived text used only for branch proposal validation."""
+    """Build VLM-derived text for the shared branch and safety policy."""
 
-    return f"{result.service_query}。{result.problem_summary}"
+    parts = (
+        result.service_query,
+        result.problem_summary,
+        *result.safety_warnings,
+    )
+    return "。".join(part.strip().rstrip("。") for part in parts if part.strip())
 
 
 def _routing_message(

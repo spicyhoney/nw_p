@@ -33,6 +33,7 @@ class _VisionStub:
     def __init__(self) -> None:
         self.calls = 0
         self.fail = False
+        self.safety_warnings = ["先關閉附近水源，避免積水滑倒。"]
 
     async def analyze(
         self,
@@ -50,7 +51,7 @@ class _VisionStub:
         return VisionAnalysisResult(
             service_query="水龍頭漏水",
             problem_summary="水龍頭接縫附近疑似滲水",
-            safety_warnings=["先關閉附近水源，避免積水滑倒。"],
+            safety_warnings=self.safety_warnings,
             confidence=0.82,
             uncertain=True,
         )
@@ -361,6 +362,35 @@ class MediaWebTests(unittest.TestCase):
         self.assertEqual("臺北市大安區", located["location"]["full_name"])
         self.assertEqual("repair_form_v1", located["consultation_form"]["form_key"])
         self.assertEqual([], located["candidates"])
+
+    def test_image_first_applies_safety_policy_to_vlm_warnings(self) -> None:
+        session = self.create_session()
+        session_id = session["session_id"]
+        self.vision.safety_warnings = ["插座已燒焦並冒出濃煙，可能有火災風險。"]
+
+        upload = self.client.post(
+            f"/api/sessions/{session_id}/image",
+            files={"file": ("hazard.png", _png_bytes(), "image/png")},
+            data={"external_processing_confirmed": "true"},
+        )
+
+        self.assertEqual(422, upload.status_code, upload.text)
+        self.assertEqual(
+            "IMAGE_SAFETY_CONFIRMATION_REQUIRED",
+            upload.json()["error"]["code"],
+        )
+        current = self.client.get(f"/api/sessions/{session_id}")
+        self.assertEqual(200, current.status_code, current.text)
+        body = current.json()
+        self.assertIsNone(body["media"])
+        self.assertIsNone(body["repair_routing"])
+        self.assertIsNone(body["service"])
+        self.assertIsNone(body["consultation_form"])
+        self.assertEqual([], body["candidates"])
+        remaining_files = [
+            filename for root, _dirs, files in os.walk(self.media_root.name) for filename in files
+        ]
+        self.assertEqual([], remaining_files)
 
     def test_removing_an_image_first_upload_cancels_its_branch_proposal(self) -> None:
         session = self.create_session()

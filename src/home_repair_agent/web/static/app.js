@@ -671,12 +671,9 @@ const MEDIA_CASE_SUBMITTED_STATES = new Set([
 ]);
 
 async function loadMediaProvider() {
-  if (store.session?.provider?.key) {
-    store.mediaProvider = store.session.provider.key;
-  }
   try {
     const health = await api("/api/health");
-    store.mediaProvider = health.model_provider || store.mediaProvider || "unknown";
+    store.mediaProvider = health.media_provider || "unknown";
   } catch {
     // Treat an unavailable health contract as unavailable image processing; never fall back to mock.
     store.mediaProvider = "unknown";
@@ -1739,11 +1736,12 @@ function routingCandidates() {
 
 function renderForm() {
   const form = store.session.consultation_form;
+  const guidedFormActive = Boolean(store.session.guided_form_active);
   const formLocked =
     (store.session.candidates || []).length > 0 ||
     store.session.state === "no_candidates" ||
     Boolean(store.session.dispatch);
-  if (!form || formLocked) {
+  if (!form || formLocked || guidedFormActive) {
     elements.formSection.hidden = true;
     if (store.formSignature) {
       elements.formFields.replaceChildren();

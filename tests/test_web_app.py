@@ -228,6 +228,7 @@ class WebAppTests(unittest.TestCase):
                 "service": "home-repair-web",
                 "mode": "provider-workflow-demo",
                 "model_provider": "mock",
+                "media_provider": None,
             },
             response.json(),
         )
@@ -239,7 +240,9 @@ class WebAppTests(unittest.TestCase):
                 "os.environ",
                 {
                     "WEB_MODEL_PROVIDER": "bedrock",
+                    "WEB_MEDIA_PROVIDER": "huggingface",
                     "AWS_PROFILE": "private-profile-marker",
+                    "HF_TOKEN": "test-only-token",
                 },
                 clear=False,
             ),
@@ -254,6 +257,7 @@ class WebAppTests(unittest.TestCase):
 
         self.assertEqual(200, health.status_code)
         self.assertEqual("bedrock", health.json()["model_provider"])
+        self.assertEqual("huggingface", health.json()["media_provider"])
         self.assertEqual(201, session.status_code)
         self.assertEqual(
             {
@@ -271,6 +275,7 @@ class WebAppTests(unittest.TestCase):
             "account_id",
             "arn:aws",
             "credential",
+            "test-only-token",
         ):
             self.assertNotIn(forbidden, public_response)
 
@@ -1008,7 +1013,7 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual("臺北市大安區", completed_body["location"]["full_name"])
         self.assertTrue(completed_body["can_submit_form"])
 
-    def test_location_like_issue_text_does_not_silently_replace_location(self) -> None:
+    def test_location_like_issue_text_is_collected_without_replacing_location(self) -> None:
         ready = self.prepare_form(
             "faucet_leak",
             text="新北市板橋區水龍頭漏水",
@@ -1019,8 +1024,11 @@ class WebAppTests(unittest.TestCase):
             json={"text": "施工區域在浴室。"},
         )
 
-        self.assertEqual(409, response.status_code)
-        self.assertEqual("FORM_ALREADY_READY", response.json()["error"]["code"])
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(
+            "施工區域在浴室。",
+            response.json()["answers"]["issue_description"],
+        )
         unchanged = self.client.get(f"/api/sessions/{ready['session_id']}").json()
         self.assertEqual("新北市板橋區", unchanged["location"]["full_name"])
         self.assertEqual("repair_form_v1", unchanged["consultation_form"]["form_key"])

@@ -35,8 +35,13 @@ class MediaFrontendContractTests(unittest.TestCase):
         self.assertIn("store.mediaModeExpanded = true", self.app)
         self.assertNotIn("請先確認水電修繕分支，再上傳圖片", self.app)
 
-    def test_upload_requires_huggingface_and_explicit_consent(self) -> None:
-        self.assertIn("health.model_provider", self.app)
+    def test_upload_uses_independent_hf_media_capability_and_explicit_consent(self) -> None:
+        self.assertIn("health.media_provider", self.app)
+        self.assertNotIn("health.model_provider", self.app)
+        self.assertNotIn(
+            "store.mediaProvider = store.session.provider.key",
+            self.app,
+        )
         self.assertIn('store.mediaProvider === "huggingface"', self.app)
         self.assertIn('bedrock: "Bedrock 模式"', self.app)
         self.assertIn("Mock／Bedrock／未設定", self.app)

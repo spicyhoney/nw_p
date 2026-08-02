@@ -4,7 +4,7 @@ import asyncio
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import PurePosixPath
 from typing import Literal, Protocol
 from uuid import uuid4
@@ -121,6 +121,10 @@ FORM_PROJECTION_EXCLUDED_TOPICS = frozenset({"service_location", "preferred_date
 SHARED_ANSWER_KEYS = frozenset({"budget", "urgency"})
 OPTIONAL_ANSWER_STATES = frozenset({"skipped", "declined_to_answer"})
 URGENCY_VALUES = frozenset({"normal", "urgent"})
+GUIDED_FORM_MANUAL_COMMANDS = frozenset({"直接填表", "手動填表", "我要自己填表"})
+TAIPEI_FIXED_OFFSET = timezone(timedelta(hours=8))
+GUIDED_FORM_MAX_WINDOW = timedelta(hours=12)
+GUIDED_FORM_MAX_OFFSET = timedelta(days=30)
 WATER_SHUTOFF_BRANCHES = (
     RepairBranch.FAUCET_LEAK.value,
     RepairBranch.TOILET_ISSUE.value,
@@ -266,6 +270,8 @@ class _SessionRecord:
     location: ResolvedLocation | None = None
     source_consultation_form: ConsultationForm | None = None
     consultation_form: ConsultationForm | None = None
+    guided_form_started: bool = False
+    guided_form_active: bool = False
     answers: dict[str, AnswerValue] = field(default_factory=dict)
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
@@ -367,11 +373,6 @@ class WebSessionService:
         record = await self._get_record(session_id)
         async with record.lock:
             self._require_media_dependencies()
-            if self._provider.key != "huggingface":
-                raise WebSessionConflictError(
-                    code="IMAGE_ANALYSIS_UNAVAILABLE",
-                    message="圖片分析只在 Hugging Face AI 模式提供；目前不會自動降級或模擬。",
-                )
             self._require_media_intake_open(record)
             if external_processing_confirmed is not True:
                 raise WebSessionInputError(
@@ -748,6 +749,10 @@ class WebSessionService:
                 )
                 return await self._to_view(record)
 
+            if record.consultation_form is not None and record.guided_form_active:
+                self._collect_guided_form_answer(record, user_text)
+                return await self._to_view(record)
+
             if record.consultation_form is not None:
                 raise WebSessionConflictError(
                     code="FORM_ALREADY_READY",
@@ -888,6 +893,7 @@ class WebSessionService:
                     )
                 )
                 record.state = self._derive_state(record)
+                self._start_guided_form(record)
             else:
                 pending_image_confirmation = (
                     record.media is not None
@@ -966,6 +972,8 @@ class WebSessionService:
             record.answers = clean_answers
             record.preferred_start = submission.preferred_start
             record.preferred_end = submission.preferred_end
+            record.guided_form_started = True
+            record.guided_form_active = False
             record.candidates.clear()
             record.summary_version += 1
             record.summary_id = str(uuid4())
@@ -1233,6 +1241,8 @@ class WebSessionService:
             record.location = None
             record.source_consultation_form = None
             record.consultation_form = None
+            record.guided_form_started = False
+            record.guided_form_active = False
             record.answers.clear()
             record.preferred_start = None
             record.preferred_end = None
@@ -1373,6 +1383,105 @@ class WebSessionService:
             record.state = "error"
         else:
             record.state = self._derive_state(record)
+            self._start_guided_form(record)
+
+    def _start_guided_form(self, record: _SessionRecord) -> None:
+        if (
+            record.guided_form_started
+            or record.consultation_form is None
+            or record.confirmed_branch is None
+            or record.location is None
+            or record.state == "error"
+        ):
+            return
+        record.guided_form_started = True
+        topic = _next_guided_form_topic(record)
+        if topic is None:
+            record.guided_form_active = False
+            return
+        record.guided_form_active = True
+        record.messages.append(
+            self._message(
+                "assistant",
+                "我會依照既有 repair_form_v1 逐題整理，不會自動送案。"
+                f"{_guided_form_question(topic)}若想自行填寫，可輸入「直接填表」。",
+            )
+        )
+
+    def _collect_guided_form_answer(
+        self,
+        record: _SessionRecord,
+        user_text: str,
+    ) -> None:
+        record.messages.append(self._message("user", user_text))
+        command = user_text.strip(" \t\r\n。.!！?？")
+        if command in GUIDED_FORM_MANUAL_COMMANDS:
+            record.guided_form_active = False
+            record.messages.append(
+                self._message(
+                    "assistant",
+                    "已切換為手動填表；目前已收集的內容會保留，仍須由你檢查並按下保存。",
+                )
+            )
+            record.state = self._derive_state(record)
+            return
+
+        topic = _next_guided_form_topic(record)
+        if topic is None:
+            record.guided_form_active = False
+            record.messages.append(
+                self._message("assistant", "資料已收齊，請檢查下方表單後再按保存。")
+            )
+            record.state = self._derive_state(record)
+            return
+
+        try:
+            if topic.topic_key == "preferred_time":
+                preferred_start, preferred_end = _parse_guided_datetime_range(
+                    user_text,
+                    now=self._now(),
+                )
+                record.preferred_start = preferred_start
+                record.preferred_end = preferred_end
+            else:
+                value = _parse_guided_topic_value(topic, user_text)
+                if (
+                    topic.topic_key == "issue_description"
+                    and record.confirmed_branch == RepairBranch.OTHER
+                    and isinstance(value, str)
+                    and not is_supported_water_repair_text(value)
+                ):
+                    raise ValueError("請具體描述一項居家水電修繕現象。")
+                record.answers[topic.topic_key] = value
+        except (TypeError, ValueError) as error:
+            record.messages.append(
+                self._message(
+                    "assistant",
+                    f"{error} {_guided_form_question(topic)}",
+                )
+            )
+            return
+
+        record.candidates.clear()
+        record.checklist["consultation"] = False
+        record.state = self._derive_state(record)
+        next_topic = _next_guided_form_topic(record)
+        if next_topic is None:
+            record.guided_form_active = False
+            record.messages.append(
+                self._message(
+                    "assistant",
+                    "已將對話內容帶入既有諮詢單。請在下方檢查或修改後按「保存表單」；"
+                    "目前尚未產生摘要、媒合或派單。",
+                )
+            )
+            return
+        record.messages.append(
+            self._message(
+                "assistant",
+                f"已記下。{_guided_form_question(next_topic)}",
+            )
+        )
 
     async def _replace_branch(
         self,
@@ -1398,6 +1507,8 @@ class WebSessionService:
         )
         record.confirmed_branch = branch
         record.verified_service = None
+        record.guided_form_started = False
+        record.guided_form_active = False
         record.answers = retained_answers
         record.candidates.clear()
         if record.summary_version:
@@ -1840,6 +1951,7 @@ class WebSessionService:
             service_source=record.service_source,
             location=record.location,
             consultation_form=record.consultation_form,
+            guided_form_active=record.guided_form_active,
             answers=dict(record.answers),
             preferred_start=record.preferred_start,
             preferred_end=record.preferred_end,
@@ -2434,6 +2546,155 @@ def _build_checklist(record: _SessionRecord) -> list[ChecklistItemView]:
         )
         for key, label in CHECKLIST_ITEMS
     ]
+
+
+def _next_guided_form_topic(record: _SessionRecord) -> FormTopic | None:
+    if record.consultation_form is None:
+        return None
+    for topic in sorted(record.consultation_form.topics, key=lambda item: item.sort_order):
+        if topic.topic_key == "issue_category" or not topic.is_required:
+            continue
+        if topic.topic_key == "preferred_time":
+            if record.preferred_start is None or record.preferred_end is None:
+                return topic
+            continue
+        if _is_missing(record.answers.get(topic.topic_key)):
+            return topic
+    return None
+
+
+def _guided_form_question(topic: FormTopic) -> str:
+    if topic.topic_key == "issue_description":
+        return "請再描述目前看到的狀況，例如漏水位置與發生方式。"
+    if topic.topic_key == "preferred_time":
+        return "希望哪個服務時段？請提供完整日期與起訖時間，例如「2026-08-08 13:00 到 17:00」。"
+    if topic.input_type == "single_select":
+        labels = "、".join(option.label for option in topic.options)
+        return f"{topic.title}？請回答：{labels}。"
+    return f"{topic.title}？"
+
+
+def _parse_guided_topic_value(topic: FormTopic, user_text: str) -> AnswerValue:
+    if topic.input_type != "single_select":
+        return _validate_topic_value(topic, user_text)
+
+    normalized = _normalize_guided_choice(user_text)
+    exact_matches = [
+        option.value
+        for option in topic.options
+        if normalized
+        in {
+            _normalize_guided_choice(option.value),
+            _normalize_guided_choice(option.label),
+        }
+    ]
+    if len(set(exact_matches)) == 1:
+        return _validate_topic_value(topic, exact_matches[0])
+
+    alias_value: str | None = None
+    if topic.topic_key == "water_shutoff":
+        if any(token in normalized for token in ("不可以", "不能", "無法關", "沒辦法關")):
+            alias_value = "no"
+        elif any(token in normalized for token in ("不確定", "不知道", "不清楚")):
+            alias_value = "unknown"
+        elif any(token in normalized for token in ("可以", "能關", "可關")):
+            alias_value = "yes"
+    elif topic.topic_key == "contact_method":
+        if any(token in normalized for token in ("app", "訊息", "站內")):
+            alias_value = "app"
+        elif "電話" in normalized:
+            alias_value = "phone"
+        elif any(token in normalized for token in ("email", "電子郵件", "信箱")):
+            alias_value = "email"
+
+    if alias_value is not None:
+        return _validate_topic_value(topic, alias_value)
+
+    contained_matches = {
+        option.value
+        for option in topic.options
+        if _normalize_guided_choice(option.label) in normalized
+        or _normalize_guided_choice(option.value) in normalized
+    }
+    if len(contained_matches) == 1:
+        return _validate_topic_value(topic, contained_matches.pop())
+    raise ValueError("無法對應到既有表單選項，請使用提示中的其中一項。")
+
+
+def _normalize_guided_choice(value: str) -> str:
+    return re.sub(r"[\s，,。.!！?？、:：;；()（）]", "", value).casefold()
+
+
+def _parse_guided_datetime_range(
+    user_text: str,
+    *,
+    now: datetime,
+) -> tuple[datetime, datetime]:
+    date_match = re.search(
+        r"(?P<year>\d{4})\s*[-/年]\s*(?P<month>\d{1,2})\s*[-/月]\s*"
+        r"(?P<day>\d{1,2})\s*日?",
+        user_text,
+    )
+    if date_match is None:
+        raise ValueError("請提供完整西元日期，系統不會猜測『明天』或『下週』。")
+    trailing = user_text[date_match.end() :]
+    time_match = re.search(
+        r"(?P<start_hour>\d{1,2})(?::(?P<start_min>\d{2}))?\s*(?:點|時)?\s*"
+        r"(?:到|至|[-~～])\s*"
+        r"(?P<end_hour>\d{1,2})(?::(?P<end_min>\d{2}))?\s*(?:點|時)?",
+        trailing,
+    )
+    if time_match is None:
+        raise ValueError("請同時提供開始與結束時間。")
+
+    try:
+        year = int(date_match.group("year"))
+        month = int(date_match.group("month"))
+        day = int(date_match.group("day"))
+        start_hour = int(time_match.group("start_hour"))
+        end_hour = int(time_match.group("end_hour"))
+        start_minute = int(time_match.group("start_min") or 0)
+        end_minute = int(time_match.group("end_min") or 0)
+        period_context = trailing[: time_match.end()]
+        if "下午" in period_context or "晚上" in period_context:
+            if 1 <= start_hour <= 11:
+                start_hour += 12
+            if 1 <= end_hour <= 11:
+                end_hour += 12
+        elif "上午" in period_context:
+            if start_hour == 12:
+                start_hour = 0
+            if end_hour == 12:
+                end_hour = 0
+        preferred_start = datetime(
+            year,
+            month,
+            day,
+            start_hour,
+            start_minute,
+            tzinfo=TAIPEI_FIXED_OFFSET,
+        )
+        preferred_end = datetime(
+            year,
+            month,
+            day,
+            end_hour,
+            end_minute,
+            tzinfo=TAIPEI_FIXED_OFFSET,
+        )
+    except ValueError as error:
+        raise ValueError("日期或時間格式無效，請依提示重新輸入。") from error
+
+    taipei_now = now.astimezone(TAIPEI_FIXED_OFFSET)
+    if preferred_start <= taipei_now:
+        raise ValueError("希望服務時段必須晚於目前時間。")
+    if preferred_end <= preferred_start:
+        raise ValueError("結束時間必須晚於開始時間。")
+    if preferred_end - preferred_start > GUIDED_FORM_MAX_WINDOW:
+        raise ValueError("單一服務時段不可超過 12 小時。")
+    if preferred_start - taipei_now > GUIDED_FORM_MAX_OFFSET:
+        raise ValueError("希望服務日期必須在未來 30 天內。")
+    return preferred_start, preferred_end
 
 
 def _validate_answers(

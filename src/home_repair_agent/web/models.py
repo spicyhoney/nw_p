@@ -260,6 +260,7 @@ class SessionView(WebModel):
     service_source: ServiceSource | None = None
     location: ResolvedLocation | None = None
     consultation_form: ConsultationForm | None = None
+    guided_form_active: bool = False
     answers: dict[str, AnswerValue] = Field(default_factory=dict)
     preferred_start: datetime | None = None
     preferred_end: datetime | None = None
@@ -281,6 +282,7 @@ class HealthView(WebModel):
     service: Literal["home-repair-web"] = "home-repair-web"
     mode: Literal["provider-workflow-demo"] = "provider-workflow-demo"
     model_provider: Literal["mock", "huggingface", "bedrock"]
+    media_provider: Literal["huggingface"] | None = None
 
 
 class SpeechTranscriptionView(WebModel):

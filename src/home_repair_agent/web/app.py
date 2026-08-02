@@ -175,6 +175,25 @@ def _resolve_case_repository() -> CaseWorkflowRepository:
     raise RuntimeError("WEB_CASE_REPOSITORY must be one of: memory, postgres")
 
 
+def _resolve_media_provider(model_provider_key: str) -> str | None:
+    """Resolve rich-media inference independently from the text model.
+
+    Existing Hugging Face text mode keeps its media behavior for backwards
+    compatibility.  Other text providers must explicitly opt in so Bedrock or
+    Mock mode can never silently start sending media to an external service.
+    """
+
+    configured = os.getenv("WEB_MEDIA_PROVIDER")
+    if configured is None:
+        return "huggingface" if model_provider_key == "huggingface" else None
+    media_provider = configured.strip().lower()
+    if media_provider == "none":
+        return None
+    if media_provider == "huggingface":
+        return media_provider
+    raise RuntimeError("WEB_MEDIA_PROVIDER must be one of: none, huggingface")
+
+
 @asynccontextmanager
 async def _tool_client_context(
     repository: DemoReadRepository,
@@ -231,6 +250,11 @@ def create_app(
             app.state.web_sessions = session_service
             app.state.case_workflow = session_service.case_workflow
             app.state.speech_to_text = speech_to_text_client
+            app.state.media_provider = (
+                "huggingface"
+                if speech_to_text_client is not None and session_service.image_analysis_available
+                else None
+            )
             yield
             return
 
@@ -239,13 +263,16 @@ def create_app(
             os.getenv("MODEL_PROVIDER", "mock"),
         ).strip()
         model_client, provider_label = _resolve_model_client(provider_key)
+        media_provider_key = _resolve_media_provider(provider_key)
         media_storage = LocalMediaStorage()
         vision_client = (
-            HuggingFaceVisionClient.from_environment() if provider_key == "huggingface" else None
+            HuggingFaceVisionClient.from_environment()
+            if media_provider_key == "huggingface"
+            else None
         )
         speech_client = speech_to_text_client or (
             HuggingFaceGradioSpeechToTextClient.from_environment()
-            if provider_key == "huggingface"
+            if media_provider_key == "huggingface"
             else None
         )
         repository = DemoReadRepository(reference_time=reference_time)
@@ -277,6 +304,7 @@ def create_app(
             )
             app.state.case_workflow = workflow
             app.state.speech_to_text = speech_client
+            app.state.media_provider = media_provider_key
             yield
 
     app = FastAPI(
@@ -397,7 +425,10 @@ def create_app(
 
     @app.get("/api/health", response_model=HealthView)
     async def health(request: Request) -> HealthView:
-        return HealthView(model_provider=_session_service(request).provider.key)
+        return HealthView(
+            model_provider=_session_service(request).provider.key,
+            media_provider=getattr(request.app.state, "media_provider", None),
+        )
 
     @app.post(
         "/api/sessions",
@@ -421,12 +452,12 @@ def create_app(
         file: Annotated[UploadFile, File()],
         external_processing_confirmed: Annotated[bool, Form()],
     ) -> SpeechTranscriptionView:
-        session = await _session_service(request).get_session(session_id)
+        await _session_service(request).get_session(session_id)
         speech_client = getattr(request.app.state, "speech_to_text", None)
-        if session.provider.key != "huggingface" or speech_client is None:
+        if speech_client is None:
             raise WebSessionConflictError(
                 code="VOICE_INPUT_UNAVAILABLE",
-                message="語音輸入只在已設定的 Hugging Face 模式開放，不會改用 Mock。",
+                message="語音輸入服務尚未設定；系統不會改用 Mock 或其他供應商。",
             )
         if not external_processing_confirmed:
             raise WebSessionInputError(

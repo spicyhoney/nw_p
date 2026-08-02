@@ -297,6 +297,10 @@ Windows PostgreSQL 模式不要改用裸 `python -m uvicorn ...` 啟動。Linux�
 | 變數 | 預設 | 用途 |
 |---|---|---|
 | `WEB_MODEL_PROVIDER` | `mock` | `mock`、`huggingface` 或 `bedrock` |
+| `TOOL_TRANSPORT` | `local` | `local` 或 `agentcore_remote_mcp`；Tool transport 與模型 provider 獨立選擇 |
+| `AGENTCORE_RUNTIME_ARN` | 無 | 僅 `agentcore_remote_mcp` 必填；從目前 shell 或 secret manager 注入，不可提交真實 ARN |
+| `AGENTCORE_REGION` | `us-west-2` | AgentCore Runtime client 使用的 Region |
+| `AGENTCORE_QUALIFIER` | `DEFAULT` | 選填的 AgentCore Runtime qualifier |
 | `WEB_CASE_REPOSITORY` | `memory` | `memory` 或 `postgres`；只影響 case workflow |
 | `DATABASE_URL` | 無 | PostgreSQL case 模式必填；不得提交正式密碼 |
 | `WEB_HOST` | `127.0.0.1` | Web bind host |
@@ -323,6 +327,40 @@ chain（例如 `AWS_PROFILE`）取得授權，同樣不會 fallback。圖片分�
 模式可用，Bedrock 文字模式不會建立或改用 HF VLM。使用者每次勾選外部處理同意並
 上傳圖片時，正規化後的圖片 bytes 也會送到所選 HF VLM provider。請只使用
 synthetic／公開測試內容。
+
+### 最終 Demo 模式與 AWS Tool transport
+
+`WEB_MODEL_PROVIDER` 選擇語言模型；`TOOL_TRANSPORT` 另外選擇唯讀 MCP 的路徑。兩者
+刻意獨立，使相同 Web 對話契約可選用本機 FastMCP 或經 IAM 驗證的 AgentCore Remote MCP
+Runtime。
+
+以下是兩個分開執行的 Demo 模式，**不宣稱同一個 browser session 同時支援兩者**：
+
+- **HF rich-media Demo：**`WEB_MODEL_PROVIDER=huggingface`、`TOOL_TRANSPORT=local`。
+  本機 browser 展示圖片建議與台語／國語 speech-to-text；MCP 查詢維持本機。
+- **AWS text Demo：**`WEB_MODEL_PROVIDER=bedrock`、
+  `TOOL_TRANSPORT=agentcore_remote_mcp`。Amazon Nova Lite 處理文字對話，遠端 Runtime
+  只提供四個既有唯讀 Tools：`search_services`、`resolve_location`、
+  `get_consultation_form`、`match_service_providers`。
+
+Remote MCP 不提供寫入能力。表單確認、建案、派單、廠商接案、idempotency 與 audit 仍由
+受控的本機 Web `CaseWorkflowService` 執行。AgentCore Runtime ARN、AWS credential chain、
+initialize 或 transport 任一失敗時，Web 會 fail closed，**不會**靜默 fallback 到 local MCP、
+Mock 或 Hugging Face。
+
+本機啟動 AWS text Demo 時，僅在目前 shell 或 secret manager 提供設定；不可將真實 ARN、
+account ID、access key 或 token 寫入 `.env.example`、程式碼、截圖或 log：
+
+```powershell
+$env:AWS_PROFILE = "hackathon" # 本機已有的 named profile（可選）
+$env:WEB_MODEL_PROVIDER = "bedrock"
+$env:BEDROCK_REGION = "us-west-2"
+$env:BEDROCK_MODEL_ID = "amazon.nova-lite-v1:0"
+$env:TOOL_TRANSPORT = "agentcore_remote_mcp"
+$env:AGENTCORE_REGION = "us-west-2"
+$env:AGENTCORE_RUNTIME_ARN = "<approved runtime ARN from secret/configuration>"
+home-repair-web
+```
 
 ### HF 多輪 synthetic eval（明確 opt-in）
 

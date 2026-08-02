@@ -3,8 +3,15 @@
 2026 雲湧智生：臺灣生成式 AI 應用黑客松的雙人團隊專案。
 
 目前的 MVP 聚焦在「居家水電修繕」：使用者用自然語言描述問題後，AI Agent
-將需求結構化、查詢服務與行政區、追問缺少資訊、建立諮詢案件，並在使用者
-確認後完成服務媒合與訂單建立。
+將需求結構化、查詢服務與行政區、追問缺少資訊並載入分支適用表單。使用者必須
+親自確認修繕分支、Checklist、最新摘要與派單；案件與 Demo 訂單由受控 Web API
+及 Service Layer 建立，不由模型直接寫入。
+
+目前 AWS 證據包含真實 Amazon Nova Lite 四工具閉環，以及獨立工作樹中 AgentCore
+Runtime Remote MCP 的 `initialize`、`tools/list` 與四個唯讀工具 live 呼叫。該工作樹
+的程式與 evidence 尚待 snapshot／整合；Web 接上 remote ToolClient 的最後組裝也仍在
+進行。網站本身尚未部署到 AWS。完整現況、展示亮點與流程圖請先看
+[專案白話指南](docs/project-guide.md)。
 
 ## MVP 情境
 
@@ -17,17 +24,18 @@
 1. 辨識地點、問題與期望時間。
 2. 查詢水電修繕服務與行政區代碼。
 3. 取得對應諮詢單，僅追問缺少的欄位。
-4. 建立諮詢案件。
-5. 依服務區域與可用時段配對模擬服務商。
-6. 經使用者確認後建立訂單。
+4. 使用者確認最新摘要後，依服務區域與條件配對 synthetic 服務商。
+5. 使用者選擇廠商並明確確認後，才建立諮詢案件。
+6. 指派廠商接受後建立 `SYN-ORDER-*` Demo 訂單。
 7. 提供案件與訂單狀態查詢。
 
 ## 技術方向
 
-- Model：正式環境目標為 Amazon Bedrock Converse API；本機可用 Mock 或
-  Hugging Face Inference Providers
-- Agent hosting：Amazon Bedrock AgentCore Runtime（比賽環境）
-- Agent tool gateway：AgentCore Gateway / MCP
+- Model：Mock、Hugging Face Inference Providers、Amazon Bedrock Converse API；
+  Nova Lite 已完成 live tool-use 驗證
+- Agent tool hosting：Amazon Bedrock AgentCore Runtime Remote MCP；synthetic-only
+  四工具已完成 live 驗證
+- Agent tool protocol：MCP；目前 direct Runtime，不使用 AgentCore Gateway
 - Backend：Python、FastAPI
 - Database：PostgreSQL；正式環境目標為 Amazon RDS for PostgreSQL
 - Object storage：Amazon S3（報修照片，選配）
@@ -35,14 +43,15 @@
 - Data pipeline：Python、Pydantic、pandas、SQLAlchemy
 - Test：pytest
 
-主辦方資料不會用來重新訓練基礎模型。Agent 會透過受控的 MCP Tools 或 API
-查詢清洗後的 PostgreSQL。
+主辦方資料不會用來重新訓練基礎模型。Agent 只會透過受控的 MCP Tools 或 API
+呼叫 Service Layer；本機獨立 MCP 可查清洗後的 PostgreSQL，目前 Web／AgentCore
+Demo 則使用有來源標示的 synthetic repository。
 
-目前尚無比賽 AWS 憑證，因此先以 Mock Model 或可選的 Hugging Face hosted
-open model、本機 MCP Tools 與本機 PostgreSQL 開發。拿到憑證後才替換為
-Bedrock、AgentCore Gateway / Runtime、RDS 與 S3 adapter，資料清洗與 Service
-Layer 不需重寫。各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，請見
-[系統與 AWS 架構](docs/architecture.md)。
+目前已使用比賽 AWS session 驗證 Bedrock 與 AgentCore Runtime；Remote MCP 使用
+`DemoReadRepository` 的 synthetic 資料，並未建立 AgentCore Gateway、RDS 或公開 AWS
+網站。Web → Bedrock → AgentCore 的 remote ToolClient 組裝完成前，仍以本機 Web 和
+分開的 AWS backend evidence 展示。各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，
+請見[系統與 AWS 架構](docs/architecture.md)。
 
 ## 專案結構
 
@@ -98,10 +107,13 @@ docs/             架構、計畫與競賽文件
 - [x] 完成 process-local 案件／訂單 P0 Service：確認、冪等、授權與稽核
 - [x] 將案件／訂單／冪等／audit workflow 持久化至 PostgreSQL
 - [x] 完成消費者人工 Checklist、桌機／手機響應式與無障礙基線
-- [ ] 建立固定 Hugging Face eval 與外部 HTTP MCP 驗證
+- [x] 完成 Bedrock Nova Lite 四工具 live 閉環
+- [ ] 將已通過 live 驗證的 AgentCore Runtime Remote MCP 工作樹與 evidence 納入 repo
+- [ ] 完成 Web → Bedrock → AgentCore Remote MCP 最後整合驗收
+- [ ] 合併台語／國語 STT Web 分支並完成現場延遲 smoke（TTS 未產品化）
+- [ ] 建立固定 Hugging Face eval
 - [ ] 加入正式登入、角色授權與資料庫最小權限
-- [ ] 完成 Bedrock adapter
-- [ ] 取得比賽 AWS 環境後串接 Bedrock、AgentCore、RDS 與公開部署
+- [ ] 未來再評估 AgentCore Gateway、RDS 與公開 Web hosting
 
 ## 執行資料清洗
 

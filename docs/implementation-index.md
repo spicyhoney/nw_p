@@ -10,17 +10,19 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | B+ 資料清洗 | 已驗證 | `src/home_repair_agent/data_cleaning/` | [清洗手冊](data-cleaning-runbook.md) | Python 測試、品質報告 |
 | PostgreSQL schema / loader | 已驗證 | `sql/`、`data_cleaning/postgres.py` | [SQL README](../sql/README.md) | PostgreSQL 16.14 整合測試 |
 | Service Layer | 唯讀、媒合、派單／接單與 async PostgreSQL 寫入均已驗證 | `src/home_repair_agent/backend/` | [Service Layer](service-layer.md)、[媒合服務](matching-service.md)、[派單／接單](provider-workflow.md) | 單元測試與 PostgreSQL 16.14 整合測試 |
-| 引導式單一修繕對話 | 已驗證單一 Active Task；五分支均需明確確認 | `backend/repair_conversation.py`、`web/`、`data/processed/curated_repair_form.json` | [Web 引導式流程](../src/home_repair_agent/web/README.md)、[Feature requirements](../.kiro/specs/guided-home-repair-conversation/requirements.md) | focused `59 passed, 50 subtests passed`；兩條 FastAPI HTTP E2E |
+| 引導式單一修繕對話 | 已驗證單一 Active Task；五分支均需明確確認 | `backend/repair_conversation.py`、`web/`、`data/processed/curated_repair_form.json` | [Web 引導式流程](../src/home_repair_agent/web/README.md)；Kiro spec 路徑為 `.kiro/specs/guided-home-repair-conversation/requirements.md`，待該目錄整合 | focused `59 passed, 50 subtests passed`；兩條 FastAPI HTTP E2E |
 | 四個唯讀 MCP Tools | 已驗證；本次未改 schema | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
 | Agent 核心迴圈 | 已驗證 Mock、HF 與 Bedrock adapter contract；本次未改 AgentRunner／ToolClient port | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
-| AgentCore Remote MCP ToolClient | fake transport／credentials contract 已驗證；尚未接入 Web、未以此 adapter 執行 live smoke | `src/home_repair_agent/agent/agentcore_mcp_client.py` | [AgentCore Remote MCP ToolClient](../src/home_repair_agent/agent/README.md#agentcore-remote-mcp-toolclient) | focused `10 passed`；targeted Ruff check／format check |
+| AgentCore Remote MCP ToolClient | 已接入 Web 並完成真實 Browser → Bedrock → AgentCore 四工具閉環；初始化或憑證失敗時 fail closed | `src/home_repair_agent/agent/agentcore_mcp_client.py`、`src/home_repair_agent/web/app.py` | [AgentCore Remote MCP ToolClient](../src/home_repair_agent/agent/README.md#agentcore-remote-mcp-toolclient)、[AWS 架構](architecture.md) | adapter／composition tests 與 Browser live smoke；遮罩證據見 `reports/agentcore_remote_mcp_demo.json` |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；七案 opt-in harness 已建立，本輪 live 矩陣待新 token | `src/home_repair_agent/agent/huggingface_model.py`、`scripts/huggingface_web_eval.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式)、[Web Demo 收尾](ENGINEER_LOG-web-demo-viewport-hf-testability.md) | request/response、tool call、timeout、錯誤遮罩、offline 七案 contract、歷史 Qwen3 live |
 | 圖片上傳與 HF VLM | 已整合；完成本機、live HF、PostgreSQL 16.14 驗證，guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003／branch binding／summary invalidation tests |
 | HF 台語／國語語音輸入 | 已完成 HF-only Web POC；錄音只回填 composer、需人工確認，不保存、不自動送出、不 fallback | `web/speech.py`、`web/app.py`、`web/static/` | [Web 語音流程](../src/home_repair_agent/web/README.md#台語國語語音輸入hf-only) | fake HTTP／API／前端契約；公開教育部短音訊 Breeze-ASR-26 live smoke |
 | Bedrock Model adapter | contract、synthetic tool-use smoke 與四工具 MCP live 閉環已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_*.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC](ENGINEER_LOG-aws-bedrock-agentcore-poc.md)、[MCP E2E](ENGINEER_LOG-aws-bedrock-mcp-e2e.md) | fake-client contract、Nova Lite Converse、AgentRunner × MCP 四工具 live |
 | FastAPI / Demo UI | 已驗證 guided 單一修繕、跨輪地點／更正、單一內容捲動、廠商 reflow 與受控答案顯示；唯讀服務資料仍是 Demo repository | `src/home_repair_agent/web/` | [Web README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md)、[Web Demo 收尾](ENGINEER_LOG-web-demo-viewport-hf-testability.md) | HTTP／a11y／Node regression；桌面／手機與等效 125%／200% viewport smoke |
+| 最終 Web rich-media 整合 | 已整合圖片入口、人工確認與 HF 台語／國語 STT；STT 只回填、不自動送出 | `web/speech.py`、`web/service.py`、`web/static/` | [Web README](../src/home_repair_agent/web/README.md)、[AWS 架構與整合邊界](architecture.md) | 自動 focused tests 已通過；實體麥克風 smoke 由隊友進行中；TTS 未整合 |
+| Web → AgentCore remote ToolClient | 已完成 AWS text Demo；Browser 經 Bedrock Nova Lite 與 AgentCore Remote MCP 取得兩位 synthetic 候選 | `web/app.py`、`agent/agentcore_mcp_client.py` | [AWS 架構](architecture.md) | service 17、臺北市大安區、`repair_form_v1`、matching live 通過；未選廠商、未建案 |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
@@ -43,11 +45,27 @@ MCP Client / 測試 Agent
 ```
 
 四個 MCP Tools 仍全部唯讀。上圖是獨立 MCP Server 的預設組裝，以及
-`PostgresReadRepository` 整合測試所對應的路徑。獨立 AgentCore Remote MCP 成果已驗證
-外部 Streamable HTTP 的 initialize／tools/list／四工具；本 branch 新增的 ToolClient
-只做 fake transport contract，尚未接入 Web 或另跑 live。Web app 與 Terminal Demo 的
+`PostgresReadRepository` 整合測試所對應的路徑。Web app 與 Terminal Demo 的
 in-process MCP Server 建立
 `DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查 PostgreSQL。
+
+AWS text Demo 使用已和 Web 組裝、並完成 live 驗證的 Remote MCP 路徑：
+
+```text
+SigV4 remote client
+  -> AgentCore Runtime /mcp
+  -> initialize + tools/list
+  -> search_services
+  -> resolve_location
+  -> get_consultation_form（service_id 來自先前 ToolResult）
+  -> match_service_providers（service_id / location_id 來自先前 ToolResult）
+  -> ReadServiceLayer
+  -> DemoReadRepository（synthetic-only）
+```
+
+2026-08-02 的遮罩 evidence 顯示四工具皆通過；Browser live 也實際完成
+Bedrock → AgentCore → service/location/form/matching，並顯示兩位 synthetic 候選。
+網站本身仍只在本機，沒有公開 AWS Web URL，也沒有 Gateway 或 RDS。
 
 Web 現在另有一條 deterministic、單一 Active Task 的引導式閉環：
 
@@ -94,8 +112,9 @@ Web 的受控寫入閉環仍不經 LLM 或 MCP：
 
 PostgreSQL 模式以 async I/O 在程式重啟後重新讀取案件、訂單、idempotency 與 audit；
 Web session／Active Task 仍不能恢復，也不會真的保留師傅時段。廠商 header 只是 Demo
-身分模擬，不是正式登入；目前沒有正式 PII、authentication、多任務、清潔服務、AWS
-adapter 或寫入 MCP Tool。CLI 與 Web 可顯式切換到 Hugging Face hosted model；缺少
+身分模擬，不是正式登入；目前沒有正式 PII、authentication、多任務、清潔服務或寫入
+MCP Tool。AgentCore remote ToolClient 已成為 AWS text Demo 的可選 transport。CLI 與 Web
+可顯式切換到 Hugging Face hosted model；缺少
 `HF_TOKEN` 時會停止並提示，不會靜默切回 Mock。
 
 另有一條真實 Bedrock、但仍為 process-local MCP 的 synthetic 閉環：
@@ -105,8 +124,10 @@ Amazon Nova Lite -> AgentRunner -> MCPToolClient -> FastMCP Server
   -> ReadServiceLayer -> DemoReadRepository -> ToolResult -> Nova Lite final answer
 ```
 
-2026-08-01 live run 實際完成四個唯讀 Tool 並取得 synthetic 候選；這不等同外部
-Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時段。
+2026-08-01 這次 process-local live run 實際完成四個唯讀 Tool 並取得 synthetic
+候選；該次執行本身沒有使用外部 Streamable HTTP，也不會建立案件、訂單或保留時段。
+外部 AgentCore Runtime 的 Remote MCP 證據是上方另列的 2026-08-02 路徑；兩者都沒有
+使用 AgentCore Gateway。
 
 相同閉環也已在短效 AgentCore Runtime 執行：
 
@@ -133,30 +154,21 @@ External Python MCP Client -> IAM SigV4 -> AgentCore Runtime /mcp
 
 ## 最近驗證
 
-- 2026-08-02：新增 AgentCore Runtime authenticated remote MCP。外部 Python MCP
-  Client 經 IAM SigV4 與 Streamable HTTP 完成 initialize、exact 四工具 list 與
-  四次 call；service/location ID provenance 與 synthetic data source 全數通過，
-  沒有業務寫入。遮罩 evidence 位於 `reports/agentcore_remote_mcp_demo.json`；
-  Runtime 與附屬短效資源依 Demo 指示保留至共同 expiry，cleanup 尚未執行。
-  focused `33 passed, 36 subtests passed`；乾淨 Python 3.11 完整 suite
-  `202 passed, 18 skipped, 84 subtests passed`；新增檔 Ruff／format、compileall、
-  Node regression、diff 與 credential／PII scan 通過。
-
-- 2026-08-01：新增 synthetic-only AgentCore Runtime direct-code POC。`us-west-2`
-  Nova Lite 在 Runtime 內完成四工具，4 次 request interval 為
-  1.303／1.102／1.102 秒；log credential／provider payload pattern 為 0。
-  Runtime、workload identity、S3、IAM role 與 CloudWatch log group 已 cleanup，
-  腳本及獨立 CLI 複驗皆為 0／不存在。focused `38 passed, 7 subtests passed`，
-  完整 `175 passed, 19 skipped, 59 subtests passed`。
-
-- 2026-08-02：新增 provider-neutral `AgentCoreMCPToolClient`，以受控環境設定、
-  `SecretStr` Runtime ARN、boto3 standard credential chain、每 request refreshable SigV4、
-  Streamable HTTP 與 `ClientSession.initialize()` 管理遠端 MCP lifecycle；成功結果委派
-  既有 `MCPToolClient` mapping，缺設定、無／過期 credential、initialize、transport 與
-  遠端例外均 fail closed 且不含 ARN／provider payload。fake transport／credentials
-  focused `10 passed`，兩個新增 Python 檔 targeted Ruff check／format check 通過；未跑
-  完整 pytest，未修改 Web composition，也未部署、更新或 cleanup 既有 Runtime。
-
+- 2026-08-02：完成最終 AWS text 組裝。Browser → Bedrock Nova Lite →
+  `AgentRunner` → `AgentCoreMCPToolClient` → AgentCore Runtime → 四個唯讀 Tools
+  真實走完 service 17、臺北市大安區、`repair_form_v1` 與 matching，顯示 synthetic
+  A／B 組（94%／81%），未選廠商、未建立案件。整合驗證為 `182 passed, 90 subtests`；
+  Ruff、format、compileall、Node syntax、diff check 與 secret scan 通過。遮罩 evidence
+  位於 `reports/agentcore_remote_mcp_demo.json`；短效資源保留至
+  `2026-08-02T09:09:06Z` 標籤，標籤不會自動刪除，Demo 後必須執行 cleanup。
+- 2026-08-02：整合 HF 圖片與台語／國語 STT Web Demo。圖片只提出建議且須人工確認；
+  Breeze ASR 結果只回填輸入框、不自動送出。自動測試已通過，實體麥克風 smoke 由隊友
+  進行中；公開 HF Space 無 SLA，台語 TTS 未整合。HF rich-media 與 AWS text 目前是
+  兩種分開的 Demo mode。
+- 2026-08-02：`AgentCoreMCPToolClient` 使用 standard credential chain、refreshable SigV4
+  與 Streamable HTTP；credential refresh 不阻塞 event loop，transport log 遮罩 Runtime
+  識別，startup cancellation 會釋放已開啟 contexts。缺設定、credential 或 remote
+  initialize／transport 失敗時一律 fail closed，不 fallback 到 local、HF 或 Mock。
 - 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
   `repair_form_v1` 五分支、deterministic proposal、branch／summary 明確確認、確認時
   service/form 重驗、版本化可修改摘要、field applicability、branch switch、single

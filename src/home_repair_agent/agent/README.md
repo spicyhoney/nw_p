@@ -1,10 +1,9 @@
 # Agent 對話迴圈實作說明
 
-狀態：本機核心迴圈、終端 Demo、Hugging Face 與 Bedrock adapter contract 已驗證；
-Bedrock 已完成四個唯讀 MCP Tools 的 synthetic live 閉環，固定評估矩陣與
-AgentCore 部署尚待驗證
+狀態：本機核心迴圈、終端 Demo、Hugging Face、Bedrock 與 AgentCore Remote MCP
+`ToolClient` adapter contract 已驗證；Remote adapter 尚未接入 Web composition
 
-最後更新：2026-08-01
+最後更新：2026-08-02
 
 ## 做了什麼
 
@@ -16,6 +15,7 @@ AgentCore 部署尚待驗證
 | 對話契約 | `models.py` | 訊息、Tool Call、Tool Result、trace 與停止原因 |
 | `ModelClient` / `ToolClient` | `ports.py` | 隔離模型供應商與工具 transport |
 | `MCPToolClient` | `mcp_client.py` | 將 MCP `ClientSession` 轉成 Agent 可用的工具介面 |
+| `AgentCoreMCPToolClient` | `agentcore_mcp_client.py` | 以 SigV4 + Streamable HTTP 連接遠端 MCP，並管理完整 session lifecycle |
 | `RuleBasedRepairMockModel` | `mock_model.py` | 無 AWS 時可重現的修繕流程替身 |
 | `ScriptedModelClient` | `mock_model.py` | 精確控制 Tool Call 的測試替身 |
 | `HuggingFaceModelClient` | `huggingface_model.py` | 將對話與工具轉成 Hugging Face chat completion/function calling |
@@ -142,6 +142,52 @@ synthetic 圖片 smoke；adapter contract test 不等於 provider 可用性保�
 ```
 
 模型不會取得資料庫連線，也不能送任意 SQL。
+
+## AgentCore Remote MCP ToolClient
+
+`AgentCoreMCPToolClient` 實作既有 `ToolClient` port，將 AWS transport 留在 adapter：
+它以 boto3 standard credential chain 對每次 HTTP request 重新取得可刷新的 credentials，
+使用 SigV4 連接 AgentCore Streamable HTTP endpoint，完成 `ClientSession.initialize()` 後，
+把 `list_tools()`／`call_tool()` 委派給既有 `MCPToolClient`。因此 Tool schema、
+`ToolExecutionResult` 與 MCP `isError` mapping 沒有平行實作。
+
+受控環境設定只有：
+
+| 環境變數 | 預設 | 規則 |
+|---|---|---|
+| `AGENTCORE_RUNTIME_ARN` | 無 | 必填；以 `SecretStr` 遮罩，不得出現在 log／exception |
+| `AGENTCORE_REGION` | `us-west-2` | 本 adapter 只接受 `us-west-2` |
+| `AGENTCORE_QUALIFIER` | `DEFAULT` | 只接受受限字元；MCP session ID 由 protocol lifecycle 管理 |
+
+最小使用方式如下；client 必須在應用 lifespan 內建立並關閉：
+
+```python
+from home_repair_agent.agent.agentcore_mcp_client import (
+    create_agentcore_mcp_tool_client,
+)
+
+remote_client = create_agentcore_mcp_tool_client()
+async with remote_client as tool_client:
+    runner = AgentRunner(model_client=model_client, tool_client=tool_client)
+    # lifespan 期間提供 runner；離開後依序關閉 MCP session、transport 與 HTTP client
+```
+
+缺設定、無／過期 credentials、SigV4、initialize、transport 或遠端 protocol 失敗時
+全部 fail closed，只拋固定且不含 Runtime ARN／provider payload 的 adapter error；
+不會 fallback 到本機 MCP、Mock 或 Hugging Face。這個 branch 刻意不修改
+`web/app.py`，也未用現有 Runtime 執行新的 live call；integration owner 只需在既有
+FastAPI lifespan 替換 ToolClient 的建立方式。
+
+focused contract tests 使用 fake credentials、HTTP context、Streamable HTTP transport
+與 MCP session，覆蓋 initialize、credential refresh／expired、list、call、MCP error
+mapping、例外遮罩及反向 close order：
+
+```powershell
+python -m pytest tests/test_agentcore_mcp_client.py -q
+```
+
+本輪結果：`10 passed`；兩個新增 Python 檔的 targeted Ruff check 與 format check
+通過。未跑完整 pytest、未執行 live deployment，也未建立、更新或 cleanup AWS 資源。
 
 ## 每一輪如何停止
 
@@ -327,7 +373,7 @@ form／match 的 ID 必須來自更早 ModelTurn 的成功 ToolResult；同輪�
 
 - 可重複的 Hugging Face 固定 LLM tool-selection eval、延遲與額度紀錄。
 - 可重複的 Bedrock 固定 tool-selection eval、延遲與額度紀錄。
-- AgentCore Runtime / Gateway 部署與 IAM 驗證。
+- `AgentCoreMCPToolClient` 尚未由 Web lifespan wiring，也未用既有 Runtime 做此 adapter 的 live smoke。
 - FastAPI／瀏覽器 Demo UI、Speech-to-Text、Text-to-Speech 與前端麥克風。
 - 回答自動對映到任意表單 topic 的 LLM slot filling。
 - Rule-based Mock 尚未把表單自由文字自動轉成含時區的媒合參數。

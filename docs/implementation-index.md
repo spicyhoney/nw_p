@@ -13,7 +13,8 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 引導式單一修繕對話 | 已驗證單一 Active Task；五分支均需明確確認 | `backend/repair_conversation.py`、`web/`、`data/processed/curated_repair_form.json` | [Web 引導式流程](../src/home_repair_agent/web/README.md)、[Feature requirements](../.kiro/specs/guided-home-repair-conversation/requirements.md) | focused `59 passed, 50 subtests passed`；兩條 FastAPI HTTP E2E |
 | 四個唯讀 MCP Tools | 已驗證；本次未改 schema | `src/home_repair_agent/mcp_server/` | [MCP README](../src/home_repair_agent/mcp_server/README.md) | 7 個 MCP protocol tests |
 | 寫入 Service / MCP Tools | memory／async PostgreSQL Service 已驗證；寫入 MCP 未開始 | `backend/case_*.py`、`backend/postgres_case_repository.py` | [案件持久化](postgres-case-persistence.md)、[派單／接單](provider-workflow.md) | workflow unit、rollback、非阻塞契約與跨 worker 整合測試 |
-| Agent 核心迴圈 | 已驗證 Mock、HF 與 Bedrock adapter contract；本次未改 AgentRunner／ToolClient | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| Agent 核心迴圈 | 已驗證 Mock、HF 與 Bedrock adapter contract；本次未改 AgentRunner／ToolClient port | `src/home_repair_agent/agent/` | [Agent README](../src/home_repair_agent/agent/README.md) | Agent / MCP / provider tests |
+| AgentCore Remote MCP ToolClient | fake transport／credentials contract 已驗證；尚未接入 Web、未以此 adapter 執行 live smoke | `src/home_repair_agent/agent/agentcore_mcp_client.py` | [AgentCore Remote MCP ToolClient](../src/home_repair_agent/agent/README.md#agentcore-remote-mcp-toolclient) | focused `10 passed`；targeted Ruff check／format check |
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；七案 opt-in harness 已建立，本輪 live 矩陣待新 token | `src/home_repair_agent/agent/huggingface_model.py`、`scripts/huggingface_web_eval.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式)、[Web Demo 收尾](ENGINEER_LOG-web-demo-viewport-hf-testability.md) | request/response、tool call、timeout、錯誤遮罩、offline 七案 contract、歷史 Qwen3 live |
 | 圖片上傳與 HF VLM | 已整合；完成本機、live HF、PostgreSQL 16.14 驗證，guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003／branch binding／summary invalidation tests |
@@ -41,14 +42,12 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-Agent／MCP 閉環目前仍只讀。上圖是獨立 MCP Server 的預設組裝，以及
-`PostgresReadRepository` 整合測試所對應的路徑。另有獨立 AgentCore remote MCP 路徑已以 Streamable HTTP 端到端驗證，但該 Runtime 明確組裝 synthetic `DemoReadRepository`，不代表 PostgreSQL read path 已部署。Web app 與 Terminal Demo 的 in-process MCP Server 建立
-`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查
-PostgreSQL。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
-代碼、該服務要填哪些諮詢欄位」；Web P2 另提供記憶體 session、結構化
-`SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
-確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
-只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
+四個 MCP Tools 仍全部唯讀。上圖是獨立 MCP Server 的預設組裝，以及
+`PostgresReadRepository` 整合測試所對應的路徑。獨立 AgentCore Remote MCP 成果已驗證
+外部 Streamable HTTP 的 initialize／tools/list／四工具；本 branch 新增的 ToolClient
+只做 fake transport contract，尚未接入 Web 或另跑 live。Web app 與 Terminal Demo 的
+in-process MCP Server 建立
+`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查 PostgreSQL。
 
 Web 現在另有一條 deterministic、單一 Active Task 的引導式閉環：
 
@@ -149,6 +148,30 @@ External Python MCP Client -> IAM SigV4 -> AgentCore Runtime /mcp
   Runtime、workload identity、S3、IAM role 與 CloudWatch log group 已 cleanup，
   腳本及獨立 CLI 複驗皆為 0／不存在。focused `38 passed, 7 subtests passed`，
   完整 `175 passed, 19 skipped, 59 subtests passed`。
+
+- 2026-08-02：新增 provider-neutral `AgentCoreMCPToolClient`，以受控環境設定、
+  `SecretStr` Runtime ARN、boto3 standard credential chain、每 request refreshable SigV4、
+  Streamable HTTP 與 `ClientSession.initialize()` 管理遠端 MCP lifecycle；成功結果委派
+  既有 `MCPToolClient` mapping，缺設定、無／過期 credential、initialize、transport 與
+  遠端例外均 fail closed 且不含 ARN／provider payload。fake transport／credentials
+  focused `10 passed`，兩個新增 Python 檔 targeted Ruff check／format check 通過；未跑
+  完整 pytest，未修改 Web composition，也未部署、更新或 cleanup 既有 Runtime。
+
+- 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
+  `repair_form_v1` 五分支、deterministic proposal、branch／summary 明確確認、確認時
+  service/form 重驗、版本化可修改摘要、field applicability、branch switch、single
+  Active Task、multi-intent 選一項、照片 branch binding／summary invalidation、安全
+  reminder／stop 與建案後表單鎖定均有回歸。預算與緊急程度維持非表單 topic 的選填
+  共用 answers：缺答保存 `skipped`、可 `declined_to_answer`，`urgency` 僅接受
+  `normal|urgent` 加上述 answer states，且不改 `matching_v1`。faucet 與 electrical 兩條
+  固定 FastAPI HTTP E2E 均在補齊完整地點後走完
+  `summary -> matching -> dispatch_pending`，且 electrical 全程沒有 `water_shutoff`。
+  focused guided tests 為 `59 passed, 50 subtests passed`；完整 pytest 為
+  `162 passed, 18 skipped, 102 subtests passed`，18 個 skip 不算成功證據。Node syntax
+  與 concurrency regression 通過；本功能異動 Python diagnostics、Ruff check、Ruff
+  format check 及 `git diff --check` 通過。全庫 Ruff check 已執行但保留 15 個既有、
+  非本功能檔案 finding；全庫 format check 也受既有未格式化檔案阻擋，兩者是
+  baseline debt，不能宣稱全庫通過。本輪沒有執行真瀏覽器 smoke。
 - 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
   `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與
   reason/content 不一致都拒絕。格式化兩個新檔，並將四個 Bedrock Python 檔納入

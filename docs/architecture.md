@@ -31,15 +31,15 @@ AWS 不是拿來「訓練我們自己的模型」，也不是讓 Agent 直接連
 | Service Layer | 已完成唯讀查詢／媒合、派單／接單與 memory／async PostgreSQL repository | 正式登入、時段保留與排程衝突 |
 | MCP Tools | 四個唯讀 Tool 已通過本機 protocol、Bedrock process-local E2E 與 AgentCore Remote MCP live 驗證 | 寫入仍由受控 Web API 執行，不公開成 MCP Tool |
 | Agent / Model | AgentRunner、Mock、HF 與 Bedrock adapter contract 已完成；Nova Lite 四工具 live 閉環通過 | 固定最終 Demo provider 與失敗處理 |
-| AgentCore Runtime | `us-west-2` 的 synthetic-only Remote MCP 曾達 `READY`；`initialize`、`tools/list`、四工具與 ID provenance 均通過 | 保存遮罩 evidence、整合 Web ToolClient、Demo 後 cleanup |
-| Web / FastAPI | 已完成本機雙端流程、人工 Checklist、圖片流程、無障礙基線與可選 PostgreSQL 案件持久化 | 整合 remote ToolClient 與平行語音／圖片修正分支 |
-| 台語／國語語音 | 平行分支已驗證 Breeze ASR 回填繁中輸入框；公開 HF Space 約 45–60 秒且無 SLA | 合併與現場 smoke；TTS 不列為已完成 |
+| AgentCore Runtime | `us-west-2` synthetic-only Remote MCP 為 `READY`；`initialize`、`tools/list`、四工具與 ID provenance 均通過 | Demo 後手動 cleanup；expiry 標籤不會自動刪除 |
+| Web / FastAPI | 已完成本機雙端流程、人工 Checklist、圖片、STT 與 Browser → Bedrock → AgentCore 組裝 | 評審可連線的公開 HTTPS hosting 尚未完成 |
+| 台語／國語語音 | Breeze ASR 已整合並回填繁中輸入框；公開 HF Space 約 45–60 秒且無 SLA | 實體麥克風 smoke；TTS 不列為已完成 |
 | 未做的雲端項目 | 無 AgentCore Gateway、RDS、公開 AWS 網站、正式 auth／RBAC | 只列未來 production，不冒充本次證據 |
 
 完整測試批次、commit 與 focused evidence 以[實作索引](implementation-index.md)為準。
-目前最重要的邊界是：Bedrock live 閉環和 AgentCore Remote MCP live 閉環都已個別
-通過，但 Web 使用 remote ToolClient 的最後組裝仍在進行。這些證據也不代表公開 AWS
-網站、RDS、正式身分驗證或 production 台語語音已完成。
+目前 Browser → Bedrock → AgentCore Remote MCP 的文字路徑已完整通過；HF 圖片／STT
+則是另一個本機 Demo mode。這些證據不代表公開 AWS 網站、RDS、正式身分驗證或
+production 台語語音已完成。
 
 ## 兩條已完成的 AWS live 證據
 
@@ -67,8 +67,8 @@ flowchart LR
     end
 ```
 
-證據 A 沒有跨網路呼叫 AgentCore；證據 B 沒有經過 Web 或 Bedrock。把兩條路接起來，
-才是最後 browser-to-AWS Demo。
+兩條底層證據之上，最終整合分支已再完成一次 Browser → Bedrock → AgentCore live
+旅程，取得 service、location、form 與兩位 synthetic 候選。
 
 ## 已驗證元件與最後 Demo 組裝
 
@@ -77,19 +77,19 @@ flowchart LR
     User["使用者"] --> Web["本機 Web / FastAPI<br/>已驗證"]
     Web --> Agent["AgentRunner<br/>已驗證"]
     Agent --> Bedrock["Amazon Bedrock Nova Lite<br/>live tool-use 已驗證"]
-    Agent -. "remote ToolClient 整合中" .-> Runtime["AgentCore Runtime<br/>Remote MCP 曾達 READY"]
+    Agent --> Runtime["AgentCore Runtime<br/>Remote MCP READY／live"]
     Runtime --> Tools["四個唯讀 MCP Tools<br/>live calls 已驗證"]
     Tools --> Service["ReadServiceLayer"]
     Service --> DemoRepo["DemoReadRepository<br/>synthetic-only"]
-    Voice["Breeze 台語／國語 STT<br/>平行分支已驗證"] -. "待合併" .-> Web
+    Voice["Breeze 台語／國語 STT<br/>已整合；待實體 mic smoke"] --> Web
     Web --> Case["CaseWorkflowService<br/>人工確認後寫入"]
     Case --> CaseRepo["Memory / PostgreSQL<br/>本機已驗證"]
 ```
 
-圖中的兩條虛線就是最後整合工作；其他實線只表示該元件或子路徑有驗證證據，不表示
-整張圖已經做過一次完整 browser-to-AWS E2E。
+上圖的 AWS 文字實線已做過一次完整 browser-to-AWS E2E；網站仍跑在本機，因此不等於
+已有評審可開啟的公開 URL。
 
-## 預定最終 Demo 路徑（待 browser-to-AWS E2E）
+## 已驗證的 AWS 文字 Demo 路徑
 
 以「台北市大安區水龍頭漏水，週六下午可以來嗎？」為例：
 
@@ -241,7 +241,7 @@ production 方向，不應放進本次 Demo 的「已完成」清單。
 | 介面 | 本機實作 | AWS／production adapter |
 |---|---|---|
 | `ModelClient` | `MockModelClient`，回固定 tool call | `BedrockModelClient` |
-| `ToolClient` | 直接呼叫本機 FastMCP / Python tool | AgentCore Runtime remote ToolClient（整合中） |
+| `ToolClient` | 直接呼叫本機 FastMCP / Python tool | AgentCore Runtime remote ToolClient（已整合） |
 | `Repository` | 本機 PostgreSQL | RDS PostgreSQL |
 | `ObjectStorage` | 本機測試圖片或假 object key | S3 presigned URL |
 
@@ -278,7 +278,7 @@ role。AWS SDK 會從標準 credential provider chain 取得身分，不需要�
 5. 已完成派單／接單 P0：確認、冪等、授權、audit 與狀態轉換。
 6. 已新增 PostgreSQL transaction repository；RDS 留作 production 方向。
 7. 已將 synthetic-only Remote MCP 部署到 AgentCore Runtime，並完成四工具 live 驗證。
-8. 目前整合 Web remote ToolClient，完成 browser → Bedrock → AgentCore 的最終 Demo E2E。
+8. 已整合 Web remote ToolClient，完成 browser → Bedrock → AgentCore 的最終 Demo E2E。
 9. Demo 結束後執行 cleanup，避免持續計費；保留遮罩後 evidence。
 10. 正式登入、RBAC、Gateway、RDS、正式 S3 圖片儲存與 API Gateway 留待後續。
 

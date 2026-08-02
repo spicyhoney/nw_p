@@ -18,6 +18,7 @@
 |---|---|---|---|---|---|---|
 | RELEASE-001 | In progress | Review 並交付 `integration/final-demo` | 目前完整成果只在本機整合 branch；未交付就無法由組員或評審重現 | Codex＋人類 | 隊友語音 smoke 結果、完整 diff 人工核准 | branch 已 push；PR／merge 決定有紀錄；focused tests、secret scan 與兩條 Demo 指南一致 |
 | VOICE-001 | In progress | 完成實體麥克風台語／國語 smoke | 自動測試無法證明會場麥克風、瀏覽器權限與實際台語辨識品質 | 隊友 | `fix/voice-image-live-demo`／整合版 HF 模式 | 記錄原句、轉寫、延遲、是否可接受；失敗時 UI 明確改用文字且不 fallback Mock |
+| DEPLOY-001 | Blocked | 提供評審可連線的公開 HTTPS Web URL | 大會明確要求 Live Demo URL 可由 8 個評審來源 IP 存取；`127.0.0.1` 完全無法供外部評審連線 | 人類＋Codex | 核准臨時 public tunnel 或 hosting；最低限度濫用保護 | `60.250.15.18–19`、`60.250.15.34–36`、`60.250.15.50–52` 可連；其他存取政策有紀錄；無密鑰入庫；Demo 後可關閉 |
 | CLEANUP-001 | In progress | Demo 後停止 Web 並清除短效 AgentCore 資源 | Runtime、IAM、S3、log group 會持續存在並可能產生成本 | Codex | 使用者完成 live Demo | Web process 已停；cleanup=`passed`；status=`not-deployed`；無 remaining resources |
 
 ## P1
@@ -25,7 +26,6 @@
 | ID | 狀態 | 工作 | 為什麼需要 | 負責人 | 依賴 | 完成條件 |
 |---|---|---|---|---|---|---|
 | PROMPT-001 | Todo | 固定 Bedrock 多輪地點 tool-call 評估 | Nova 對單獨地點文字曾只追問而未呼叫 Tool；現場 Demo 需要可預測性 | 未分配 | 可用 Bedrock／AgentCore、synthetic cases | 5 次「臺北市大安區」與 5 次完整地點句均正確 resolve；失敗留下遮罩報告，不放寬 no-guess gate |
-| DEPLOY-001 | Todo | 補公開 HTTPS Web 部署手冊或明確說明本機 Web＋AWS 後端 | 目前 AWS 僅部署 AgentCore 後端，評審若需遠端 URL 必須理解邊界 | 未分配 | 可用 Web hosting 權限與最低存取保護 | 有可重跑 build／health／rollback／cleanup；不提交密鑰；未部署時文件不得宣稱公開網站 |
 | DATA-001 | Todo | 讓 Web 讀取路徑可選 Demo 或 PostgreSQL repository | 正式資料持久化可證明相同服務契約不只依賴 synthetic repository | 未分配 | 已載入 clean schema 的測試 PostgreSQL | fail-fast 選項與相同服務／地點／表單／媒合契約通過 |
 | AUTH-001 | Blocked | 正式登入、廠商帳號與 RBAC | Demo header 不足以保護真實案件與圖片 | 未分配 | 身分提供者與部署環境決策 | 消費者與廠商只能讀取授權資源 |
 | PRIV-001 | Blocked | 真實個資同意、加密、保存期限與刪除 | 目前只允許 synthetic contact；正式留資前必須先完成隱私基線 | 未分配 | KMS／法遵／刪除政策 | 金鑰不入庫，保存與刪除行為有測試及文件 |

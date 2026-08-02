@@ -7,10 +7,9 @@
 親自確認修繕分支、Checklist、最新摘要與派單；案件與 Demo 訂單由受控 Web API
 及 Service Layer 建立，不由模型直接寫入。
 
-目前 AWS 證據包含真實 Amazon Nova Lite 四工具閉環，以及獨立工作樹中 AgentCore
-Runtime Remote MCP 的 `initialize`、`tools/list` 與四個唯讀工具 live 呼叫。該工作樹
-的程式與 evidence 尚待 snapshot／整合；Web 接上 remote ToolClient 的最後組裝也仍在
-進行。網站本身尚未部署到 AWS。完整現況、展示亮點與流程圖請先看
+目前 AWS 證據包含真實 Browser → Amazon Nova Lite → AgentCore Runtime Remote MCP
+四工具閉環，並已在本機 Web 顯示兩位有來源標籤的 synthetic 候選。程式與遮罩 evidence
+已納入 `integration/final-demo`；網站本身仍只在本機，尚未提供公開 HTTPS URL。完整現況、展示亮點與流程圖請先看
 [專案白話指南](docs/project-guide.md)。
 
 ## MVP 情境
@@ -49,8 +48,8 @@ Demo 則使用有來源標示的 synthetic repository。
 
 目前已使用比賽 AWS session 驗證 Bedrock 與 AgentCore Runtime；Remote MCP 使用
 `DemoReadRepository` 的 synthetic 資料，並未建立 AgentCore Gateway、RDS 或公開 AWS
-網站。Web → Bedrock → AgentCore 的 remote ToolClient 組裝完成前，仍以本機 Web 和
-分開的 AWS backend evidence 展示。各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，
+網站。Web → Bedrock → AgentCore 的 remote ToolClient 已完成本機 Browser live 驗收。
+各 AWS 服務的角色、聊天與按鈕的完整呼叫路徑，
 請見[系統與 AWS 架構](docs/architecture.md)。
 
 ## 專案結構
@@ -108,12 +107,12 @@ docs/             架構、計畫與競賽文件
 - [x] 將案件／訂單／冪等／audit workflow 持久化至 PostgreSQL
 - [x] 完成消費者人工 Checklist、桌機／手機響應式與無障礙基線
 - [x] 完成 Bedrock Nova Lite 四工具 live 閉環
-- [ ] 將已通過 live 驗證的 AgentCore Runtime Remote MCP 工作樹與 evidence 納入 repo
-- [ ] 完成 Web → Bedrock → AgentCore Remote MCP 最後整合驗收
-- [ ] 合併台語／國語 STT Web 分支並完成現場延遲 smoke（TTS 未產品化）
+- [x] 將 AgentCore Runtime Remote MCP 與遮罩 evidence 納入整合分支
+- [x] 完成 Web → Bedrock → AgentCore Remote MCP 本機 Browser 驗收
+- [ ] 完成台語／國語 STT 實體麥克風 smoke（程式已整合；TTS 未產品化）
 - [ ] 建立固定 Hugging Face eval
 - [ ] 加入正式登入、角色授權與資料庫最小權限
-- [ ] 未來再評估 AgentCore Gateway、RDS 與公開 Web hosting
+- [ ] 提供評審可連線的公開 HTTPS Web URL；Gateway／RDS 仍留待後續
 
 ## 執行資料清洗
 

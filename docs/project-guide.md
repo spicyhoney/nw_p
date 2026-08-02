@@ -20,11 +20,9 @@
    `SYN-ORDER-*` Demo 訂單。
 
 目前本機雙端流程已能執行，案件 repository 可選記憶體或 PostgreSQL。真實
-Amazon Nova Lite 已透過 `BedrockModelClient` 完成四工具閉環；獨立 AgentCore 工作樹
-也已在 `us-west-2` 完成一次 Remote MCP 部署，並通過 `initialize`、`tools/list` 與
-四個唯讀 `tools/call` 的 live 驗證，但該程式與 evidence 尚待 snapshot／整合。最後的
-Web → Bedrock → AgentCore Remote MCP 組裝仍在進行，因此不能把「AWS 後端已驗證」
-說成「目前 repo 已包含全部實作」或「網站已部署到 AWS」。正式登入、真實個資、
+Amazon Nova Lite 已透過 `BedrockModelClient` 與 AgentCore Remote MCP 完成 Browser
+四工具閉環，程式與遮罩 evidence 已納入整合分支。但這仍不能說成「網站已部署到
+AWS」：目前只有本機 Web 連 AWS 後端。正式登入、真實個資、
 真實廠商、RDS 與公開 Web hosting 仍不在目前 Demo 證據內。
 
 ## 競賽定位與展示亮點
@@ -39,8 +37,8 @@ Web → Bedrock → AgentCore Remote MCP 組裝仍在進行，因此不能把「
    使用者操作。
 4. AWS 工具閉環：Bedrock 負責理解與選工具，AgentCore Runtime 暴露四個唯讀 MCP
    Tools，Service Layer 驗證 canonical ID 與媒合規則。
-5. 高齡友善入口：台語／國語語音辨識已在平行分支完成 Web Demo 驗證，輸出繁中供
-   使用者修改後送出；目前仍待整合，且不宣稱台語 TTS 已完成。
+5. 高齡友善入口：台語／國語語音辨識已整合至 Web，輸出繁中供使用者修改後送出；
+   實體麥克風 smoke 仍在進行，且不宣稱台語 TTS 已完成。
 6. 資料可信度：主辦方原始資料、人工設定與 synthetic Demo 資料都有來源標籤，展示
    時不把模擬資料說成真實營運資料。
 
@@ -64,8 +62,8 @@ Web → Bedrock → AgentCore Remote MCP 組裝仍在進行，因此不能把「
 
 ## 目前架構
 
-實線是已驗證的元件或路徑；虛線是尚待完成的最後組裝。AgentCore 的 live 驗證目前
-使用 synthetic 資料，並不代表 Web、資料庫與所有周邊服務都已上雲。
+實線是已驗證的元件或路徑。AgentCore 的 live 驗證目前使用 synthetic 資料，並不代表
+Web、資料庫與所有周邊服務都已上雲。
 
 ```mermaid
 flowchart LR
@@ -92,12 +90,12 @@ flowchart LR
     CaseService --> CaseRepo["Memory 或 async PostgreSQL<br/>CaseWorkflowRepository"]
     CaseRepo --> Workflow[("案件／訂單／冪等／audit")]
 
-    Agent -. "ToolClient adapter 整合中" .-> Remote["AgentCore Runtime<br/>Remote MCP 曾達 READY／live 驗證"]
+    Agent --> Remote["AgentCore Runtime<br/>Remote MCP READY／live 驗證"]
     Remote --> RemoteMCP["四個唯讀 MCP Tools"]
     RemoteMCP --> RemoteService["ReadServiceLayer"]
     RemoteService --> RemoteRepo["DemoReadRepository<br/>synthetic-only"]
 
-    Voice["台語／國語 STT<br/>平行分支已驗證"] -. "待整合" .-> API
+    Voice["台語／國語 STT<br/>已整合；待實體 mic smoke"] --> API
 ```
 
 完整的 AWS 角色與未來部署方式見[系統與 AWS 架構](architecture.md)。
@@ -212,10 +210,9 @@ Web app 與 Terminal Demo 建立的 in-process MCP Server 則使用
 - 案件、訂單、冪等與 audit 可切換到 async PostgreSQL repository。
 - 四個 MCP Tools 全部唯讀；派單與接案目前由 Web 按鈕直接呼叫
   `CaseWorkflowService`。
-- Hugging Face 與 Bedrock 都有 model adapter；Bedrock Nova Lite 已完成 live tool-use
-  閉環。AgentCore Remote MCP 也已獨立完成 live 驗證，但 Web remote ToolClient 尚在
-  整合；RDS 與公開 Web hosting 未完成。
-- 台語／國語 STT 在平行分支完成辨識與回填輸入框；尚未合併，且台語 TTS 仍只有
+- Hugging Face 與 Bedrock 都有 model adapter；Bedrock Nova Lite 已透過 Web remote
+  ToolClient 完成 AgentCore live 閉環；RDS 與公開 Web hosting 未完成。
+- 台語／國語 STT 已整合辨識與回填輸入框；實體麥克風 smoke 仍待完成，台語 TTS 仍只有
   feasibility spike，不能在 Demo 中宣稱雙向台語語音已完成。
 - Demo contact 是 synthetic。正式個資加密、同意、保存及刪除政策仍是待辦。
 
@@ -232,18 +229,18 @@ Web app 與 Terminal Demo 建立的 in-process MCP Server 則使用
 - memory／async PostgreSQL 案件 repository、冪等、audit 與並行狀態保護。
 - 桌機／手機響應式與無障礙基線。
 
-已在平行工作樹／分支驗證、尚待整合：
+已整合至最終分支：
 
-- AgentCore Runtime Remote MCP 的 `initialize`、`tools/list` 與四工具 live 呼叫，
+- AgentCore Runtime Remote MCP 的 `initialize`、`tools/list`、四工具與 Browser live，
   包含 service／location ID provenance 驗證。
-- 台語／國語 STT 的錄音、Breeze ASR 與繁中輸入框回填。
+- 台語／國語 STT 的錄音、Breeze ASR 與繁中輸入框回填程式。
 
 尚未完成：
 
 - 固定 Hugging Face eval 矩陣。
 - Web 讀取 repository 的 Demo／PostgreSQL 可設定切換。
-- Web → Bedrock → AgentCore Remote MCP 的最後 ToolClient 組裝與整合驗收。
-- 台語／國語 STT 分支合併與現場延遲 smoke；台語 TTS 尚未產品化。
+- 評審可連線的公開 HTTPS Web URL；目前只有本機 Web 連 AWS 後端。
+- 台語／國語 STT 現場延遲 smoke；台語 TTS 尚未產品化。
 - 正式登入、時段保留、真實個資政策、回覆紀錄與通知。
 - RDS、正式 Web hosting、正式 authentication／RBAC 與 production 維運。
 

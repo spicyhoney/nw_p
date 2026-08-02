@@ -1,6 +1,6 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-08-02 11:25（Asia/Taipei）　更新者：Codex　機器：MSI/water
+> 更新：2026-08-02 11:36（Asia/Taipei）　更新者：Codex　機器：MSI/water
 > 規則：全文 ≤150 行；只描述現在；真實 ARN、account、token 與個資不得入檔。
 
 ## 1. 目前狀態
@@ -36,6 +36,7 @@
 ### HF rich-media（圖片＋台語／國語 STT）
 
 - `WEB_MODEL_PROVIDER=huggingface`、`TOOL_TRANSPORT=local`。
+- URL：`http://127.0.0.1:8093/`；本機 process 由 PID 35944 啟動。
 - 圖片只提出建議且須人工確認；STT 只回填繁中輸入框，須由使用者確認後送出。
 - 隊友正在做實體麥克風 smoke；應回報原句、辨識結果、延遲、是否可接受。
 
@@ -55,10 +56,17 @@
    `docs/implementation-index.md`；不要再加功能或改 STT adapter。
 2. [active] 人工 review `integration/final-demo` 相對 `origin/main` 的完整 diff；確認後再由
    使用者決定是否 push／開 PR／merge。
-3. [active] Demo 結束先關閉 PID 37696（child 30560），再在本 worktree 執行：
-   `python scripts/agentcore_remote_mcp_demo.py cleanup`，接著 `status` 必須為
+3. [blocked] 大會要求 Live Demo URL 能由以下 8 個來源 IP 存取：
+   `60.250.15.18–19`、`60.250.15.34–36`、`60.250.15.50–52`。目前無 IP allowlist，
+   但也沒有公開 HTTPS Web；`127.0.0.1` 只限本機。需人類核准臨時 public tunnel 或
+   提供已核准 hosting，且公開前須有最低限度濫用保護。
+4. [active] Demo 結束先關閉 HF PID 35944 與 AWS Web PID 37696（child 30560），
+   再於本 worktree 設定
+   `AWS_PROFILE=hackathon`、`AWS_DEFAULT_REGION=us-west-2`，以
+   `var\agentcore-remote-mcp\test-venv\Scripts\python.exe` 依序執行
+   `scripts\agentcore_remote_mcp_demo.py cleanup` 與 `status`；後者必須為
    `not-deployed`。cleanup 若為 partial 不得宣稱成功。
-4. [open issue] Nova 對單獨「臺北市大安區」有一次只追問而未 tool call；受控 gate 無誤，
+5. [open issue] Nova 對單獨「臺北市大安區」有一次只追問而未 tool call；受控 gate 無誤，
    但 prompt 穩定性需另做 5 次 synthetic eval。比賽前可先用上方穩定語句。
 
 ## 5. User decisions（照做，不重新問）
@@ -86,4 +94,5 @@
 - AgentCore：`us-west-2`、synthetic-only、短效資源；到期標籤
   `2026-08-02T09:09:06Z`（臺北 17:09:06）。state 在 ignored
   `var/agentcore-remote-mcp/state.json`，只能從本 worktree cleanup。
+- `ExpiresAt` 只是追蹤標籤，不會自動刪除 AWS 資源；Demo 後仍須執行上述 cleanup。
 - 公開頁面未部署；目前是本機 Web 連 AWS 後端。

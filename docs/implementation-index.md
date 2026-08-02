@@ -23,7 +23,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
 | PostgreSQL CI | 已建立，可自動或手動重跑 | `.github/workflows/postgresql-ci.yml` | [案件持久化](postgres-case-persistence.md) | PostgreSQL 16.14 service、Ruff、compileall、完整 pytest |
 | 專案地圖與任務文件 | 已驗證 | `TASKS.md`、`HANDOFF.md`、`docs/` | [專案白話指南](project-guide.md)、[文件整理紀錄](project-map-and-backlog-plan.md) | 21 份異動 Markdown 相對連結、4 個 Mermaid、SVG XML／視覺、secret pattern、diff check 與完整 pytest |
-| AgentCore Runtime / Gateway 部署 | 未執行；本輪範圍無既有 deployment artifact，且最小 direct-code 流程需要本輪禁止建立的 S3 artifact | 尚無 | [AWS 架構](architecture.md)、[AWS POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md) | 兩個允許 Region 的 Runtime count 均為 0 |
+| AgentCore Runtime / Gateway 部署 | Runtime synthetic direct-code POC 與 authenticated remote MCP P0 已驗證；Gateway 待做 | `agentcore_*_entrypoint.py`、`scripts/agentcore_*.py` | [AWS 架構](architecture.md)、[Runtime POC 證據](ENGINEER_LOG-aws-bedrock-agentcore-poc.md)、[Remote MCP 證據](ENGINEER_LOG-agentcore-remote-mcp-demo.md) | Runtime READY；SigV4 Streamable HTTP initialize／list／四工具 passed；短效資源保留至 expiry，cleanup command 已驗證 |
 
 ## 目前可執行的閉環
 
@@ -41,10 +41,14 @@ MCP Client / 測試 Agent
   -> PostgreSQL agent.* views
 ```
 
-四個 MCP Tools 仍全部唯讀。上圖是獨立 MCP Server 的預設組裝，以及
-`PostgresReadRepository` 整合測試所對應的路徑；外部 Streamable HTTP Client／Gateway
-尚未端到端驗證。Web app 與 Terminal Demo 的 in-process MCP Server 建立
-`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查 PostgreSQL。
+Agent／MCP 閉環目前仍只讀。上圖是獨立 MCP Server 的預設組裝，以及
+`PostgresReadRepository` 整合測試所對應的路徑。另有獨立 AgentCore remote MCP 路徑已以 Streamable HTTP 端到端驗證，但該 Runtime 明確組裝 synthetic `DemoReadRepository`，不代表 PostgreSQL read path 已部署。Web app 與 Terminal Demo 的 in-process MCP Server 建立
+`DemoReadRepository`，不會因 `WEB_CASE_REPOSITORY=postgres` 自動改查
+PostgreSQL。Terminal Demo 能多輪回答「支援什麼服務、地點對應哪個
+代碼、該服務要填哪些諮詢欄位」；Web P2 另提供記憶體 session、結構化
+`SessionView`、動態表單與 synthetic 候選卡。Web 的日期時間由使用者在 UI
+確認，送出 `Asia/Taipei` aware ISO window，後端驗證後才呼叫媒合 Tool；模型
+只看得到前三個查詢 Tool，不能繞過人工表單直接媒合。
 
 Web 現在另有一條 deterministic、單一 Active Task 的引導式閉環：
 
@@ -105,37 +109,46 @@ Amazon Nova Lite -> AgentRunner -> MCPToolClient -> FastMCP Server
 2026-08-01 live run 實際完成四個唯讀 Tool 並取得 synthetic 候選；這不等同外部
 Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時段。
 
+相同閉環也已在短效 AgentCore Runtime 執行：
+
+```text
+IAM-authenticated invoke -> AgentCore Runtime -> Nova Lite -> AgentRunner
+  -> process-local MCP -> DemoReadRepository -> redacted result -> cleanup
+```
+
+Runtime 只接受固定 synthetic scenario；deploy 後完成四工具與 CloudWatch 檢查，
+隨即刪除 Runtime、workload identity、S3、IAM role 與 log group。它仍不是 Gateway、
+Streamable HTTP、RDS 或正式 Web 部署。
+
+另有一條不呼叫模型的 authenticated remote MCP 閉環：
+
+```text
+External Python MCP Client -> IAM SigV4 -> AgentCore Runtime /mcp
+  -> existing FastMCP tools -> ReadServiceLayer -> DemoReadRepository
+```
+
+2026-08-02 live P0 的 Runtime 為 `READY`，initialize、exact tools/list 與四工具 call
+全數通過；form／matching IDs 皆可追溯到前序 ToolResult。資源依 Demo 指示暫時保留至
+共同 expiry，機器 evidence 不含 account、ARN、URL、credential 或完整 payload。
+這不等於網站已部署，也未驗證 ChatGPT Developer Mode。
+
 ## 最近驗證
 
-- 2026-08-02：在 PR #20 head `9a7648e` 上新增 HF-only 台語／國語語音輸入 POC。
-  Browser 以同一按鈕開始／停止最長 30 秒錄音；6 MiB、MIME 與簽章由後端重驗，
-  transcript 只回填 composer，需人工確認後自行送出。Mock／Bedrock 不顯示按鈕，
-  provider 失敗不 fallback；音訊不進 session、案件、MEDIA_ROOT、PostgreSQL 或 audit，
-  一般 `HF_TOKEN` 也不會隱含轉送給社群 Space。新增 focused
-  `17 passed, 10 subtests passed`；含 PR #20 Web 回歸為
-  `114 passed, 2 skipped, 58 subtests passed`；完整 pytest 為
-  `265 passed, 21 skipped, 132 subtests passed`。`MediaTek-Research/Breeze-ASR-26`
-  經 `LiaoZike/breeze-asr-api` 對公開教育部短音訊 live 回傳「這條水管破了」。兩筆
-  相鄰 latency probe 總耗時 52.586 秒與 48.276 秒，其中外部 queue＋inference 佔
-  50.950 秒與 46.215 秒；前端因此每 15 秒顯示實際等待與 45–60 秒預期，並允許取消
-  等待後改用文字，不以額外暖機、cache 或 fallback 假裝降低延遲。真瀏覽器
-  `1280x720` 的語音按鈕為 `64x48`、composer／輸入框可見、無水平 overflow 或
-  console error；手機與真麥克風仍需人工作最後 Demo smoke。
-- 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
-  `repair_form_v1` 五分支、deterministic proposal、branch／summary 明確確認、確認時
-  service/form 重驗、版本化可修改摘要、field applicability、branch switch、single
-  Active Task、multi-intent 選一項、照片 branch binding／summary invalidation、安全
-  reminder／stop 與建案後表單鎖定均有回歸。預算與緊急程度維持非表單 topic 的選填
-  共用 answers：缺答保存 `skipped`、可 `declined_to_answer`，`urgency` 僅接受
-  `normal|urgent` 加上述 answer states，且不改 `matching_v1`。faucet 與 electrical 兩條
-  固定 FastAPI HTTP E2E 均在補齊完整地點後走完
-  `summary -> matching -> dispatch_pending`，且 electrical 全程沒有 `water_shutoff`。
-  focused guided tests 為 `59 passed, 50 subtests passed`；完整 pytest 為
-  `162 passed, 18 skipped, 102 subtests passed`，18 個 skip 不算成功證據。Node syntax
-  與 concurrency regression 通過；本功能異動 Python diagnostics、Ruff check、Ruff
-  format check 及 `git diff --check` 通過。全庫 Ruff check 已執行但保留 15 個既有、
-  非本功能檔案 finding；全庫 format check 也受既有未格式化檔案阻擋，兩者是
-  baseline debt，不能宣稱全庫通過。本輪沒有執行真瀏覽器 smoke。
+- 2026-08-02：新增 AgentCore Runtime authenticated remote MCP。外部 Python MCP
+  Client 經 IAM SigV4 與 Streamable HTTP 完成 initialize、exact 四工具 list 與
+  四次 call；service/location ID provenance 與 synthetic data source 全數通過，
+  沒有業務寫入。遮罩 evidence 位於 `reports/agentcore_remote_mcp_demo.json`；
+  Runtime 與附屬短效資源依 Demo 指示保留至共同 expiry，cleanup 尚未執行。
+  focused `33 passed, 36 subtests passed`；乾淨 Python 3.11 完整 suite
+  `202 passed, 18 skipped, 84 subtests passed`；新增檔 Ruff／format、compileall、
+  Node regression、diff 與 credential／PII scan 通過。
+
+- 2026-08-01：新增 synthetic-only AgentCore Runtime direct-code POC。`us-west-2`
+  Nova Lite 在 Runtime 內完成四工具，4 次 request interval 為
+  1.303／1.102／1.102 秒；log credential／provider payload pattern 為 0。
+  Runtime、workload identity、S3、IAM role 與 CloudWatch log group 已 cleanup，
+  腳本及獨立 CLI 複驗皆為 0／不存在。focused `38 passed, 7 subtests passed`，
+  完整 `175 passed, 19 skipped, 59 subtests passed`。
 - 2026-08-01：依 PR #17 review 將 Bedrock `stopReason` 改為 fail-closed；只有
   `end_turn` 接受文字、`tool_use` 接受工具呼叫，截斷、filter、malformed 與
   reason/content 不一致都拒絕。格式化兩個新檔，並將四個 Bedrock Python 檔納入

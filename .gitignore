@@ -52,3 +52,5 @@ Thumbs.db
 *.log
 /uploads/
 /var/media/
+/var/agentcore-poc/
+/var/agentcore-remote-mcp/

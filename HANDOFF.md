@@ -1,6 +1,6 @@
 # HANDOFF：居家修繕 Agent（nw_p）
 
-> 更新：2026-08-02 11:36（Asia/Taipei）　更新者：Codex　機器：MSI/water
+> 更新：2026-08-02 11:55（Asia/Taipei）　更新者：Codex　機器：MSI/water
 > 規則：全文 ≤150 行；只描述現在；真實 ARN、account、token 與個資不得入檔。
 
 ## 1. 目前狀態
@@ -11,6 +11,8 @@
   四個唯讀 Tools，並在 Web 顯示 2 位 synthetic 師傅。
 - [active] HF rich-media 與 AWS text 是兩個獨立 Demo 模式；目前不宣稱同一 session 同時
   支援圖片／語音與 Bedrock。
+- [active] HF rich-media 與 AWS text 各有一個 Quick Tunnel 公開網址；8 個大會 IP 採
+  精確 allowlist，其他來源回 403。`hackathon` credential 已更新，兩個模式都正在跑。
 
 ## 2. 本次完成與證據
 
@@ -36,13 +38,19 @@
 ### HF rich-media（圖片＋台語／國語 STT）
 
 - `WEB_MODEL_PROVIDER=huggingface`、`TOOL_TRANSPORT=local`。
-- URL：`http://127.0.0.1:8093/`；本機 process 由 PID 35944 啟動。
+- 本機：`http://127.0.0.1:8093/`；公開：
+  `https://peter-scotland-gospel-graham.trycloudflare.com`。
+- Process：launcher PID 11428、server PID 40676、cloudflared PID 35296。
+- allowlist commit `e2cf9b1`；外部非核准來源實測 403，本機模擬評審 IP 實測 200。
 - 圖片只提出建議且須人工確認；STT 只回填繁中輸入框，須由使用者確認後送出。
 - 隊友正在做實體麥克風 smoke；應回報原句、辨識結果、延遲、是否可接受。
 
-### AWS text（目前正在跑）
+### AWS text（正在跑）
 
-- URL：`http://127.0.0.1:8094/`。
+- 本機：`http://127.0.0.1:8094/`；公開：
+  `https://markers-encouraged-stack-mating.trycloudflare.com`。
+- Process：launcher PID 50632、server PID 39264、cloudflared PID 17068；非核准來源
+  實測 403，本機模擬評審 IP 實測 200。
 - 設定：`WEB_MODEL_PROVIDER=bedrock`、`TOOL_TRANSPORT=agentcore_remote_mcp`。
 - 最穩定操作：輸入「臺北市大安區水龍頭漏水」→確認分支；若仍追問地點，輸入
   「服務地點是臺北市大安區，請查詢此行政區」。
@@ -56,11 +64,10 @@
    `docs/implementation-index.md`；不要再加功能或改 STT adapter。
 2. [active] 人工 review `integration/final-demo` 相對 `origin/main` 的完整 diff；確認後再由
    使用者決定是否 push／開 PR／merge。
-3. [blocked] 大會要求 Live Demo URL 能由以下 8 個來源 IP 存取：
-   `60.250.15.18–19`、`60.250.15.34–36`、`60.250.15.50–52`。目前無 IP allowlist，
-   但也沒有公開 HTTPS Web；`127.0.0.1` 只限本機。需人類核准臨時 public tunnel 或
-   提供已核准 hosting，且公開前須有最低限度濫用保護。
-4. [active] Demo 結束先關閉 HF PID 35944 與 AWS Web PID 37696（child 30560），
+3. [active] 請大會網路實際開啟兩個公開 URL，確認指定來源 IP 能看到頁面；目前只完成
+   非核准來源 403 與本機模擬評審 IP 200。Quick Tunnel 無 SLA，評審前須再檢查。
+4. [active] Demo 結束先關閉 cloudflared PID 35296／17068、HF PID 11428／40676、
+   AWS Web PID 50632／39264，
    再於本 worktree 設定
    `AWS_PROFILE=hackathon`、`AWS_DEFAULT_REGION=us-west-2`，以
    `var\agentcore-remote-mcp\test-venv\Scripts\python.exe` 依序執行
@@ -89,10 +96,14 @@
 ## 7. 環境快照
 
 - Worktree：`C:\Users\water\Desktop\AI\claude\hack松\nw_p_final_integration`。
-- Web：PID 37696（Python child 30560），port 8094；必須保留
-  `PYTHONPATH=<final-integration>\src`，否則共享 editable venv 會誤載 `nw_p\src`。
+- AWS Web：PID 50632／39264，port 8094；必須保留
+  `PYTHONPATH=<final-integration>\src`，否則共享 editable venv 會載入錯 worktree。
+- HF Web：PID 11428／40676，port 8093；Quick Tunnel PID 35296；AWS Quick Tunnel
+  PID 17068。Quick Tunnel 無 SLA，電腦／網路／process 中斷即失效，不能保證整整
+  24 小時；正式評審前須重點檢查。
 - AgentCore：`us-west-2`、synthetic-only、短效資源；到期標籤
   `2026-08-02T09:09:06Z`（臺北 17:09:06）。state 在 ignored
   `var/agentcore-remote-mcp/state.json`，只能從本 worktree cleanup。
 - `ExpiresAt` 只是追蹤標籤，不會自動刪除 AWS 資源；Demo 後仍須執行上述 cleanup。
-- 公開頁面未部署；目前是本機 Web 連 AWS 後端。
+- 公開頁面未部署到 AWS；目前是兩個短效 Quick Tunnel 連本機 Web，其中 AWS text Web
+  再連 Bedrock 與 AgentCore 後端。

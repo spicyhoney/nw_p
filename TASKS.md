@@ -18,8 +18,8 @@
 |---|---|---|---|---|---|---|
 | RELEASE-001 | In progress | Review 並交付 `integration/final-demo` | 目前完整成果只在本機整合 branch；未交付就無法由組員或評審重現 | Codex＋人類 | 隊友語音 smoke 結果、完整 diff 人工核准 | branch 已 push；PR／merge 決定有紀錄；focused tests、secret scan 與兩條 Demo 指南一致 |
 | VOICE-001 | In progress | 完成實體麥克風台語／國語 smoke | 自動測試無法證明會場麥克風、瀏覽器權限與實際台語辨識品質 | 隊友 | `fix/voice-image-live-demo`／整合版 HF 模式 | 記錄原句、轉寫、延遲、是否可接受；失敗時 UI 明確改用文字且不 fallback Mock |
-| DEPLOY-001 | Blocked | 提供評審可連線的公開 HTTPS Web URL | 大會明確要求 Live Demo URL 可由 8 個評審來源 IP 存取；`127.0.0.1` 完全無法供外部評審連線 | 人類＋Codex | 核准臨時 public tunnel 或 hosting；最低限度濫用保護 | `60.250.15.18–19`、`60.250.15.34–36`、`60.250.15.50–52` 可連；其他存取政策有紀錄；無密鑰入庫；Demo 後可關閉 |
-| CLEANUP-001 | In progress | Demo 後停止 Web 並清除短效 AgentCore 資源 | Runtime、IAM、S3、log group 會持續存在並可能產生成本 | Codex | 使用者完成 live Demo | Web process 已停；cleanup=`passed`；status=`not-deployed`；無 remaining resources |
+| DEPLOY-001 | In progress | 維持評審可連線的公開 HTTPS Web URL | 大會明確要求 Live Demo URL 可由 8 個評審來源 IP 存取 | 人類＋Codex | 電腦不休眠、網路與 Quick Tunnel 持續 | 公開 HF 與 AWS text URL 已建立；非核准來源 403、模擬評審 IP 200；正式評審 IP 實連待確認；若 process 重啟須更新 URL |
+| CLEANUP-001 | In progress | Demo 後停止 tunnel／Web 並清除短效 AgentCore 資源 | Runtime、IAM、S3、log group 會持續存在並可能產生成本 | Codex | 使用者完成 live Demo | tunnel 與 Web process 已停；cleanup=`passed`；status=`not-deployed`；無 remaining resources |
 
 ## P1
 
@@ -43,6 +43,7 @@
 
 - Bedrock ModelClient、AgentRunner tool-use、request pacing 與 synthetic live evidence。
 - AgentCore Remote MCP Runtime、四個唯讀 Tools、SigV4 client 與 Browser composition。
+- 評審 IP allowlist；HF 與 AWS text 兩個 Quick Tunnel 已啟動，非核准來源 403、模擬評審 IP 200。
 - HF 圖片建議／人工確認與台語／國語 STT Web 入口（仍待實體麥克風 smoke）。
 - 手動 Checklist、動態 `repair_form_v1`、摘要確認、synthetic 媒合與本機派單 workflow。
 

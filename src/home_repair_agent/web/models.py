@@ -283,6 +283,13 @@ class HealthView(WebModel):
     model_provider: Literal["mock", "huggingface", "bedrock"]
 
 
+class SpeechTranscriptionView(WebModel):
+    text: str = Field(min_length=1, max_length=1000)
+    model_id: str = Field(min_length=1, max_length=200)
+    provider: Literal["huggingface_space"] = "huggingface_space"
+    needs_user_confirmation: Literal[True] = True
+
+
 class DemoProviderIdentityListView(WebModel):
     identities: list[DemoProviderIdentity] = Field(default_factory=list)
 

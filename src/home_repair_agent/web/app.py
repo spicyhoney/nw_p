@@ -62,6 +62,7 @@ from home_repair_agent.web.models import (
     ProviderDecisionRequest,
     ProviderView,
     SessionView,
+    SpeechTranscriptionView,
     SummaryConfirmRequest,
 )
 from home_repair_agent.web.service import (
@@ -73,6 +74,14 @@ from home_repair_agent.web.service import (
     WebSessionNotFoundError,
     WebSessionService,
     WebSessionUpstreamError,
+)
+from home_repair_agent.web.speech import (
+    MAX_SPEECH_UPLOAD_BYTES,
+    HuggingFaceGradioSpeechToTextClient,
+    SpeechToTextInputError,
+    SpeechToTextPort,
+    SpeechToTextRequestError,
+    SpeechToTextResponseError,
 )
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -112,6 +121,7 @@ def create_app(
     session_service: WebSessionService | None = None,
     case_workflow: CaseWorkflowService | None = None,
     reference_time: datetime | None = None,
+    speech_to_text_client: SpeechToTextPort | None = None,
 ) -> FastAPI:
     if (
         session_service is not None
@@ -132,6 +142,7 @@ def create_app(
         if session_service is not None:
             app.state.web_sessions = session_service
             app.state.case_workflow = session_service.case_workflow
+            app.state.speech_to_text = speech_to_text_client
             yield
             return
 
@@ -143,6 +154,11 @@ def create_app(
         media_storage = LocalMediaStorage()
         vision_client = (
             HuggingFaceVisionClient.from_environment() if provider_key == "huggingface" else None
+        )
+        speech_client = speech_to_text_client or (
+            HuggingFaceGradioSpeechToTextClient.from_environment()
+            if provider_key == "huggingface"
+            else None
         )
         repository = DemoReadRepository(reference_time=reference_time)
         workflow = (
@@ -177,6 +193,7 @@ def create_app(
                 vision_client=vision_client,
             )
             app.state.case_workflow = workflow
+            app.state.speech_to_text = speech_client
             yield
 
     app = FastAPI(
@@ -288,6 +305,55 @@ def create_app(
     @app.get("/api/sessions/{session_id}", response_model=SessionView)
     async def get_session(session_id: str, request: Request) -> SessionView:
         return await _session_service(request).get_session(session_id)
+
+    @app.post(
+        "/api/sessions/{session_id}/speech/transcribe",
+        response_model=SpeechTranscriptionView,
+    )
+    async def transcribe_session_audio(
+        session_id: str,
+        request: Request,
+        file: Annotated[UploadFile, File()],
+        external_processing_confirmed: Annotated[bool, Form()],
+    ) -> SpeechTranscriptionView:
+        session = await _session_service(request).get_session(session_id)
+        speech_client = getattr(request.app.state, "speech_to_text", None)
+        if session.provider.key != "huggingface" or speech_client is None:
+            raise WebSessionConflictError(
+                code="VOICE_INPUT_UNAVAILABLE",
+                message="語音輸入只在已設定的 Hugging Face 模式開放，不會改用 Mock。",
+            )
+        if not external_processing_confirmed:
+            raise WebSessionInputError(
+                code="VOICE_EXTERNAL_CONSENT_REQUIRED",
+                message="請先明確同意將這段測試錄音送至外部 Hugging Face Space。",
+            )
+        try:
+            content = await file.read(MAX_SPEECH_UPLOAD_BYTES + 1)
+        finally:
+            await file.close()
+        try:
+            transcript = await speech_client.transcribe(
+                content,
+                content_type=file.content_type or "",
+            )
+        except SpeechToTextInputError as error:
+            raise WebSessionInputError(
+                code="INVALID_VOICE_AUDIO",
+                message=(
+                    "無法處理這段錄音；請使用瀏覽器支援的 WebM、Ogg、MP4、WAV 或 "
+                    "MP3，且大小不超過 6 MB。"
+                ),
+            ) from error
+        except (SpeechToTextRequestError, SpeechToTextResponseError) as error:
+            raise WebSessionUpstreamError(
+                code="VOICE_TRANSCRIPTION_FAILED",
+                message=("台語語音辨識服務目前無法完成處理，沒有改用 Mock；請稍後再試或改用文字。"),
+            ) from error
+        return SpeechTranscriptionView(
+            text=transcript.text,
+            model_id=transcript.model_id,
+        )
 
     @app.post(
         "/api/sessions/{session_id}/image",

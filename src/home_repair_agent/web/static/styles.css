@@ -1074,12 +1074,49 @@ a:focus-visible {
   background: white;
 }
 
+.message-composer--voice {
+  grid-template-columns: 58px minmax(0, 1fr) 42px;
+}
+
 .privacy-note {
   grid-column: 1 / -1;
   margin: 0;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.voice-button {
+  width: 58px;
+  height: 42px;
+  padding: 0 8px;
+  border: 1px solid var(--teal-dark);
+  border-radius: 4px;
+  background: var(--teal-pale);
+  color: var(--teal-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.voice-button:hover {
+  background: #d7efea;
+}
+
+.voice-button[aria-pressed="true"] {
+  border-color: #a52a1f;
+  background: #fff0ed;
+  color: #8b1d14;
+}
+
+.voice-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+#voice-status:not(:empty)::before {
+  content: " · ";
 }
 
 .message-composer textarea {
@@ -1514,6 +1551,10 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) 48px;
 }
 
+.message-composer--voice {
+  grid-template-columns: 64px minmax(0, 1fr) 48px;
+}
+
 .privacy-note {
   font-size: 13px;
 }
@@ -1527,6 +1568,12 @@ a:focus-visible {
 .send-button {
   width: 48px;
   height: 48px;
+}
+
+.voice-button {
+  width: 64px;
+  height: 48px;
+  font-size: 14px;
 }
 
 .candidate-card h3 {

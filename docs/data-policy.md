@@ -109,3 +109,18 @@
   目錄驗證，才能影響表單、媒合與派單。
 - 廠商只能讀取指派給自己的 pending／accepted 案件圖片；rejected 與未指派一律
   回 404。Browser 只知道 `has_image`，不取得內部 storage path。
+
+## 語音與外部 ASR
+
+- 語音輸入目前只允許 HF 模式的 synthetic／公開測試內容。不得錄製或送出真實姓名、
+  電話、門牌、案件個資或可識別的背景談話。
+- Browser 必須由明確使用者手勢開始錄音，最長 30 秒；再按一次停止後才會送到 UI
+  已揭露的外部 Hugging Face Space。Mock／Bedrock 不開放，provider 失敗不 fallback。
+- 後端只接受實際簽章相符的 WebM／Ogg／MP4／WAV／MP3，最大 6 MiB；音訊只在記憶體
+  與外部 endpoint 處理，不寫入 `MEDIA_ROOT`、PostgreSQL、案件、audit 或 log。
+- 外部社群 Space 的暫存／保留政策不受本專案控制，因此此 POC 不得用於真實個資或
+  正式案件。若未來部署自有 endpoint，必須另訂保存期限、刪除、存取與告知政策。
+- transcript 只是待確認草稿，只能填入既有 composer；使用者確認／修改並自行送出後，
+  才能進入既有文字安全、服務、地點、表單、媒合與派單 gate。
+- 一般聊天／VLM 的 `HF_TOKEN` 不得隱含轉送給社群 Space；private ASR endpoint 只能用
+  權限最小化、獨立保存的 `HF_ASR_TOKEN`。

@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-08-01
+最後更新：2026-08-02
 
 這是目前程式狀態的入口。競賽構想文件描述「可能要做什麼」；本頁與各功能
 README 描述「現在真的做了什麼」。新功能完成時必須更新本頁。
@@ -17,6 +17,7 @@ README 描述「現在真的做了什麼」。新功能完成時必須更新本�
 | 本機終端 Demo | 已驗證四工具閉環與顯式 provider routing | `src/home_repair_agent/agent/demo.py` | [Agent README](../src/home_repair_agent/agent/README.md#本機終端-demo) | 腳本化 Mock smoke、Demo tests |
 | Hugging Face Model adapter | contract 與單一 Web 三工具 live case 已驗證；七案 opt-in harness 已建立，本輪 live 矩陣待新 token | `src/home_repair_agent/agent/huggingface_model.py`、`scripts/huggingface_web_eval.py` | [HF 模型模式](../src/home_repair_agent/agent/README.md#hugging-face-模型模式)、[Web Demo 收尾](ENGINEER_LOG-web-demo-viewport-hf-testability.md) | request/response、tool call、timeout、錯誤遮罩、offline 七案 contract、歷史 Qwen3 live |
 | 圖片上傳與 HF VLM | 已整合；完成本機、live HF、PostgreSQL 16.14 驗證，guided flow 綁 active branch 並在圖片變更時使摘要失效 | `agent/huggingface_vision.py`、`backend/media_storage.py`、`web/` | [Web 圖片流程](../src/home_repair_agent/web/README.md#圖片建議hf-only)、[資料政策](data-policy.md#圖片與外部模型) | VLM／storage／API／provider access／前端／migration 003／branch binding／summary invalidation tests |
+| HF 台語／國語語音輸入 | 已完成 HF-only Web POC；錄音只回填 composer、需人工確認，不保存、不自動送出、不 fallback | `web/speech.py`、`web/app.py`、`web/static/` | [Web 語音流程](../src/home_repair_agent/web/README.md#台語國語語音輸入hf-only) | fake HTTP／API／前端契約；公開教育部短音訊 Breeze-ASR-26 live smoke |
 | Bedrock Model adapter | contract、synthetic tool-use smoke 與四工具 MCP live 閉環已驗證 | `src/home_repair_agent/agent/bedrock_model.py`、`scripts/bedrock_*.py` | [Agent README](../src/home_repair_agent/agent/README.md#bedrock-模型模式)、[AWS POC](ENGINEER_LOG-aws-bedrock-agentcore-poc.md)、[MCP E2E](ENGINEER_LOG-aws-bedrock-mcp-e2e.md) | fake-client contract、Nova Lite Converse、AgentRunner × MCP 四工具 live |
 | FastAPI / Demo UI | 已驗證 guided 單一修繕、跨輪地點／更正、單一內容捲動、廠商 reflow 與受控答案顯示；唯讀服務資料仍是 Demo repository | `src/home_repair_agent/web/` | [Web README](../src/home_repair_agent/web/README.md)、[無障礙 UI](consumer-accessibility.md)、[Web Demo 收尾](ENGINEER_LOG-web-demo-viewport-hf-testability.md) | HTTP／a11y／Node regression；桌面／手機與等效 125%／200% viewport smoke |
 | Web 讀取 adapter | 待辦：服務、地區、表單與媒合可設定切換 Demo／PostgreSQL repository | 尚無 | [TASKS `DATA-001`](../TASKS.md) | 尚未驗證 |
@@ -106,6 +107,20 @@ Streamable HTTP／AgentCore Gateway，也不會建立案件、訂單或保留時
 
 ## 最近驗證
 
+- 2026-08-02：在 PR #20 head `9a7648e` 上新增 HF-only 台語／國語語音輸入 POC。
+  Browser 以同一按鈕開始／停止最長 30 秒錄音；6 MiB、MIME 與簽章由後端重驗，
+  transcript 只回填 composer，需人工確認後自行送出。Mock／Bedrock 不顯示按鈕，
+  provider 失敗不 fallback；音訊不進 session、案件、MEDIA_ROOT、PostgreSQL 或 audit，
+  一般 `HF_TOKEN` 也不會隱含轉送給社群 Space。新增 focused
+  `17 passed, 10 subtests passed`；含 PR #20 Web 回歸為
+  `114 passed, 2 skipped, 58 subtests passed`；完整 pytest 為
+  `265 passed, 21 skipped, 132 subtests passed`。`MediaTek-Research/Breeze-ASR-26`
+  經 `LiaoZike/breeze-asr-api` 對公開教育部短音訊 live 回傳「這條水管破了」。兩筆
+  相鄰 latency probe 總耗時 52.586 秒與 48.276 秒，其中外部 queue＋inference 佔
+  50.950 秒與 46.215 秒；前端因此每 15 秒顯示實際等待與 45–60 秒預期，並允許取消
+  等待後改用文字，不以額外暖機、cache 或 fallback 假裝降低延遲。真瀏覽器
+  `1280x720` 的語音按鈕為 `64x48`、composer／輸入框可見、無水平 overflow 或
+  console error；手機與真麥克風仍需人工作最後 Demo smoke。
 - 2026-08-01：完成 guided single-repair conversation。canonical `service_id=17`、
   `repair_form_v1` 五分支、deterministic proposal、branch／summary 明確確認、確認時
   service/form 重驗、版本化可修改摘要、field applicability、branch switch、single

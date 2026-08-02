@@ -58,6 +58,11 @@ const store = {
   mediaEditorExpanded: false,
   formSignature: "",
   visibleFormSignature: "",
+  voiceState: "idle",
+  voiceCapture: null,
+  voiceProgressTimer: null,
+  voiceTranscriptionStartedAt: 0,
+  voiceAbortController: null,
 };
 
 const elements = {};
@@ -98,6 +103,9 @@ function bindElements() {
   elements.messageForm = document.querySelector("#message-form");
   elements.messageInput = document.querySelector("#message-input");
   elements.sendButton = document.querySelector("#send-button");
+  elements.voiceButton = document.querySelector("#voice-button");
+  elements.voiceDisclosure = document.querySelector("#voice-disclosure");
+  elements.voiceStatus = document.querySelector("#voice-status");
   elements.formSection = document.querySelector("#form-section");
   elements.formTitle = document.querySelector("#form-title");
   elements.formDescription = document.querySelector("#form-description");
@@ -187,6 +195,7 @@ function bindEvents() {
   elements.cancelDispatch.addEventListener("click", cancelDispatch);
   elements.confirmDispatch.addEventListener("click", confirmDispatch);
   elements.messageInput.addEventListener("input", resizeMessageInput);
+  elements.voiceButton.addEventListener("click", toggleVoiceRecording);
   elements.mediaUploadForm.addEventListener("submit", handleMediaUpload);
   elements.mediaFile.addEventListener("change", handleMediaFileChange);
   elements.mediaRemoveButton.addEventListener("click", removeMedia);
@@ -204,7 +213,10 @@ function bindEvents() {
       setMobileView(button.dataset.mobileTarget, { focusHeading: true });
     });
   });
-  window.addEventListener("beforeunload", stopSessionPolling);
+  window.addEventListener("beforeunload", () => {
+    stopSessionPolling();
+    cancelVoiceCapture();
+  });
 }
 
 async function createSession() {
@@ -652,10 +664,331 @@ async function loadMediaProvider() {
     store.mediaProvider = "unknown";
   }
   renderMedia();
+  renderVoiceInput();
 }
 
 function isHuggingFaceMediaAvailable() {
   return store.mediaProvider === "huggingface";
+}
+
+const VOICE_MAX_BYTES = 6 * 1024 * 1024;
+const VOICE_MAX_DURATION_MS = 30 * 1000;
+const VOICE_PROGRESS_INTERVAL_MS = 15 * 1000;
+const VOICE_EXPECTED_WAIT_SECONDS = "45–60";
+const VOICE_MIME_CANDIDATES = [
+  "audio/webm;codecs=opus",
+  "audio/webm",
+  "audio/ogg;codecs=opus",
+  "audio/mp4",
+];
+
+function renderVoiceInput() {
+  if (!elements.voiceButton || !elements.messageForm) {
+    return;
+  }
+  const available = isHuggingFaceMediaAvailable();
+  const recording = store.voiceState === "recording";
+  const transcribing = store.voiceState === "transcribing";
+  const otherBusy = store.busy || store.mediaBusy || hasChecklistMutation();
+  const canSend = Boolean(store.session?.can_send_message);
+
+  elements.messageForm.classList.toggle("message-composer--voice", available);
+  elements.voiceButton.hidden = !available;
+  elements.voiceDisclosure.hidden = !available;
+  elements.voiceButton.disabled =
+    !available ||
+    !canSend ||
+    (transcribing && store.voiceAbortController?.signal.aborted) ||
+    (otherBusy && !recording && !transcribing);
+  elements.voiceButton.setAttribute("aria-pressed", String(recording));
+  elements.voiceButton.textContent = recording
+    ? "停止"
+    : transcribing
+      ? "取消"
+      : "語音";
+  const actionLabel = recording
+    ? "停止錄音並送至外部 Hugging Face Space 辨識"
+    : transcribing
+      ? "取消等待 Hugging Face Space 辨識"
+      : "同意外部處理並開始台語或國語錄音";
+  elements.voiceButton.setAttribute("aria-label", actionLabel);
+  elements.voiceButton.title = actionLabel;
+  if (!available) {
+    setVoiceStatus("");
+  }
+}
+
+function setVoiceStatus(message) {
+  if (elements.voiceStatus) {
+    elements.voiceStatus.textContent = message;
+  }
+}
+
+function startVoiceProgress() {
+  stopVoiceProgress();
+  store.voiceTranscriptionStartedAt = Date.now();
+  renderVoiceProgress();
+  store.voiceProgressTimer = window.setInterval(
+    renderVoiceProgress,
+    VOICE_PROGRESS_INTERVAL_MS,
+  );
+}
+
+function renderVoiceProgress() {
+  if (store.voiceState !== "transcribing" || !store.voiceTranscriptionStartedAt) {
+    return;
+  }
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - store.voiceTranscriptionStartedAt) / 1000),
+  );
+  setVoiceStatus(
+    `正在等待 Breeze-ASR-26；已等待 ${elapsedSeconds} 秒。` +
+      `公開 Space 實測通常約 ${VOICE_EXPECTED_WAIT_SECONDS} 秒；可按「取消」後改用文字。`,
+  );
+}
+
+function stopVoiceProgress() {
+  if (store.voiceProgressTimer) {
+    window.clearInterval(store.voiceProgressTimer);
+  }
+  store.voiceProgressTimer = null;
+  store.voiceTranscriptionStartedAt = 0;
+}
+
+async function toggleVoiceRecording() {
+  if (store.voiceState === "recording") {
+    stopVoiceRecording();
+    return;
+  }
+  if (store.voiceState === "transcribing") {
+    cancelVoiceTranscription();
+    return;
+  }
+  if (
+    store.voiceState !== "idle" ||
+    !store.session ||
+    !store.session.can_send_message ||
+    !isHuggingFaceMediaAvailable()
+  ) {
+    return;
+  }
+  if (
+    !navigator.mediaDevices?.getUserMedia ||
+    typeof MediaRecorder === "undefined"
+  ) {
+    setVoiceStatus("此瀏覽器不支援安全錄音，請改用最新版瀏覽器或文字輸入。");
+    announce("此瀏覽器無法使用語音輸入。");
+    return;
+  }
+  const mimeType = supportedVoiceMimeType();
+  if (!mimeType) {
+    setVoiceStatus("此瀏覽器沒有可安全上傳的錄音格式，請改用文字輸入。");
+    return;
+  }
+
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+      video: false,
+    });
+  } catch (error) {
+    const denied = error?.name === "NotAllowedError";
+    setVoiceStatus(
+      denied
+        ? "未取得麥克風權限；你仍可直接輸入文字。"
+        : "目前無法開啟麥克風；你仍可直接輸入文字。",
+    );
+    announce("麥克風未開啟。");
+    return;
+  }
+
+  if (
+    !store.session?.can_send_message ||
+    !isHuggingFaceMediaAvailable() ||
+    store.voiceState !== "idle"
+  ) {
+    stream.getTracks().forEach((track) => track.stop());
+    return;
+  }
+
+  const recorder = new MediaRecorder(stream, { mimeType });
+  const capture = {
+    recorder,
+    stream,
+    mimeType,
+    chunks: [],
+    sessionId: store.session.session_id,
+    timer: 0,
+    discard: false,
+  };
+  recorder.addEventListener("dataavailable", (event) => {
+    if (event.data?.size) {
+      capture.chunks.push(event.data);
+    }
+  });
+  recorder.addEventListener("stop", () => completeVoiceCapture(capture));
+  recorder.addEventListener("error", () => {
+    capture.discard = true;
+    setVoiceStatus("錄音失敗；沒有送出任何內容，請改用文字或重試。");
+    cancelVoiceCapture();
+  });
+  store.voiceCapture = capture;
+  store.voiceState = "recording";
+  recorder.start(500);
+  capture.timer = window.setTimeout(() => {
+    if (store.voiceCapture === capture && store.voiceState === "recording") {
+      setVoiceStatus("已達 30 秒上限，正在停止錄音並辨識…");
+      stopVoiceRecording();
+    }
+  }, VOICE_MAX_DURATION_MS);
+  setVoiceStatus("錄音中；再按一次「停止」後才會送至外部 HF Space 辨識。");
+  announce("已開始錄音，再按一次停止錄音。");
+  updateControls();
+}
+
+function supportedVoiceMimeType() {
+  return (
+    VOICE_MIME_CANDIDATES.find((type) => MediaRecorder.isTypeSupported(type)) ||
+    ""
+  );
+}
+
+function stopVoiceRecording() {
+  const capture = store.voiceCapture;
+  if (!capture || store.voiceState !== "recording") {
+    return;
+  }
+  window.clearTimeout(capture.timer);
+  store.voiceState = "transcribing";
+  capture.stream.getTracks().forEach((track) => track.stop());
+  if (capture.recorder.state !== "inactive") {
+    capture.recorder.stop();
+  }
+  setVoiceStatus("錄音已停止，正在等待 Breeze-ASR-26 辨識…");
+  announce("錄音已停止，正在辨識；不會自動送出對話。");
+  updateControls();
+}
+
+async function completeVoiceCapture(capture) {
+  window.clearTimeout(capture.timer);
+  capture.stream.getTracks().forEach((track) => track.stop());
+  if (capture.discard || store.voiceCapture !== capture) {
+    return;
+  }
+  store.voiceCapture = null;
+  if (store.session?.session_id !== capture.sessionId) {
+    store.voiceState = "idle";
+    setVoiceStatus("對話已切換，舊錄音未套用。");
+    updateControls();
+    return;
+  }
+
+  const blob = new Blob(capture.chunks, { type: capture.mimeType });
+  if (!blob.size) {
+    store.voiceState = "idle";
+    setVoiceStatus("沒有收到可辨識的聲音，請重試或改用文字。");
+    updateControls();
+    return;
+  }
+  if (blob.size > VOICE_MAX_BYTES) {
+    store.voiceState = "idle";
+    setVoiceStatus("錄音超過 6 MB，未送出；請縮短後重試。");
+    updateControls();
+    return;
+  }
+
+  const body = new FormData();
+  body.append("file", blob, voiceFilename(capture.mimeType));
+  body.append("external_processing_confirmed", "true");
+  const abortController = new AbortController();
+  store.voiceAbortController = abortController;
+  startVoiceProgress();
+  try {
+    const response = await api(
+      `/api/sessions/${encodeURIComponent(capture.sessionId)}/speech/transcribe`,
+      { method: "POST", body, signal: abortController.signal },
+    );
+    if (store.session?.session_id !== capture.sessionId) {
+      setVoiceStatus("對話已切換，辨識結果未套用。");
+      return;
+    }
+    const transcript = String(response?.text || "").trim();
+    if (!transcript) {
+      throw new Error("語音服務沒有回傳可確認的文字。");
+    }
+    const currentText = elements.messageInput.value.trimEnd();
+    const combined = currentText ? `${currentText} ${transcript}` : transcript;
+    if (combined.length > elements.messageInput.maxLength) {
+      setVoiceStatus("辨識完成，但加上現有草稿會超過字數限制；請先精簡文字再重試。");
+      return;
+    }
+    elements.messageInput.value = combined;
+    resizeMessageInput();
+    elements.messageInput.focus({ preventScroll: true });
+    setVoiceStatus("辨識文字已填入；請先確認或修改，再按送出。");
+    announce("語音辨識完成，文字已填入但尚未送出。");
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setVoiceStatus("已取消等待；辨識結果未套用，現在可直接輸入文字。");
+      announce("已取消等待語音辨識，可以改用文字輸入。");
+    } else {
+      setVoiceStatus(`${error.message} 沒有改用 Mock，也沒有送出對話。`);
+      announce("語音辨識未完成，請改用文字或稍後重試。");
+    }
+  } finally {
+    stopVoiceProgress();
+    if (store.voiceAbortController === abortController) {
+      store.voiceAbortController = null;
+    }
+    store.voiceState = "idle";
+    updateControls();
+  }
+}
+
+function cancelVoiceTranscription() {
+  const controller = store.voiceAbortController;
+  if (store.voiceState !== "transcribing" || !controller || controller.signal.aborted) {
+    return;
+  }
+  controller.abort();
+  stopVoiceProgress();
+  setVoiceStatus("正在取消等待；已送出的錄音不會套用到對話。");
+  updateControls();
+}
+
+function cancelVoiceCapture() {
+  stopVoiceProgress();
+  store.voiceAbortController?.abort();
+  store.voiceAbortController = null;
+  const capture = store.voiceCapture;
+  if (!capture) {
+    store.voiceState = "idle";
+    return;
+  }
+  capture.discard = true;
+  window.clearTimeout(capture.timer);
+  capture.stream.getTracks().forEach((track) => track.stop());
+  if (capture.recorder.state !== "inactive") {
+    capture.recorder.stop();
+  }
+  store.voiceCapture = null;
+  store.voiceState = "idle";
+}
+
+function voiceFilename(mimeType) {
+  const normalized = mimeType.split(";", 1)[0];
+  const extension = {
+    "audio/mp4": "m4a",
+    "audio/ogg": "ogg",
+    "audio/webm": "webm",
+  }[normalized] || "webm";
+  return `voice-input.${extension}`;
 }
 
 function currentMedia() {
@@ -1916,7 +2249,12 @@ function hasChecklistMutation() {
 }
 
 function isSessionMutationBlocked() {
-  return store.busy || store.mediaBusy || hasChecklistMutation();
+  return (
+    store.busy ||
+    store.mediaBusy ||
+    store.voiceState !== "idle" ||
+    hasChecklistMutation()
+  );
 }
 
 function updateControls() {
@@ -1962,6 +2300,7 @@ function updateControls() {
       button.disabled = sessionMutationBlocked;
     });
   renderMedia();
+  renderVoiceInput();
 }
 
 function setBusy(value, message = "") {
@@ -2091,6 +2430,7 @@ function revealConversationSection(section, focusTarget) {
 }
 
 function resetTransientConversationUi() {
+  cancelVoiceCapture();
   clearPreviewObjectUrl();
   store.mediaEditorExpanded = false;
   store.formSignature = "";
@@ -2107,6 +2447,7 @@ function resetTransientConversationUi() {
   if (elements.mediaStatus) {
     elements.mediaStatus.textContent = "";
   }
+  setVoiceStatus("");
 }
 
 function resizeMessageInput() {

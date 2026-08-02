@@ -37,6 +37,9 @@ synthetic 媒合與受控案件 workflow 組成 FastAPI Web Demo。
 - HF 模式可上傳一張 JPEG／PNG／WebP synthetic／公開測試圖片。既有安全儲存、
   VLM 建議、人工修正／確認及服務目錄重驗管線不變；圖片會綁定 active branch，
   移除圖片會使現有摘要版本失效。
+- HF 模式的 composer 可用同一顆按鈕開始／停止最多 30 秒的台語或國語錄音；錄音
+  只在使用者停止後送到外部 Hugging Face Space 的 Breeze-ASR-26，回傳文字只會填入
+  既有輸入框，必須由使用者確認／修改後自行送出，不會自動建案、媒合或派單。
 
 廠商端 `/provider` 維持既有受控流程：
 
@@ -85,6 +88,8 @@ FastAPI route 只做 HTTP validation 與 adapter。主要責任分工如下：
   PostgreSQL 案件 persistence adapter。
 - `LocalMediaStorage`：實際解碼、重新編碼移除 metadata、安全相對路徑與刪除。
 - `HuggingFaceVisionClient`：外部 VLM 結構化建議；不診斷、不選分支、不媒合、不派單。
+- `HuggingFaceGradioSpeechToTextClient`：驗證短音訊並呼叫受限的 `hf.space` ASR
+  endpoint；只回傳 provider-neutral transcript，不保存錄音、不送出對話、不 fallback。
 
 分支 router 與表單 applicability 都是可測試的結構化規則，不由 prompt 或前端字串
 決定。分支確認時再查一次服務目錄與表單，可以阻擋 stale proposal、錯誤 service ID、
@@ -159,6 +164,30 @@ Browser explicit external-processing consent + multipart image
 不會取得 server `image_path`。上傳、替換、確認或刪除圖片都會使先前摘要失效；切換
 branch 時不沿用不相符的圖片分析。
 
+### 台語／國語語音輸入（HF only）
+
+```text
+Browser 使用者按「語音」並允許麥克風
+  -> MediaRecorder 最多錄製 30 秒
+  -> 使用者再按一次停止
+  -> POST multipart audio + explicit external-processing consent
+  -> 後端驗證 MIME、檔案簽章與 6 MiB 上限
+  -> configurable hf.space Gradio endpoint
+  -> MediaTek-Research/Breeze-ASR-26 transcript
+  -> 只回填原本 composer textarea
+  -> 使用者確認／修改後才自行按送出
+```
+
+預設端點是社群維護的 `LiaoZike/breeze-asr-api`，只作非個資黑客松 Demo；模型本身為
+Apache-2.0，但 Space 沒有 SLA。兩筆相鄰的 live probe 總耗時為 52.586 秒與
+48.276 秒，其中 upload／enqueue 合計僅 1.636 秒與 2.061 秒，外部 queue＋inference
+佔 50.950 秒與 46.215 秒。因此前端每 15 秒顯示實際等待時間與 45–60 秒預期，並可
+取消等待後改用文字；取消只保證結果不套用到對話，不宣稱能撤回已送至 Space 的音訊。
+本功能不假裝是本機上傳變慢，也不送額外暖機請求。錄音只在記憶體與外部 Space 暫存，不寫入
+`MEDIA_ROOT`、PostgreSQL、案件、audit 或 log。Mock／Bedrock 模式不顯示語音按鈕，
+外部失敗會明確回報且不改用 Mock。這不是安全關鍵逐字稿；漏電、冒煙等字詞仍必須由
+使用者確認後，才會進入既有文字安全規則。
+
 ### 廠商接受／拒絕
 
 ```text
@@ -187,6 +216,7 @@ Assigned provider explicit decision
 | `GET` | `/api/sessions/{id}/image` | 讀取目前 session 私有圖片預覽 |
 | `DELETE` | `/api/sessions/{id}/image` | 未建案前移除圖片並使摘要版本失效 |
 | `POST` | `/api/sessions/{id}/image/confirm` | 人工更正／確認圖片建議並重驗 service_id=17 |
+| `POST` | `/api/sessions/{id}/speech/transcribe` | HF-only 短錄音轉文字；不修改 session、不送出訊息 |
 | `PUT` | `/api/sessions/{id}/checklist/{key}` | 人工勾選／取消單一核對項目 |
 | `POST` | `/api/sessions/{id}/reset` | 未建案前重設；已有 audit 時拒絕清除 |
 | `GET` | `/api/provider/identities` | 列出 synthetic Demo 身分 |
@@ -222,6 +252,10 @@ authentication。
   Email、臉孔、證件或可識別住家照片。
 - 圖片每次外送 Hugging Face 前都要明確同意；binary 不進 PostgreSQL、audit、log
   或 API model。拒絕 traversal、symlink、偽 MIME、損壞檔與超過 8 MiB。
+- 語音錄製必須由使用者手勢啟動；只接受實際簽章相符的 WebM／Ogg／MP4／WAV／MP3，
+  最大 6 MiB、30 秒。每次停止錄音即代表本次明確外送，UI 會持續揭露外部處理；
+  transcript 不自動送出。一般 `HF_TOKEN` 不會轉送到社群 Space，private Space 只能用
+  獨立的 `HF_ASR_TOKEN`。
 - pending provider 只見遮罩 contact；只有已指派且 accepted 的 synthetic provider
   可見完整 synthetic contact。未指派或 rejected 圖片請求回 404。
 - Agent 只看三個查詢 Tool；matching 由摘要確認後端呼叫。四個 MCP Tools 仍唯讀，
@@ -274,6 +308,13 @@ Windows PostgreSQL 模式不要改用裸 `python -m uvicorn ...` 啟動。Linux�
 | `HF_VL_MODEL_ID` | `Qwen/Qwen3-VL-30B-A3B-Instruct` | 圖片分析模型 |
 | `HF_VL_PROVIDER` | `auto` | 圖片模型的 Inference Provider |
 | `MEDIA_ROOT` | `var/media` | 私有本機圖片根目錄；不進 Git |
+| `HF_ASR_SPACE_URL` | `https://liaozike-breeze-asr-api.hf.space` | HF-only 語音 Demo endpoint；只允許 HTTPS `*.hf.space` |
+| `HF_ASR_API_NAME` | `transcribe` | Gradio named endpoint |
+| `HF_ASR_AUDIO_PARAMETER` | `audio` | Gradio 音訊參數名稱 |
+| `HF_ASR_MODEL_ID` | `MediaTek-Research/Breeze-ASR-26` | 公開回應與證據使用的模型標籤 |
+| `HF_ASR_TIMEOUT_SECONDS` | `90` | upload／queue／inference timeout |
+| `HF_ASR_EXTRA_INPUTS_JSON` | `{}` | 其他 endpoint 必要的純量參數；最多 10 個 |
+| `HF_ASR_TOKEN` | 無 | 只供 private ASR Space；絕不隱含重用 `HF_TOKEN` |
 
 `WEB_MODEL_PROVIDER=huggingface` 會把對話與 Tool schema 傳到 hosted provider；沒有
 必要設定時不會靜默切回 Mock。`WEB_MODEL_PROVIDER=bedrock` 會使用
@@ -317,6 +358,8 @@ python scripts/huggingface_web_eval.py --live
   dispatch／provider workflow。
 - `tests/test_media_web.py`：圖片 active branch、summary invalidation 與案件圖片權限。
 - `tests/test_consumer_accessibility.py`、`tests/test_media_frontend.py`：HTML／JS 靜態契約。
+- `tests/test_huggingface_speech.py`、`tests/test_speech_web.py`、
+  `tests/test_voice_frontend.py`：ASR adapter、no-fallback API、HF-only 與 composer 回填契約。
 - `tests/test_checklist_concurrency.js`：前端反序回應與 session generation regression。
 
 常用驗證命令：
@@ -326,10 +369,29 @@ python -m pytest tests/test_repair_conversation.py tests/test_repair_form_config
 python -m pytest tests/test_web_app.py tests/test_media_web.py -q
 python -m pytest tests/test_huggingface_web_eval.py tests/test_huggingface_model.py tests/test_huggingface_vision.py -q
 python -m pytest -q
+python .\scripts\hf_asr_latency_probe.py <public-or-synthetic-audio.mp3>
 node --check .\src\home_repair_agent\web\static\app.js
 node --check .\src\home_repair_agent\web\static\provider.js
 node .\tests\test_checklist_concurrency.js
 ```
+
+2026-08-02 HF 語音輸入 POC 驗證：
+
+- 新增 adapter／API／前端 focused：`17 passed, 10 subtests passed`。
+- 連同 PR #20 Web／圖片／viewport focused：
+  `114 passed, 2 skipped, 58 subtests passed`。
+- 完整 pytest：`265 passed, 21 skipped, 132 subtests passed`；21 個 skip 是條件式環境
+  未提供，不算成功證據。
+- Changed-file Ruff／format、compileall、Node syntax、PR #20 checklist concurrency、
+  `git diff --check` 通過。
+- 真瀏覽器 `1280x720`：HF 語音按鈕 `64x48`，composer、輸入框與送出按鈕均可見，
+  無水平 overflow／console error。手機與真麥克風仍需人工作最後 smoke；自動化沒有錄取
+  現場環境聲音，避免把非 synthetic 音訊送到外部。
+- Breeze-ASR-26 live：公開教育部短音訊「這條水管破去矣」辨識為「這條水管破了」。
+  兩筆相鄰 probe 為 52.586 秒與 48.276 秒；queue＋inference 分別佔 50.950 秒與
+  46.215 秒，證明瓶頸在外部執行面而非 19 KB／17 KB 上傳。probe 只輸出 phase、耗時、
+  HTTP status 與 transcript 字數，不輸出音訊或逐字稿。這證明閉環可行，不代表
+  production latency／品質。
 
 2026-08-01 已記錄的驗證證據：
 

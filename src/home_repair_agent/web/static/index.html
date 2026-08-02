@@ -376,7 +376,25 @@
           <label class="sr-only" for="message-input">修繕需求</label>
           <p id="privacy-note" class="privacy-note">
             Demo 請勿輸入真實姓名、電話、門牌或其他個人資料。
+            <span id="voice-disclosure" hidden>
+              語音會送至外部 Hugging Face Space；僅限 synthetic／公開測試內容，
+              辨識文字必須由你確認後再送出。
+            </span>
+            <span id="voice-status" role="status" aria-live="polite"></span>
           </p>
+          <button
+            id="voice-button"
+            class="voice-button"
+            type="button"
+            aria-pressed="false"
+            aria-describedby="voice-disclosure"
+            aria-label="同意外部處理並開始台語或國語錄音"
+            title="同意外部處理並開始台語或國語錄音"
+            hidden
+            disabled
+          >
+            語音
+          </button>
           <textarea
             id="message-input"
             name="message"

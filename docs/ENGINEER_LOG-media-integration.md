@@ -63,7 +63,7 @@ The local 18 skips include PostgreSQL integration because this machine has no
 `TEST_DATABASE_URL`. Follow-up GitHub Actions Run #15 stopped before pytest
 because Ruff 0.16.1 would reformat `web/app.py` and
 `test_postgres_case_repository.py`; commit `5410e75` applied exactly that
-formatter output. [Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182)
+formatter output. [Run #16](https://github.com/spicyhoney/repair-captain-ai/actions/runs/30645834182)
 then passed on PostgreSQL 16.14 with `151 passed, 1 skipped, 52 subtests passed`,
 which executes the migration 001–003 assertion, repository recreation and
 database constraint cases. Full-repository

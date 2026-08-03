@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="diagram-title diagram-desc">
-  <title id="diagram-title">修繕小隊長目前架構與未完成邊界</title>
+  <title id="diagram-title">修繕小隊長 Repair Captain AI 目前架構與未完成邊界</title>
   <desc id="diagram-desc">顯示已驗證的人工 Checklist、無障礙消費者與廠商雙端流程，以及 FastAPI、Agent、MCP、Service Layer、async Repository、PostgreSQL 和未完成 AWS 元件的關係。</desc>
   <defs>
     <marker id="arrow-current" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
@@ -38,7 +38,7 @@
   <rect x="0" y="0" width="1600" height="112" fill="#ffffff"/>
   <rect x="0" y="108" width="1600" height="4" fill="#c94f3b"/>
 
-  <text class="title" x="56" y="55">修繕小隊長｜目前架構與未完成邊界</text>
+  <text class="title" x="56" y="55">修繕小隊長｜Repair Captain AI｜目前架構與未完成邊界</text>
   <text class="subtitle" x="56" y="84">2026 雲湧智生黑客松 · AI 生活管家 · 居家水電修繕 MVP</text>
 
   <g id="legend" transform="translate(1118 28)">

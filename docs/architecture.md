@@ -167,7 +167,8 @@ S3、付款、通知或真實時段保留。實作優先級見 [TASKS](../TASKS.
 - synthetic provider、時段、case、order 與 contact 必須保留來源標籤。
 - 不記錄 token、AWS key、Runtime ARN、完整圖片 bytes、真實個資或完整 provider payload。
 - hosted 圖片／語音送出前必須取得同意；輸出只作建議，仍需人工確認。
-- AWS `ExpiresAt` tag 不會自動刪除資源；賽後帳號 audit 仍列為待辦。
+- AWS `ExpiresAt` tag 不會自動刪除資源；帳號持有人已於 2026-08-03 完成賽後
+  console／billing 檢查，確認沒有殘留資源或非預期持續用量。
 
 ## 官方參考
 

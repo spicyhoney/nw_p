@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "home-repair-agent"
-version = "1.0.0"
+version = "1.0.1"
 description = "Auditable AI-assisted home-repair consultation and provider dispatch platform."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
     { name = "spicyhoney" },
 ]
-keywords = ["agent", "fastapi", "mcp", "postgresql", "bedrock", "agentcore"]
+keywords = ["repair-captain-ai", "agent", "fastapi", "mcp", "postgresql", "bedrock", "agentcore"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: FastAPI",
@@ -24,8 +24,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/spicyhoney/nw_p"
-Documentation = "https://github.com/spicyhoney/nw_p#readme"
+Repository = "https://github.com/spicyhoney/repair-captain-ai"
+Documentation = "https://github.com/spicyhoney/repair-captain-ai#readme"
 
 [project.optional-dependencies]
 data = [

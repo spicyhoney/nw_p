@@ -1,11 +1,11 @@
-# HANDOFF：修繕小隊長
+# HANDOFF：修繕小隊長｜Repair Captain AI
 
-> 更新：2026-08-02（Asia/Taipei）
+> 更新：2026-08-03（Asia/Taipei）
 > 用途：只記錄目前可接手狀態，維持 150 行內；歷史證據放在實作索引與 ENGINEER LOG。
 
 ## 目前狀態
 
-- 黑客松已結束；專案正在收斂為公開作品集版本，穩定目標分支為 `main`。
+- 黑客松已結束；公開作品集版本 `v1.0.1` 已發布，穩定目標分支為 `main`。
 - 最終程式包含消費者／廠商雙端 Web、引導式水電修繕對話、人工 Checklist、圖片建議、
   台語／國語 STT、四個唯讀 MCP Tools、memory／async PostgreSQL 案件 repository，
   以及 Mock、Hugging Face、Bedrock 與 AgentCore Remote MCP adapters。
@@ -56,10 +56,9 @@ home-repair-web
 ## AWS 帳務安全
 
 - PR #19 的短效 direct-code Runtime POC 文件記錄 cleanup 已完成。
-- 最終 Remote MCP Demo 是在另一台筆電與比賽 AWS credential 執行；本桌機沒有 AWS
-  profile，無法重新查證帳號內是否仍有 Runtime、S3、IAM role 或 CloudWatch log group。
-- Repo 中的 `ExpiresAt` 只是一個追蹤標籤，不會自動刪除資源。帳號持有人仍須登入當時
-  AWS 帳號完成一次 console／billing audit；此項列於 [TASKS](TASKS.md)。
+- 最終 Remote MCP Demo 曾在比賽 AWS 帳號執行；帳號持有人已於 2026-08-03 完成賽後
+  console／billing 檢查，確認沒有殘留資源或非預期持續用量。
+- Repo 中的 `ExpiresAt` 只是歷史追蹤標籤，不代表仍有可用 Runtime 或公開 endpoint。
 
 ## 接手閱讀順序
 

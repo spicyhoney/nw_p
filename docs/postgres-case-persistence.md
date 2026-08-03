@@ -134,7 +134,7 @@ python -m pytest -q `
 
 2026-08-01 再以 GitHub Actions 的乾淨 PostgreSQL 16.14 service 驗證 MEDIA-001：
 
-- [Run #16](https://github.com/spicyhoney/nw_p/actions/runs/30645834182) 套用 migration
+- [Run #16](https://github.com/spicyhoney/repair-captain-ai/actions/runs/30645834182) 套用 migration
   001–003，並通過圖片 path／analysis constraint、repository 重建還原與完整 suite。
 - 結果：`151 passed, 1 skipped, 52 subtests passed`；Ruff／format、compileall、
   JavaScript syntax 與 checklist concurrency 均通過。

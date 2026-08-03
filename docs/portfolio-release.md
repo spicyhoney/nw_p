@@ -1,6 +1,6 @@
-# 作品集版本整理紀錄
+# 修繕小隊長｜Repair Captain AI 作品集版本整理紀錄
 
-最後更新：2026-08-02
+最後更新：2026-08-03
 
 ## 做了什麼
 
@@ -40,6 +40,7 @@ Web confirmation -> CaseWorkflowService -> memory / PostgreSQL -> audit
 
 ## 驗證結果
 
+- 帳號持有人已於 2026-08-03 完成比賽 AWS 帳號的資源與 Billing 收尾檢查。
 - 完整 pytest：`327 passed, 17 skipped, 168 subtests passed`。
 - 全庫 Ruff check 與 format check：passed。
 - Python compileall、JavaScript syntax、Checklist／media Node regressions：passed。
@@ -51,6 +52,5 @@ Web confirmation -> CaseWorkflowService -> memory / PostgreSQL -> audit
 
 ## 待辦與風險
 
-- 比賽 AWS 帳號需要帳號持有人做一次賽後資源與 Billing audit。
 - 正式部署、登入／RBAC、真實個資政策、時段鎖與 notification 都仍是產品化工作。
 - 外部 HF／AWS provider 的可用性、費用與延遲不由本 repo 保證。

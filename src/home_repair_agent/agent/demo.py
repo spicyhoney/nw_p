@@ -48,7 +48,7 @@ SCRIPTED_INPUTS = (
     "App 訊息",
 )
 DEMO_NOTICE_TEMPLATE = """\
-修繕小隊長｜本機終端 Demo
+修繕小隊長｜Repair Captain AI｜本機終端 Demo
 模型：{model_label}
 資料：記憶體 Demo 資料（不連 AWS、不寫資料庫、不建立案件）
 用途：人工驗證 Agent → 四個唯讀 MCP Tools → Service Layer 的多輪閉環。

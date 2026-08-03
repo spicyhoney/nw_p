@@ -308,7 +308,7 @@ def create_app(
             yield
 
     app = FastAPI(
-        title="修繕小隊長 Web Demo",
+        title="修繕小隊長｜Repair Captain AI Web Demo",
         version="0.2.0",
         docs_url=None,
         redoc_url=None,

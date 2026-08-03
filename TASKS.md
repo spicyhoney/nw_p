@@ -1,16 +1,10 @@
 # 專案待辦
 
-最後更新：2026-08-02
+最後更新：2026-08-03
 
 本檔只保留尚未完成的工作；已完成項目移至
 [實作索引](docs/implementation-index.md)。狀態只使用 `Todo`、`In progress`、
 `Blocked`，優先級依序為 `P0`、`P1`、`P2`。
-
-## P0：立即風險
-
-| ID | 狀態 | 工作 | 負責人 | 依賴 | 完成條件 |
-|---|---|---|---|---|---|
-| AWS-AUDIT-001 | Blocked | 登入比賽使用的 AWS 帳號，確認最終 Remote MCP Demo 沒有殘留計費資源 | 帳號持有人 | 當時的 AWS 登入權限 | AgentCore Runtime、S3 artifact、IAM role／workload identity、CloudWatch log group 皆已刪除；Billing 無非預期持續用量，留下不含 ARN／account 的確認紀錄 |
 
 ## P1：產品化缺口
 

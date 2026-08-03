@@ -1,12 +1,13 @@
-# 修繕小隊長
+# 修繕小隊長｜Repair Captain AI
 
-[![PostgreSQL CI](https://github.com/spicyhoney/nw_p/actions/workflows/postgresql-ci.yml/badge.svg)](https://github.com/spicyhoney/nw_p/actions/workflows/postgresql-ci.yml)
+[![PostgreSQL CI](https://github.com/spicyhoney/repair-captain-ai/actions/workflows/postgresql-ci.yml/badge.svg)](https://github.com/spicyhoney/repair-captain-ai/actions/workflows/postgresql-ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-read--only-20232A)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 
-一個把生成式 AI 放進**可驗證、可人工掌控**流程的居家水電修繕平台。消費者可用
+**Repair Captain AI** 是一個把生成式 AI 放進**可驗證、可人工掌控**流程的居家水電
+修繕平台。消費者可用
 自然語言描述需求，系統會查詢服務、行政區、動態諮詢表單與 synthetic 師傅；只有在
 使用者確認分支、Checklist、摘要與派單後，才會建立案件。廠商端則能接受或拒絕指派，
 並依狀態查看遮罩或完整的 synthetic 聯絡資料。
@@ -80,8 +81,8 @@ FastAPI 與 MCP 都只是 adapter；這個分層讓本機 Mock Demo、PostgreSQL
 預設 Mock 模式不需要 token、AWS 或 PostgreSQL。
 
 ```powershell
-git clone https://github.com/spicyhoney/nw_p.git
-cd nw_p
+git clone https://github.com/spicyhoney/repair-captain-ai.git
+cd repair-captain-ai
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[app,data,dev]"

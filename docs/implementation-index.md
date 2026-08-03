@@ -1,6 +1,6 @@
 # 實作索引
 
-最後更新：2026-08-02
+最後更新：2026-08-03
 
 本頁只列已完成且有程式或驗證證據的功能。尚未完成的工作在
 [TASKS](../TASKS.md)；早期構想不能覆蓋本頁、測試或模組 README 的目前契約。
@@ -90,4 +90,5 @@ live 驗證；報告已遮罩 account、ARN、credential 與完整 payload。這
 - 四個 MCP Tools 皆唯讀；模型不能確認、建案、派單或執行任意 SQL。
 - Demo 師傅、聯絡資料、時段、案件與訂單皆為 synthetic。
 - 沒有正式登入、RBAC、付款、通知、真實時段保留、RDS 或長期公開 hosting。
-- AWS `ExpiresAt` 標籤不會自動刪除資源；帳號 cleanup audit 狀態見 [TASKS](../TASKS.md)。
+- 帳號持有人已於 2026-08-03 完成賽後 AWS console／billing 檢查，確認沒有殘留資源
+  或非預期持續用量；`ExpiresAt` 僅為歷史追蹤標籤。
